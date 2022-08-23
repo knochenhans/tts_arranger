@@ -1,6 +1,7 @@
 from tts_convert import TTS_Convert, TTS_Item
 
 t = TTS_Convert()
+t.initialize()
 
 # Get speakers from the list of default speakers
 speaker_1 = TTS_Convert.default_speakers[0]
