@@ -710,7 +710,7 @@ class TTS_Convert:
         # self.synthesizer = None
         # gc.collect()
 
-        # Set the default format to mp3
+        # Set default format to mp3
         format = 'mp3'
 
         file_format = os.path.splitext(output_filename)[1][1:]
