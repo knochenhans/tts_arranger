@@ -8,16 +8,17 @@ import os
 import re
 import string
 import sys
-import tempfile
 import numpy as np
 from pydub import AudioSegment
 from pydub.silence import detect_silence
 from pydub.effects import normalize
-import soundfile
 import TTS
 from TTS.utils.manage import ModelManager
 from TTS.utils.synthesizer import Synthesizer
 import time
+import numpy
+import io
+import scipy.io.wavfile
 
 
 class bcolors:
@@ -63,48 +64,50 @@ class TTS_Item:
     def get_character_count(self) -> int:
         return len(self.text)
 
-    def speak(self, synthesizer: Synthesizer, path='/tmp/') -> AudioSegment:
-        audio = AudioSegment.empty()
+    # def speak(self, synthesizer: Synthesizer, path='/tmp/') -> AudioSegment:
+    #     audio = AudioSegment.empty()
 
-        if self.pause_pre > 0:
-            audio += AudioSegment.silent(duration=self.pause_pre)
+    #     if synthesizer is not None:
+    #         if self.pause_pre > 0:
+    #             audio += AudioSegment.silent(duration=self.pause_pre)
 
-        # Check if line contains actual speech data
-        if re.search(r'[a-zA-Z0-9]', self.text):
-            try:
-                # Suppress tts output
-                with contextlib.redirect_stdout(None):
-                    wav = synthesizer.tts(
-                        text=self.text,
-                        speaker_name=self.speaker,
-                        speaker_wav=None,
-                        language_name='',
-                        reference_wav=None,
-                        reference_speaker_name=None,
-                    )
-            except:
-                with open(path + 'tts-error.log', 'a') as f:
-                    f.write(f'Error synthesizing "{self.text}"\n')
+    #         # Check if line contains actual speech data
+    #         # TODO: put into prepare
+    #         # if re.search(r'[a-zA-Z0-9]', self.text):
+    #         try:
+    #             # Suppress tts output
+    #             with contextlib.redirect_stdout(None):
+    #                 wav = synthesizer.tts(
+    #                     text=self.text,
+    #                     speaker_name=self.speaker,
+    #                     speaker_wav=None,
+    #                     language_name='',
+    #                     reference_wav=None,
+    #                     reference_speaker_name=None,
+    #                 )
+    #         except:
+    #             # with open(path + 'tts-error.log', 'a+') as f:
+    #             # f.write(f'Error synthesizing "{self.text}"\n')
 
-                raise Exception(f'Error synthesizing {self.text}')
-            else:
-                synthesizer.save_wav(wav, path + '/tts_output.wav')
+    #             raise Exception(f'Error synthesizing "{self.text}"')
+    #         else:
+    #             synthesizer.save_wav(wav, path + '/tts_output.wav')
 
-                segment = AudioSegment.from_wav(path + '/tts_output.wav')
+    #             segment = AudioSegment.from_wav(path + '/tts_output.wav')
 
-                if self.strip_silence:
-                    silence = detect_silence(segment, 100, -45)
-                    segment = segment[:silence[-1][0]]
-                    segment = segment.apply_gain(-20 - segment.dBFS)
-                    # with open('/tmp/tts-rms.log', 'a') as f:
-                    #     f.write(f'{segment.rms}\n')
+    #             if self.strip_silence:
+    #                 silence = detect_silence(segment, 100, -45)
+    #                 segment = segment[:silence[-1][0]]
+    #                 segment = segment.apply_gain(-20 - segment.dBFS)
+    #                 # with open('/tmp/tts-rms.log', 'a+') as f:
+    #                 #     f.write(f'{segment.rms}\n')
 
-                audio += segment
+    #             audio += segment
 
-        if self.pause_post > 0:
-            audio += AudioSegment.silent(duration=self.pause_post)
+    #         if self.pause_post > 0:
+    #             audio += AudioSegment.silent(duration=self.pause_post)
 
-        return audio
+    #     return audio
 
 
 class TTS_Part:
@@ -239,7 +242,7 @@ class TTS_Convert:
     max_chars = 320
 
     def __init__(self, speakers=[str]) -> None:
-        self.audio = AudioSegment.empty()
+        self.audio_all = AudioSegment.empty()
 
         self.model = 'tts_models/en/vctk/vits'
 
@@ -249,8 +252,8 @@ class TTS_Convert:
         if speakers:
             self.default_speakers = speakers
 
-    def __del__(self):
-        self.temp_dir.cleanup()
+    # def __del__(self):
+    #     self.temp_dir.cleanup()
     #     self.synthesizer = None
     #     gc.collect()
 
@@ -258,7 +261,7 @@ class TTS_Convert:
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
 
         self.manager = ModelManager(os.path.dirname(TTS.__file__) + '/.models.json')
-        self.temp_dir = tempfile.TemporaryDirectory()
+        #self.temp_dir = tempfile.TemporaryDirectory()
 
         with contextlib.redirect_stdout(None):
             model_path, config_path, model_item = self.manager.download_model(
@@ -276,11 +279,6 @@ class TTS_Convert:
                 encoder_config=None,
                 use_cuda=False,
             )
-
-    def __del__(self):
-        self.temp_dir.cleanup()
-    #     self.synthesizer = None
-    #     gc.collect()
 
     def find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
         final_items = []
@@ -559,6 +557,16 @@ class TTS_Convert:
 
         return final_items
 
+    # def speak_item(self, tts_item: TTS_Item) -> AudioSegment:
+        
+    #     try:
+    #         return self.speak_tts_item(tts_item)
+    #     except Exception as e:
+    #         # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
+    #         #     f.write(f'Error synthesizing "{output_filename}"\n')
+    #         log(LOG_TYPE.ERROR, f'Error synthesizing "{tts_item.text}"')
+    #         sys.exit()
+
     def speak(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
         final_items = []
 
@@ -602,17 +610,26 @@ class TTS_Convert:
                 log(LOG_TYPE.ERROR, 'Stopped by user.')
                 sys.exit()
             except Exception as e:
-                with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
-                    f.write(f'Error synthesizing "{output_filename}"\n')
-                    log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}"')
+                # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
+                #     f.write(f'Error synthesizing "{output_filename}"\n')
+                log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}"')
                 sys.exit()
 
-        self.finish(output_filename)
+        self.export(output_filename)
 
-    def speak_tts_item(self, tts_item: TTS_Item) -> None:
+    def numpy_to_segment(self, numpy_wav) -> AudioSegment:
+        # Convert tts output wave into pydub segment
+        wav = numpy.array(numpy_wav).astype(numpy.float32)
+        wav_io = io.BytesIO()
+        scipy.io.wavfile.write(wav_io, self.synthesizer.output_sample_rate, wav)
+        wav_io.seek(0)
+        return AudioSegment.from_wav(wav_io)
+
+    def speak_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
+        segment = AudioSegment()
         if self.synthesizer is not None:
             if tts_item.pause_pre > 0:
-                self.audio += AudioSegment.silent(duration=tts_item.pause_pre)
+                self.audio_all += AudioSegment.silent(duration=tts_item.pause_pre)
 
             # Check if line contains actual speech data
             if re.search(r'[a-zA-Z0-9]', tts_item.text):
@@ -628,36 +645,43 @@ class TTS_Convert:
                             reference_speaker_name=None,
                         )
                 except:
-                    with open(self.temp_dir.name + '/tts-error.log', 'a') as f:
-                        f.write(f'Error synthesizing "{tts_item.text}"\n')
+                    # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
+                    #     f.write(f'Error synthesizing "{tts_item.text}"\n')
 
                     raise Exception(f'Error synthesizing {tts_item.text}')
                 else:
-                    self.synthesizer.save_wav(wav, self.temp_dir.name + '/tts_output.wav')
 
-                    segment = AudioSegment.from_wav(self.temp_dir.name + '/tts_output.wav')
+                    segment = self.numpy_to_segment(wav)
 
                     if tts_item.strip_silence:
                         silence = detect_silence(segment, min_silence_len=100, silence_thresh=-50)
                         segment = segment[:silence[-1][0]]
                         segment = segment.apply_gain(-20 - segment.dBFS)
-                        # with open('/tmp/tts-rms.log', 'a') as f:
+                        # with open('/tmp/tts-rms.log', 'a+') as f:
                         #     f.write(f'{segment.rms}\n')
 
-                    self.audio += segment
+                    self.audio_all += segment
 
             if tts_item.pause_post > 0:
-                self.audio += AudioSegment.silent(duration=tts_item.pause_post)
+                self.audio_all += AudioSegment.silent(duration=tts_item.pause_post)
 
-    def _compress(self, threshold: float, ratio: float, makeup: float, attack: float, release: float):
+        return segment
+
+    def segment_to_numpy(self, segment):
+        samples = [s.get_array_of_samples() for s in segment.split_to_mono()]
+
+        fp_arr = np.array(samples).T.astype(np.float64)
+        fp_arr /= np.iinfo(samples[0].typecode).max
+
+        return fp_arr
+
+    def _compress(self, threshold: float, ratio: float, makeup: float, attack: float, release: float, segment: AudioSegment) -> AudioSegment:
         if ratio < 1.0:
             print('Ratio must be > 1.0 for compression to occur! You are expanding.')
         if ratio == 1.0:
             print('Signal is unaffected.')
 
-        filename = self.temp_dir.name + '/tts_temp_export'
-
-        data, sr = soundfile.read(filename)
+        data = self.segment_to_numpy(segment)
 
         try:
             ch = len(data[0, ])
@@ -682,7 +706,7 @@ class TTS_Convert:
         for k in range(ch):
             for i in range(n):
                 if dataC[i, k] > threshold:
-                    dataC[i, k] = threshold+(dataC[i, k]-threshold)/(ratio)
+                    dataC[i, k] = threshold + (dataC[i, k] - threshold) / (ratio)
 
         gain = np.zeros(n)
         sgain = np.zeros(n)
@@ -711,9 +735,9 @@ class TTS_Convert:
                 if data[i, k] < 0.0:
                     dataCs_bit[i, k] = -1.0 * dataCs_bit[i, k]
 
-        soundfile.write(self.temp_dir.name + '/tts_temp_export_compressed.wav', dataCs_bit, sr, 'PCM_16')
+        return self.numpy_to_segment(dataCs_bit)
 
-    def finish(self, output_filename: str) -> None:
+    def export(self, output_filename: str) -> None:
         # Clean up to free up some memory
         # self.synthesizer = None
         # gc.collect()
@@ -726,19 +750,17 @@ class TTS_Convert:
         if file_format:
             format = file_format
 
-        self.audio.export(self.temp_dir.name + '/tts_temp_export', format='wav')
-
         log(LOG_TYPE.INFO, f'Applying compression:')
-        self._compress(-20.0, 4.0, 4.5, 5.0, 15.0)
+        self.audio_all = self._compress(-20.0, 4.0, 4.5, 5.0, 15.0, self.audio_all)
         # self.audio = normalize(compress_dynamic_range(
         #     self.audio, threshold=-20, release=15))
 
         log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
-        audio_normalized = normalize(AudioSegment.from_wav(self.temp_dir.name + '/tts_temp_export_compressed.wav'))
+        audio_normalized = normalize(self.audio_all)
 
         if format == 'mp3':
             audio_normalized.export(output_filename, format=format, bitrate='320k')
         else:
             audio_normalized.export(output_filename, format=format)
 
-        self.audio = AudioSegment.empty()
+        self.audio_all = AudioSegment.empty()
