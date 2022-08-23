@@ -292,10 +292,9 @@ class TTS_Convert:
                     find = line.rfind(b, 0, break_after)
 
                     if find >= 0:
-                        final_items.append(TTS_Item(line[:find].strip(
-                        ), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
+                        final_items.append(TTS_Item(line[:find].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
                         final_items += self._find_and_break([TTS_Item(line[find + 1:].strip(), tts_item.speaker, tts_item.pause_pre,
-                                                           tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
+                                                            tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
                         found = True
                         break
 
@@ -303,10 +302,9 @@ class TTS_Convert:
                     # No save spot for breaking found, do a hard break
                     final_items.append(TTS_Item(line[:break_after].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
                     final_items += self._find_and_break([TTS_Item(line[break_after:].strip(), tts_item.speaker, tts_item.pause_pre,
-                                                       tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
+                                                        tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
             else:
-                final_items.append(TTS_Item(line.strip(), tts_item.speaker,
-                                            tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
+                final_items.append(TTS_Item(line.strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
 
         return final_items
 
