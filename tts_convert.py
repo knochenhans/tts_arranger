@@ -110,11 +110,11 @@ class TTS_Item:
     #     return audio
 
 
-class TTS_Part:
-    def __init__(self, tts_items: list = [], title: str = '', image_path: str = ''):
-        self.tts_items = tts_items
-        self.title = title
-        self.image_path = image_path
+# class TTS_Part:
+#     def __init__(self, tts_items: list = [], title: str = '', image_path: str = ''):
+#         self.tts_items = tts_items
+#         self.title = title
+#         self.image_path = image_path
 
     def get_character_count(self) -> int:
         count = 0
