@@ -630,7 +630,7 @@ class TTS_Convert:
                     segment = AudioSegment.from_wav(self.temp_dir.name + '/tts_output.wav')
 
                     if tts_item.strip_silence:
-                        silence = detect_silence(segment, 100, -45)
+                        silence = detect_silence(segment, min_silence_len=100, silence_thresh=-50)
                         segment = segment[:silence[-1][0]]
                         segment = segment.apply_gain(-20 - segment.dBFS)
                         # with open('/tmp/tts-rms.log', 'a') as f:
