@@ -280,7 +280,7 @@ class TTS_Convert:
                 use_cuda=False,
             )
 
-    def find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
+    def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
         final_items = []
 
         for tts_item in tts_items:
@@ -294,7 +294,7 @@ class TTS_Convert:
                     if find >= 0:
                         final_items.append(TTS_Item(line[:find].strip(
                         ), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
-                        final_items += self.find_and_break([TTS_Item(line[find + 1:].strip(), tts_item.speaker, tts_item.pause_pre,
+                        final_items += self._find_and_break([TTS_Item(line[find + 1:].strip(), tts_item.speaker, tts_item.pause_pre,
                                                            tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
                         found = True
                         break
@@ -302,7 +302,7 @@ class TTS_Convert:
                 if not found:
                     # No save spot for breaking found, do a hard break
                     final_items.append(TTS_Item(line[:break_after].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
-                    final_items += self.find_and_break([TTS_Item(line[break_after:].strip(), tts_item.speaker, tts_item.pause_pre,
+                    final_items += self._find_and_break([TTS_Item(line[break_after:].strip(), tts_item.speaker, tts_item.pause_pre,
                                                        tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
             else:
                 final_items.append(TTS_Item(line.strip(), tts_item.speaker,
@@ -310,7 +310,7 @@ class TTS_Convert:
 
         return final_items
 
-    def minimize_tailing_punctuation(self, text: str) -> str:
+    def _minimize_tailing_punctuation(self, text: str) -> str:
         lenght = 0
 
         for i in reversed(text):
@@ -376,10 +376,10 @@ class TTS_Convert:
 
         tts_items = [tts_item]
 
-        tts_items = self.break_single(tts_items, r'\n', pause_post=250)
-        tts_items = self.break_single(tts_items, r'[\.!\?]\s', keep=True)
-        tts_items = self.break_single(tts_items, r'[;:]\s', pause_post=150)
-        tts_items = self.break_single(tts_items, r'[—–]', pause_post=150)
+        tts_items = self._break_single(tts_items, r'\n', pause_post=250)
+        tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
+        tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=150)
+        tts_items = self._break_single(tts_items, r'[—–]', pause_post=150)
         # tts_items = self.break_single(tts_items, '…')
 
         # Break items if too long (memory consumption)
@@ -398,16 +398,16 @@ class TTS_Convert:
         #     tts_items = self.break_speakers(tts_items, ('«', '»'), True, pause_pre=100, pause_post=100)
         #     tts_items = self.break_speakers(tts_items, ('"', '"'), True, pause_pre=100, pause_post=100)
 
-        tts_items = self.break_speakers(
+        tts_items = self._break_speakers(
             tts_items, ('(', ')'), pause_pre=300, pause_post=300)
-        tts_items = self.break_speakers(
+        tts_items = self._break_speakers(
             tts_items, ('—', '—'), pause_pre=300, pause_post=300)
-        tts_items = self.break_speakers(
+        tts_items = self._break_speakers(
             tts_items, ('– ', ' –'), pause_pre=300, pause_post=300)
         # tts_items = self.break_start_end(tts_items, ('- ', ' -'), pause_pre=300, pause_post=300)
         # tts_items = self.break_start_end(tts_items, (r'\s[-–—]-?\s', r'\s[-–—]-?\s'), pause_post=150)
         # tts_items = self.break_start_end(tts_items, (r'\(', r'\)'), pause_post=150)
-        tts_items = self.break_speakers(tts_items, ('*', '*'))
+        tts_items = self._break_speakers(tts_items, ('*', '*'))
 
         for tts_item in tts_items:
             text = tts_item.text
@@ -419,7 +419,7 @@ class TTS_Convert:
 
             # Remove all remaining punctuation after first occurrence
             # text = re.sub(r'([\.\?\!;:])\s?[\.\?\!;:,\)\"\'.\]]+', r'\1', text)
-            text = self.minimize_tailing_punctuation(text)
+            text = self._minimize_tailing_punctuation(text)
 
             # Strip starting punctuation and normalize ending punctuation
             text = text.strip().lstrip(string.punctuation).strip()
@@ -441,7 +441,7 @@ class TTS_Convert:
 
         return tts_items
 
-    def break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, strip_silence: bool = True, pause_post: int = 0) -> list[TTS_Item]:
+    def _break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, strip_silence: bool = True, pause_post: int = 0) -> list[TTS_Item]:
         final_items = []
 
         for tts_item in tts_items:
@@ -476,7 +476,7 @@ class TTS_Convert:
             character = text[pos]
         return character
 
-    def break_speakers(self, tts_items: list[TTS_Item], start_end: tuple = (), use_second_speaker: bool = False, pause_pre: int = 0, pause_post: int = 0) -> list[TTS_Item]:
+    def _break_speakers(self, tts_items: list[TTS_Item], start_end: tuple = (), use_second_speaker: bool = False, pause_pre: int = 0, pause_post: int = 0) -> list[TTS_Item]:
         final_items = []
 
         if tts_items:
