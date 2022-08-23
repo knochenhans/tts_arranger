@@ -559,9 +559,7 @@ class TTS_Convert:
 
         return final_items
 
-    def speak(self, tts_items: list[TTS_Item], output_filename: str):
-        idx = 0
-
+    def speak(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
         final_items = []
 
         for tts_item in tts_items:
@@ -590,6 +588,16 @@ class TTS_Convert:
 
             try:
                 self.speak_tts_item(tts_item)
+
+                time_now = time.time()
+                time_total += time_now - time_last
+                characters_total += len(tts_item.text)
+
+                time_needed = ((time_total / characters_total) * characters_sum) - time_total
+
+                if callback:
+                    # Report progress
+                    callback(idx, len(final_items))
             except KeyboardInterrupt:
                 log(LOG_TYPE.ERROR, 'Stopped by user.')
                 sys.exit()
@@ -598,12 +606,6 @@ class TTS_Convert:
                     f.write(f'Error synthesizing "{output_filename}"\n')
                     log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}"')
                 sys.exit()
-
-            time_now = time.time()
-            time_total += time_now - time_last
-            characters_total += len(tts_item.text)
-
-            time_needed = ((time_total / characters_total) * characters_sum) - time_total
 
         self.finish(output_filename)
 
