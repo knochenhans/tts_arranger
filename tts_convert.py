@@ -542,6 +542,8 @@ class TTS_Convert:
                     if add_item:
                         # Add item resulting from breaking
                         if new_item.text:
+                            new_item.pause_pre = pause_pre
+                            new_item.pause_post = pause_post
                             final_items.append(new_item)
                             # print(f'Adding item after breaking: {new_item.text} / {new_item.speaker}')
                         pos = idx + 1
@@ -549,8 +551,6 @@ class TTS_Convert:
                 # Add rest / regular item
                 new_item = copy.copy(tts_item)
                 new_item.text = tts_item.text[pos:].strip()
-                new_item.pause_pre = pause_pre
-                new_item.pause_post = pause_post
                 new_item.speaker = current_speaker
 
                 if new_item.text:
