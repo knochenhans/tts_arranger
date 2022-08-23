@@ -243,16 +243,17 @@ class TTS_Convert:
 
         self.model = 'tts_models/en/vctk/vits'
 
-        path = os.path.dirname(TTS.__file__) + '/.models.json'
-        self.manager = ModelManager(path)
         # self.quotes = quotes
         self.current_speaker_idx = 0
-        self.temp_dir = tempfile.TemporaryDirectory()
 
         if speakers:
             self.default_speakers = speakers
 
+    def initialize(self):
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
+
+        self.manager = ModelManager(os.path.dirname(TTS.__file__) + '/.models.json')
+        self.temp_dir = tempfile.TemporaryDirectory()
 
         with contextlib.redirect_stdout(None):
             model_path, config_path, model_item = self.manager.download_model(
