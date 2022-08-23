@@ -242,8 +242,6 @@ class TTS_Convert:
     max_chars = 320
 
     def __init__(self, speakers=[str]) -> None:
-        self.audio_all = AudioSegment.empty()
-
         self.model = 'tts_models/en/vctk/vits'
 
         # self.quotes = quotes
@@ -555,16 +553,6 @@ class TTS_Convert:
 
         return final_items
 
-    # def speak_item(self, tts_item: TTS_Item) -> AudioSegment:
-        
-    #     try:
-    #         return self.speak_tts_item(tts_item)
-    #     except Exception as e:
-    #         # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
-    #         #     f.write(f'Error synthesizing "{output_filename}"\n')
-    #         log(LOG_TYPE.ERROR, f'Error synthesizing "{tts_item.text}"')
-    #         sys.exit()
-
     def speak(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
         final_items = []
 
@@ -584,6 +572,8 @@ class TTS_Convert:
         for tts_item in final_items:
             characters_sum += len(tts_item.text)
 
+        segments = AudioSegment.empty()
+
         for idx, tts_item in enumerate(final_items):
             log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(final_items)} ({tts_item.speaker}, {tts_item.pause_pre}|{tts_item.pause_post}):{bcolors.ENDC} {tts_item.text}')
 
@@ -593,7 +583,7 @@ class TTS_Convert:
             time_last = time.time()
 
             try:
-                self.speak_tts_item(tts_item)
+                segments += self.speak_tts_item(tts_item)
 
                 time_now = time.time()
                 time_total += time_now - time_last
@@ -613,7 +603,7 @@ class TTS_Convert:
                 log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}"')
                 sys.exit()
 
-        self.export(output_filename)
+        self.export(segments, output_filename)
 
     def numpy_to_segment(self, numpy_wav) -> AudioSegment:
         # Convert tts output wave into pydub segment
@@ -624,10 +614,10 @@ class TTS_Convert:
         return AudioSegment.from_wav(wav_io)
 
     def speak_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
-        segment = AudioSegment()
+        segment = AudioSegment.empty()
         if self.synthesizer is not None:
             if tts_item.pause_pre > 0:
-                self.audio_all += AudioSegment.silent(duration=tts_item.pause_pre)
+                segment += AudioSegment.silent(duration=tts_item.pause_pre)
 
             # Check if line contains actual speech data
             if re.search(r'[a-zA-Z0-9]', tts_item.text):
@@ -649,19 +639,19 @@ class TTS_Convert:
                     raise Exception(f'Error synthesizing {tts_item.text}')
                 else:
 
-                    segment = self.numpy_to_segment(wav)
+                    speech_segment = self.numpy_to_segment(wav)
 
                     if tts_item.strip_silence:
-                        silence = detect_silence(segment, min_silence_len=100, silence_thresh=-50)
-                        segment = segment[:silence[-1][0]]
-                        segment = segment.apply_gain(-20 - segment.dBFS)
+                        silence = detect_silence(speech_segment, min_silence_len=100, silence_thresh=-50)
+                        speech_segment = speech_segment[:silence[-1][0]]
+                        speech_segment = speech_segment.apply_gain(-20 - speech_segment.dBFS)
                         # with open('/tmp/tts-rms.log', 'a+') as f:
                         #     f.write(f'{segment.rms}\n')
 
-                    self.audio_all += segment
+                    segment += speech_segment
 
             if tts_item.pause_post > 0:
-                self.audio_all += AudioSegment.silent(duration=tts_item.pause_post)
+                segment += AudioSegment.silent(duration=tts_item.pause_post)
 
         return segment
 
@@ -735,7 +725,7 @@ class TTS_Convert:
 
         return self.numpy_to_segment(dataCs_bit)
 
-    def export(self, output_filename: str) -> None:
+    def export(self, segment: AudioSegment, output_filename: str) -> None:
         # Clean up to free up some memory
         # self.synthesizer = None
         # gc.collect()
@@ -749,16 +739,14 @@ class TTS_Convert:
             format = file_format
 
         log(LOG_TYPE.INFO, f'Applying compression:')
-        self.audio_all = self._compress(-20.0, 4.0, 4.5, 5.0, 15.0, self.audio_all)
+        segment = self._compress(-20.0, 4.0, 4.5, 5.0, 15.0, segment)
         # self.audio = normalize(compress_dynamic_range(
         #     self.audio, threshold=-20, release=15))
 
         log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
-        audio_normalized = normalize(self.audio_all)
+        audio_normalized = normalize(segment)
 
         if format == 'mp3':
             audio_normalized.export(output_filename, format=format, bitrate='320k')
         else:
             audio_normalized.export(output_filename, format=format)
-
-        self.audio_all = AudioSegment.empty()
