@@ -116,12 +116,12 @@ class TTS_Item:
 #         self.title = title
 #         self.image_path = image_path
 
-    def get_character_count(self) -> int:
-        count = 0
+#     def get_character_count(self) -> int:
+#         count = 0
 
-        for tts_item in self.tts_items:
-            count += len(tts_item.text)
-        return count
+#         for tts_item in self.tts_items:
+#             count += len(tts_item.text)
+#         return count
 
 
 class TTS_Convert:
@@ -553,29 +553,48 @@ class TTS_Convert:
 
         return final_items
 
-    def speak(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
+    def convert_to_audiosegment(self, tts_items: list[TTS_Item]) -> AudioSegment:
+        final_items = []
+
+        final_items = self.preprocess_items(tts_items)
+
+        segments = AudioSegment.empty()
+
+        for tts_item in final_items:
+            segments += self.speak_tts_item(tts_item)
+
+        return segments
+
+    def preprocess_items(self, tts_items: list[TTS_Item]):
         final_items = []
 
         for tts_item in tts_items:
             if tts_item.text:
                 # self.set_current_speaker(tts_item.speaker)
-                final_items += self.prepare_item(tts_item)
+                item = self.prepare_item(tts_item)
 
-        log(LOG_TYPE.INFO, f'{len(tts_items)} items broken down into {len(final_items)} items')
+                # Check if final segment contains actual speech data
+                if re.search(r'[a-zA-Z0-9]', tts_item.text):
+                    final_items += item
 
+        #log(LOG_TYPE.INFO, f'{len(tts_items)} items broken down into {len(final_items)} items')
+
+        return final_items
+
+    def convert_and_export(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
         time_total = 0.0
         time_needed = 0.0
 
         characters_sum = 0
         characters_total = 0
 
-        for tts_item in final_items:
+        for tts_item in tts_items:
             characters_sum += len(tts_item.text)
 
         segments = AudioSegment.empty()
 
-        for idx, tts_item in enumerate(final_items):
-            log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(final_items)} ({tts_item.speaker}, {tts_item.pause_pre}|{tts_item.pause_post}):{bcolors.ENDC} {tts_item.text}')
+        for idx, tts_item in enumerate(tts_items):
+            log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)} ({tts_item.speaker}, {tts_item.pause_pre}|{tts_item.pause_post}):{bcolors.ENDC} {tts_item.text}')
 
             if time_needed:
                 log(LOG_TYPE.INFO, f'(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))})')
@@ -593,7 +612,7 @@ class TTS_Convert:
 
                 if callback:
                     # Report progress
-                    callback(idx, len(final_items))
+                    callback(idx, len(tts_items))
             except KeyboardInterrupt:
                 log(LOG_TYPE.ERROR, 'Stopped by user.')
                 sys.exit()
@@ -615,43 +634,40 @@ class TTS_Convert:
 
     def speak_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
         segment = AudioSegment.empty()
-        if self.synthesizer is not None:
-            if tts_item.pause_pre > 0:
-                segment += AudioSegment.silent(duration=tts_item.pause_pre)
+        # if self.synthesizer is not None:
+        if tts_item.pause_pre > 0:
+            segment += AudioSegment.silent(duration=tts_item.pause_pre)
 
-            # Check if line contains actual speech data
-            if re.search(r'[a-zA-Z0-9]', tts_item.text):
-                try:
-                    # Suppress tts output
-                    with contextlib.redirect_stdout(None):
-                        wav = self.synthesizer.tts(
-                            text=tts_item.text,
-                            speaker_name=tts_item.speaker,
-                            speaker_wav=None,
-                            language_name=None,
-                            reference_wav=None,
-                            reference_speaker_name=None,
-                        )
-                except:
-                    # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
-                    #     f.write(f'Error synthesizing "{tts_item.text}"\n')
+        try:
+            # Suppress tts output
+            with contextlib.redirect_stdout(None):
+                wav = self.synthesizer.tts(
+                    text=tts_item.text,
+                    speaker_name=tts_item.speaker,
+                    speaker_wav=None,
+                    language_name=None,
+                    reference_wav=None,
+                    reference_speaker_name=None,
+                )
+        except:
+            # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
+            #     f.write(f'Error synthesizing "{tts_item.text}"\n')
 
-                    raise Exception(f'Error synthesizing {tts_item.text}')
-                else:
+            raise Exception(f'Error synthesizing {tts_item.text}')
+        else:
+            speech_segment = self.numpy_to_segment(wav)
 
-                    speech_segment = self.numpy_to_segment(wav)
+            if tts_item.strip_silence:
+                silence = detect_silence(speech_segment, min_silence_len=100, silence_thresh=-50)
+                speech_segment = speech_segment[:silence[-1][0]]
+                speech_segment = speech_segment.apply_gain(-20 - speech_segment.dBFS)
+                # with open('/tmp/tts-rms.log', 'a+') as f:
+                #     f.write(f'{segment.rms}\n')
 
-                    if tts_item.strip_silence:
-                        silence = detect_silence(speech_segment, min_silence_len=100, silence_thresh=-50)
-                        speech_segment = speech_segment[:silence[-1][0]]
-                        speech_segment = speech_segment.apply_gain(-20 - speech_segment.dBFS)
-                        # with open('/tmp/tts-rms.log', 'a+') as f:
-                        #     f.write(f'{segment.rms}\n')
+            segment += speech_segment
 
-                    segment += speech_segment
-
-            if tts_item.pause_post > 0:
-                segment += AudioSegment.silent(duration=tts_item.pause_post)
+        if tts_item.pause_post > 0:
+            segment += AudioSegment.silent(duration=tts_item.pause_post)
 
         return segment
 
