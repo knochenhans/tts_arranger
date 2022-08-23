@@ -731,7 +731,7 @@ class TTS_Convert:
         # self.audio = normalize(compress_dynamic_range(
         #     self.audio, threshold=-20, release=15))
 
-        log(LOG_TYPE.INFO, f'Normalizing, converting and saving as {output_filename}')
+        log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
         audio_normalized = normalize(AudioSegment.from_wav(self.temp_dir.name + '/tts_temp_export_compressed.wav'))
 
         if format == 'mp3':
