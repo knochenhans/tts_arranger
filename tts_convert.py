@@ -249,6 +249,11 @@ class TTS_Convert:
         if speakers:
             self.default_speakers = speakers
 
+    def __del__(self):
+        self.temp_dir.cleanup()
+    #     self.synthesizer = None
+    #     gc.collect()
+
     def initialize(self):
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
 
