@@ -322,7 +322,7 @@ class TTS_Convert:
                 return text[:len(text) - (lenght - 1)]
         return text
 
-    def prepare_item(self, tts_item: TTS_Item) -> list[TTS_Item]:
+    def _prepare_item(self, tts_item: TTS_Item) -> list[TTS_Item]:
         pause_pre = tts_item.pause_pre
         pause_post = tts_item.pause_post
 
@@ -441,7 +441,14 @@ class TTS_Convert:
             tts_items[-1].pause_pre += pause_pre
             tts_items[-1].pause_post += pause_post
 
-        return tts_items
+        # Final check if text still contains actual speech date (to exclude single '"' etc.)
+        final_items = []
+
+        for tts_item in tts_items:
+            if re.search(r'[a-zA-Z0-9]', tts_item.text):
+                final_items.append(tts_item)
+
+        return final_items
 
     def _break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, strip_silence: bool = True, pause_post: int = 0) -> list[TTS_Item]:
         final_items = []
@@ -560,8 +567,6 @@ class TTS_Convert:
         return final_items
 
     def convert_to_audiosegment(self, tts_items: list[TTS_Item]) -> AudioSegment:
-        final_items = []
-
         final_items = self.preprocess_items(tts_items)
 
         segments = AudioSegment.empty()
@@ -576,12 +581,7 @@ class TTS_Convert:
 
         for tts_item in tts_items:
             if tts_item.text:
-                # self.set_current_speaker(tts_item.speaker)
-                item = self.prepare_item(tts_item)
-
-                # Check if final segment contains actual speech data
-                if re.search(r'[a-zA-Z0-9]', tts_item.text):
-                    final_items += item
+                final_items += self._prepare_item(tts_item)
 
         #log(LOG_TYPE.INFO, f'{len(tts_items)} items broken down into {len(final_items)} items')
 
@@ -593,6 +593,8 @@ class TTS_Convert:
 
         characters_sum = 0
         characters_total = 0
+
+        tts_items = self.preprocess_items(tts_items)
 
         for tts_item in tts_items:
             characters_sum += len(tts_item.text)
@@ -616,8 +618,8 @@ class TTS_Convert:
 
                 time_needed = ((time_total / characters_total) * characters_sum) - time_total
 
+                # Report progress
                 if callback:
-                    # Report progress
                     callback(idx, len(tts_items))
             except KeyboardInterrupt:
                 log(LOG_TYPE.ERROR, 'Stopped by user.')
@@ -625,18 +627,10 @@ class TTS_Convert:
             except Exception as e:
                 # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
                 #     f.write(f'Error synthesizing "{output_filename}"\n')
-                log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}"')
+                log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}": {e}')
                 sys.exit()
 
         self.export(segments, output_filename)
-
-    def numpy_to_segment(self, numpy_wav) -> AudioSegment:
-        # Convert tts output wave into pydub segment
-        wav = numpy.array(numpy_wav).astype(numpy.float32)
-        wav_io = io.BytesIO()
-        scipy.io.wavfile.write(wav_io, self.synthesizer.output_sample_rate, wav)
-        wav_io.seek(0)
-        return AudioSegment.from_wav(wav_io)
 
     def speak_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
         segment = AudioSegment.empty()
@@ -661,13 +655,13 @@ class TTS_Convert:
                     reference_wav=None,
                     reference_speaker_name=None,
                 )
-        except:
+        except Exception as e:
             # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
             #     f.write(f'Error synthesizing "{tts_item.text}"\n')
 
-            raise Exception(f'Error synthesizing {tts_item.text}')
+            raise Exception(f'Error synthesizing {tts_item.text}: {e}')
         else:
-            speech_segment = self.numpy_to_segment(wav)
+            speech_segment = self._numpy_to_segment(wav)
 
             if tts_item.strip_silence:
                 silence = detect_silence(speech_segment, min_silence_len=100, silence_thresh=-50)
@@ -683,7 +677,15 @@ class TTS_Convert:
 
         return segment
 
-    def segment_to_numpy(self, segment):
+    def _numpy_to_segment(self, numpy_wav) -> AudioSegment:
+        # Convert tts output wave into pydub segment
+        wav = numpy.array(numpy_wav).astype(numpy.float32)
+        wav_io = io.BytesIO()
+        scipy.io.wavfile.write(wav_io, self.synthesizer.output_sample_rate, wav)
+        wav_io.seek(0)
+        return AudioSegment.from_wav(wav_io)
+
+    def _segment_to_numpy(self, segment):
         samples = [s.get_array_of_samples() for s in segment.split_to_mono()]
 
         fp_arr = np.array(samples).T.astype(np.float64)
@@ -697,7 +699,7 @@ class TTS_Convert:
         if ratio == 1.0:
             print('Signal is unaffected.')
 
-        data = self.segment_to_numpy(segment)
+        data = self._segment_to_numpy(segment)
 
         try:
             ch = len(data[0, ])
@@ -751,7 +753,7 @@ class TTS_Convert:
                 if data[i, k] < 0.0:
                     dataCs_bit[i, k] = -1.0 * dataCs_bit[i, k]
 
-        return self.numpy_to_segment(dataCs_bit)
+        return self._numpy_to_segment(dataCs_bit)
 
     def export(self, segment: AudioSegment, output_filename: str) -> None:
         # Clean up to free up some memory
