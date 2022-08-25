@@ -1,24 +1,25 @@
 import contextlib
 import copy
 import datetime
-from enum import Enum, auto
 import gc
-from math import isclose
+import io
 import os
 import re
 import string
 import sys
+import time
+from enum import Enum, auto
+from math import isclose
+
+import numpy
 import numpy as np
-from pydub import AudioSegment
-from pydub.silence import detect_silence
-from pydub.effects import normalize
+import scipy.io.wavfile
 import TTS
+from pydub import AudioSegment
+from pydub.effects import normalize
+from pydub.silence import detect_silence
 from TTS.utils.manage import ModelManager
 from TTS.utils.synthesizer import Synthesizer
-import time
-import numpy
-import io
-import scipy.io.wavfile
 
 
 class bcolors:
@@ -53,16 +54,17 @@ def log(log_type: LOG_TYPE, message: str):
 
 
 class TTS_Item:
-    def __init__(self, text: str = '', speaker: str = '', pause_pre: int = 0, pause_post: int = 0, strip_silence: bool = True, speaker_idx: int = -1):
+    def __init__(self, text: str = '', speaker: str = '', pause_pre: int = 0, pause_post: int = 0, strip_silence: bool = True, speaker_idx: int = -1, notes = {}):
         self.text = text
         self.speaker = speaker
         self.speaker_idx = speaker_idx
         self.pause_pre = pause_pre
         self.pause_post = pause_post
         self.strip_silence = strip_silence
+        self.notes = notes
 
-    def get_character_count(self) -> int:
-        return len(self.text)
+    # def get_character_count(self) -> int:
+    #     return len(self.text)
 
     # def speak(self, synthesizer: Synthesizer, path='/tmp/') -> AudioSegment:
     #     audio = AudioSegment.empty()
@@ -338,11 +340,15 @@ class TTS_Convert:
 
         text = text.replace(u'\xa0', ' ')
         text = re.sub(r'\.{3,}', r'', text)
+
+        # Merge multiple interpunction symbols
         text = re.sub(r'\.+', r'.', text)
         text = re.sub(r'\?+', r'?', text)
         text = re.sub(r'\!+', r'!', text)
+
         # text = re.sub(r'[\(\)]', r'—', text)
         text = re.sub(r'…', r'', text)
+        text = re.sub(r'´', r'', text)
         text = re.sub(r'[<>]\b', r'', text)
 
         # TODO: Find a more elegant solution
@@ -354,19 +360,23 @@ class TTS_Convert:
         text = re.sub(r'\bIX\b', '9', text)
         text = re.sub(r'\bII\b', '2', text)
         text = re.sub(r'\bV\b', '5', text)
-        text = re.sub(r'\bX\b', '10', text)
+        #text = re.sub(r'\bX\b', '10', text)
 
         # Remove Japanese characters etc.
         text = ''.join(filter(lambda character: ord(character) < 0x3000, text))
 
-        # Words
+        # Word replacing
         text = re.sub(r'\bDOS\b', 'Dos', text)
-        text = re.sub(r'\bDr.\b', 'Doctor', text)
-        text = re.sub(r'\bMr.\b', 'Mister', text)
-        text = re.sub(r'\bMs.\b', 'Miss', text)
-        text = re.sub(r'\bMrs.\b', 'Misses', text)
 
-        text = re.sub(r'\bST\b', 'Estea', text)
+        text = re.sub(r'\bMr\.', 'Mister', text)
+        text = re.sub(r'\bMs\.', 'Miss', text)
+        text = re.sub(r'\bMrs\.', 'Misses', text)
+
+        if self.model.startswith('tts_models/en/'):
+            text = re.sub(r'\bDr\.', 'Doctor', text)
+            text = re.sub(r'\bST\b', 'Estea', text)
+        else:
+            text = re.sub(r'\bDr\.', 'Doktor', text)
 
         # Text emojis
         text = re.sub(r'[:;][\(\)]', '', text)
@@ -374,14 +384,16 @@ class TTS_Convert:
         # Shorten URLs
         text = re.sub(r'(?:https?://)([^/]+)(?:\S+)', r'\1', text)
 
+        text = re.sub(r'\s-\s', r'—', text)
+
         tts_item.text = text
 
         tts_items = [tts_item]
 
         tts_items = self._break_single(tts_items, r'\n', pause_post=250)
-        tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
+        # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
         tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=150)
-        tts_items = self._break_single(tts_items, r'[—–]', pause_post=150)
+        tts_items = self._break_single(tts_items, r'[—–]', pause_post=300)
         # tts_items = self.break_single(tts_items, '…')
 
         # Break items if too long (memory consumption)
@@ -426,8 +438,9 @@ class TTS_Convert:
             # Strip starting punctuation and normalize ending punctuation
             text = text.strip().lstrip(string.punctuation).strip()
 
-            # Add a full stop if necessary
-            # text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)
+            if self.model != 'tts_models/en/vctk/vits':
+                # Add a full stop if necessary to avoid synthesizing problems with some models
+                text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)
 
             if len(text) > 0:
                 if text[-1] in ['.', ':', '!']:
@@ -576,7 +589,7 @@ class TTS_Convert:
 
         return segments
 
-    def preprocess_items(self, tts_items: list[TTS_Item]):
+    def preprocess_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
         final_items = []
 
         for tts_item in tts_items:
