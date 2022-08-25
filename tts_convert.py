@@ -241,8 +241,10 @@ class TTS_Convert:
     # Break lines after number of characters to avoid OOM
     max_chars = 320
 
-    def __init__(self, speakers=[str]) -> None:
-        self.model = 'tts_models/en/vctk/vits'
+    def __init__(self, speakers=[str], model='tts_models/en/vctk/vits', vocoder='', multi=True) -> None:
+        self.model = model
+        self.vocoder = vocoder
+        self.multi = multi
 
         # self.quotes = quotes
         self.current_speaker_idx = 0
@@ -262,17 +264,21 @@ class TTS_Convert:
         #self.temp_dir = tempfile.TemporaryDirectory()
 
         with contextlib.redirect_stdout(None):
-            model_path, config_path, model_item = self.manager.download_model(
-                self.model)
-            # vocoder_path, vocoder_config_path, _ = manager.download_model(model_item["default_vocoder"])
+            model_path, config_path, model_item = self.manager.download_model(self.model)
+
+            vocoder_path = None
+            vocoder_config_path = None
+
+            if self.vocoder:
+                vocoder_path, vocoder_config_path, _ = self.manager.download_model(self.vocoder)
 
             self.synthesizer = Synthesizer(
                 tts_checkpoint=model_path,
                 tts_config_path=config_path,
                 tts_speakers_file=None,
                 tts_languages_file=None,
-                vocoder_checkpoint=None,
-                vocoder_config=None,
+                vocoder_checkpoint=vocoder_path,
+                vocoder_config=vocoder_config_path,
                 encoder_checkpoint=None,
                 encoder_config=None,
                 use_cuda=False,
@@ -640,10 +646,16 @@ class TTS_Convert:
 
         try:
             # Suppress tts output
+
+            speaker = None
+
+            if self.multi:
+                speaker = tts_item.speaker
+
             with contextlib.redirect_stdout(None):
                 wav = self.synthesizer.tts(
                     text=tts_item.text,
-                    speaker_name=tts_item.speaker,
+                    speaker_name=speaker,
                     speaker_wav=None,
                     language_name=None,
                     reference_wav=None,
