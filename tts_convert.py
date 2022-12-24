@@ -8,6 +8,7 @@ import re
 import string
 import sys
 import time
+from dataclasses import dataclass
 from enum import Enum, auto
 from math import isclose
 
@@ -53,77 +54,19 @@ def log(log_type: LOG_TYPE, message: str):
     print(format + message + f'{bcolors.ENDC}')
 
 
+@dataclass
+class TTS_Item_Properties:
+    speaker: str = ''
+    # speaker_idx: int
+    pause_pre: int = 0
+    pause_post: int = 0
+    # notes = notes
+
+
+@dataclass
 class TTS_Item:
-    def __init__(self, text: str = '', speaker: str = '', pause_pre: int = 0, pause_post: int = 0, strip_silence: bool = True, speaker_idx: int = -1, notes = {}):
-        self.text = text
-        self.speaker = speaker
-        self.speaker_idx = speaker_idx
-        self.pause_pre = pause_pre
-        self.pause_post = pause_post
-        self.strip_silence = strip_silence
-        self.notes = notes
-
-    # def get_character_count(self) -> int:
-    #     return len(self.text)
-
-    # def speak(self, synthesizer: Synthesizer, path='/tmp/') -> AudioSegment:
-    #     audio = AudioSegment.empty()
-
-    #     if synthesizer is not None:
-    #         if self.pause_pre > 0:
-    #             audio += AudioSegment.silent(duration=self.pause_pre)
-
-    #         # Check if line contains actual speech data
-    #         # TODO: put into prepare
-    #         # if re.search(r'[a-zA-Z0-9]', self.text):
-    #         try:
-    #             # Suppress tts output
-    #             with contextlib.redirect_stdout(None):
-    #                 wav = synthesizer.tts(
-    #                     text=self.text,
-    #                     speaker_name=self.speaker,
-    #                     speaker_wav=None,
-    #                     language_name='',
-    #                     reference_wav=None,
-    #                     reference_speaker_name=None,
-    #                 )
-    #         except:
-    #             # with open(path + 'tts-error.log', 'a+') as f:
-    #             # f.write(f'Error synthesizing "{self.text}"\n')
-
-    #             raise Exception(f'Error synthesizing "{self.text}"')
-    #         else:
-    #             synthesizer.save_wav(wav, path + '/tts_output.wav')
-
-    #             segment = AudioSegment.from_wav(path + '/tts_output.wav')
-
-    #             if self.strip_silence:
-    #                 silence = detect_silence(segment, 100, -45)
-    #                 segment = segment[:silence[-1][0]]
-    #                 segment = segment.apply_gain(-20 - segment.dBFS)
-    #                 # with open('/tmp/tts-rms.log', 'a+') as f:
-    #                 #     f.write(f'{segment.rms}\n')
-
-    #             audio += segment
-
-    #         if self.pause_post > 0:
-    #             audio += AudioSegment.silent(duration=self.pause_post)
-
-    #     return audio
-
-
-# class TTS_Part:
-#     def __init__(self, tts_items: list = [], title: str = '', image_path: str = ''):
-#         self.tts_items = tts_items
-#         self.title = title
-#         self.image_path = image_path
-
-#     def get_character_count(self) -> int:
-#         count = 0
-
-#         for tts_item in self.tts_items:
-#             count += len(tts_item.text)
-#         return count
+    text: str = ''
+    properties: TTS_Item_Properties = TTS_Item_Properties()
 
 
 class TTS_Convert:
@@ -247,6 +190,8 @@ class TTS_Convert:
         self.model = model
         self.vocoder = vocoder
         self.multi = multi
+        self.silence_length = 100
+        self.silence_threshold = -60
 
         # self.quotes = quotes
         self.current_speaker_idx = 0
@@ -263,7 +208,6 @@ class TTS_Convert:
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
 
         self.manager = ModelManager(os.path.dirname(TTS.__file__) + '/.models.json')
-        #self.temp_dir = tempfile.TemporaryDirectory()
 
         with contextlib.redirect_stdout(None):
             model_path, config_path, model_item = self.manager.download_model(self.model)
@@ -286,33 +230,33 @@ class TTS_Convert:
                 use_cuda=False,
             )
 
-    def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
-        final_items = []
+    # def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
+    #     final_items = []
 
-        for tts_item in tts_items:
-            line = tts_item.text
-            found = False
+    #     for tts_item in tts_items:
+    #         line = tts_item.text
+    #         found = False
 
-            if len(line) > break_after:
-                for b in break_at:
-                    find = line.rfind(b, 0, break_after)
+    #         if len(line) > break_after:
+    #             for b in break_at:
+    #                 find = line.rfind(b, 0, break_after)
 
-                    if find >= 0:
-                        final_items.append(TTS_Item(line[:find].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
-                        final_items += self._find_and_break([TTS_Item(line[find + 1:].strip(), tts_item.speaker, tts_item.pause_pre,
-                                                            tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
-                        found = True
-                        break
+    #                 if find >= 0:
+    #                     final_items.append(TTS_Item(line[:find].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
+    #                     final_items += self._find_and_break([TTS_Item(line[find + 1:].strip(), tts_item.speaker, tts_item.pause_pre,
+    #                                                         tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
+    #                     found = True
+    #                     break
 
-                if not found:
-                    # No save spot for breaking found, do a hard break
-                    final_items.append(TTS_Item(line[:break_after].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
-                    final_items += self._find_and_break([TTS_Item(line[break_after:].strip(), tts_item.speaker, tts_item.pause_pre,
-                                                        tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
-            else:
-                final_items.append(TTS_Item(line.strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
+    #             if not found:
+    #                 # No save spot for breaking found, do a hard break
+    #                 final_items.append(TTS_Item(line[:break_after].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
+    #                 final_items += self._find_and_break([TTS_Item(line[break_after:].strip(), tts_item.speaker, tts_item.pause_pre,
+    #                                                     tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
+    #         else:
+    #             final_items.append(TTS_Item(line.strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
 
-        return final_items
+    #     return final_items
 
     def _minimize_tailing_punctuation(self, text: str) -> str:
         lenght = 0
@@ -325,8 +269,8 @@ class TTS_Convert:
         return text
 
     def _prepare_item(self, tts_item: TTS_Item) -> list[TTS_Item]:
-        pause_pre = tts_item.pause_pre
-        pause_post = tts_item.pause_post
+        pause_pre = tts_item.properties.pause_post
+        pause_post = tts_item.properties.pause_post
 
         # try:
         #     speaker_idx = TTS_Convert.default_speakers.index(tts_item.speaker)
@@ -412,16 +356,13 @@ class TTS_Convert:
         #     tts_items = self.break_speakers(tts_items, ('«', '»'), True, pause_pre=100, pause_post=100)
         #     tts_items = self.break_speakers(tts_items, ('"', '"'), True, pause_pre=100, pause_post=100)
 
-        tts_items = self._break_speakers(
-            tts_items, ('(', ')'), pause_pre=300, pause_post=300)
-        tts_items = self._break_speakers(
-            tts_items, ('—', '—'), pause_pre=300, pause_post=300)
-        tts_items = self._break_speakers(
-            tts_items, ('– ', ' –'), pause_pre=300, pause_post=300)
+        tts_items = self._break_items(tts_items, ('(', ')'), pause_pre=300, pause_post=300)
+        tts_items = self._break_items(tts_items, ('—', '—'), pause_pre=300, pause_post=300)
+        tts_items = self._break_items(tts_items, ('– ', ' –'), pause_pre=300, pause_post=300)
         # tts_items = self.break_start_end(tts_items, ('- ', ' -'), pause_pre=300, pause_post=300)
         # tts_items = self.break_start_end(tts_items, (r'\s[-–—]-?\s', r'\s[-–—]-?\s'), pause_post=150)
         # tts_items = self.break_start_end(tts_items, (r'\(', r'\)'), pause_post=150)
-        tts_items = self._break_speakers(tts_items, ('*', '*'))
+        tts_items = self._break_items(tts_items, ('*', '*'))
 
         for tts_item in tts_items:
             text = tts_item.text
@@ -444,15 +385,15 @@ class TTS_Convert:
 
             if len(text) > 0:
                 if text[-1] in ['.', ':', '!']:
-                    tts_item.pause_post = 500
+                    tts_item.properties.pause_post = 500
                 elif text[-1] in ['?']:
-                    tts_item.pause_post = 750
+                    tts_item.properties.pause_post = 750
                 tts_item.text = text
 
         if len(tts_items) > 0:
-            tts_items[-1].pause_post += 500
-            tts_items[-1].pause_pre += pause_pre
-            tts_items[-1].pause_post += pause_post
+            tts_items[-1].properties.pause_post += 500
+            tts_items[-1].properties.pause_pre += pause_pre
+            tts_items[-1].properties.pause_post += pause_post
 
         # Final check if text still contains actual speech date (to exclude single '"' etc.)
         final_items = []
@@ -463,7 +404,7 @@ class TTS_Convert:
 
         return final_items
 
-    def _break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, strip_silence: bool = True, pause_post: int = 0) -> list[TTS_Item]:
+    def _break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, pause_post: int = 0) -> list[TTS_Item]:
         final_items = []
 
         for tts_item in tts_items:
@@ -479,15 +420,17 @@ class TTS_Convert:
                     if keep == False:
                         length = m.regs[0][1] - m.regs[1][1]
 
+                    item = TTS_Item(text[m.start():m.end() - length])
+
                     # From last group to end of current group
-                    final_items.append(TTS_Item(text[m.start():m.end() - length], tts_item.speaker, strip_silence=strip_silence, pause_post=pause_post))
+                    final_items.append(TTS_Item(text[m.start():m.end() - length], TTS_Item_Properties(speaker=tts_item.properties.speaker, pause_post=pause_post)))
                     last_start = m.end()
 
                 # From end of last group to end of text
                 text = text[last_start:].strip()
 
                 if text:
-                    final_items.append(TTS_Item(text, tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
+                    final_items.append(TTS_Item(text, TTS_Item_Properties(tts_item.properties.speaker, tts_item.properties.pause_pre, tts_item.properties.pause_post)))
 
         return final_items
 
@@ -498,7 +441,7 @@ class TTS_Convert:
             character = text[pos]
         return character
 
-    def _break_speakers(self, tts_items: list[TTS_Item], start_end: tuple = (), use_second_speaker: bool = False, pause_pre: int = 0, pause_post: int = 0) -> list[TTS_Item]:
+    def _break_items(self, tts_items: list[TTS_Item], start_end: tuple = (), pause_pre: int = 0, pause_post: int = 0) -> list[TTS_Item]:
         final_items = []
 
         if tts_items:
@@ -515,8 +458,8 @@ class TTS_Convert:
                 for idx, c in enumerate(tts_item.text):
                     new_item = copy.copy(tts_item)
                     new_item.text = tts_item.text[pos:idx].strip()
-                    new_item.speaker = tts_item.speaker
-                    current_speaker = tts_item.speaker
+                    new_item.properties.speaker = tts_item.properties.speaker
+                    current_speaker = tts_item.properties.speaker
 
                     add_item = False
 
@@ -562,8 +505,8 @@ class TTS_Convert:
                     if add_item:
                         # Add item resulting from breaking
                         if new_item.text:
-                            new_item.pause_pre = pause_pre
-                            new_item.pause_post = pause_post
+                            new_item.properties.pause_pre = pause_pre
+                            new_item.properties.pause_post = pause_post
                             final_items.append(new_item)
                             # print(f'Adding item after breaking: {new_item.text} / {new_item.speaker}')
                         pos = idx + 1
@@ -571,7 +514,7 @@ class TTS_Convert:
                 # Add rest / regular item
                 new_item = copy.copy(tts_item)
                 new_item.text = tts_item.text[pos:].strip()
-                new_item.speaker = current_speaker
+                new_item.properties.speaker = current_speaker
 
                 if new_item.text:
                     # print(f'Adding regular item: {new_item.text} / {new_item.speaker}')
@@ -579,15 +522,16 @@ class TTS_Convert:
 
         return final_items
 
-    def convert_to_audiosegment(self, tts_items: list[TTS_Item]) -> AudioSegment:
-        final_items = self.preprocess_items(tts_items)
+    #TODO: Is this still needed?
+    # def convert_to_audiosegment(self, tts_items: list[TTS_Item]) -> AudioSegment:
+    #     final_items = self.preprocess_items(tts_items)
 
-        segments = AudioSegment.empty()
+    #     segments = AudioSegment.empty()
 
-        for tts_item in final_items:
-            segments += self.speak_tts_item(tts_item)
+    #     for tts_item in final_items:
+    #         segments += self.synthesize_tts_item(tts_item)
 
-        return segments
+    #     return segments
 
     def preprocess_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
         final_items = []
@@ -600,7 +544,7 @@ class TTS_Convert:
 
         return final_items
 
-    def convert_and_export(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
+    def synthesize_and_export(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
         time_total = 0.0
         time_needed = 0.0
 
@@ -615,7 +559,8 @@ class TTS_Convert:
         segments = AudioSegment.empty()
 
         for idx, tts_item in enumerate(tts_items):
-            log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)} ({tts_item.speaker}, {tts_item.pause_pre}|{tts_item.pause_post}):{bcolors.ENDC} {tts_item.text}')
+            log(LOG_TYPE.INFO,
+                f'Synthesizing item {idx + 1} of {len(tts_items)} ({tts_item.properties.speaker}, {tts_item.properties.pause_pre}|{tts_item.properties.pause_post}):{bcolors.ENDC} {tts_item.text}')
 
             if time_needed:
                 log(LOG_TYPE.INFO, f'(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))})')
@@ -623,7 +568,7 @@ class TTS_Convert:
             time_last = time.time()
 
             try:
-                segments += self.speak_tts_item(tts_item)
+                segments += self.synthesize_tts_item(tts_item)
 
                 time_now = time.time()
                 time_total += time_now - time_last
@@ -645,11 +590,11 @@ class TTS_Convert:
 
         self.export(segments, output_filename)
 
-    def speak_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
+    def synthesize_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
         segment = AudioSegment.empty()
         # if self.synthesizer is not None:
-        if tts_item.pause_pre > 0:
-            segment += AudioSegment.silent(duration=tts_item.pause_pre)
+        if tts_item.properties.pause_pre > 0:
+            segment += AudioSegment.silent(duration=tts_item.properties.pause_pre)
 
         try:
             # Suppress tts output
@@ -657,7 +602,7 @@ class TTS_Convert:
             speaker = None
 
             if self.multi:
-                speaker = tts_item.speaker
+                speaker = tts_item.properties.speaker
 
             with contextlib.redirect_stdout(None):
                 wav = self.synthesizer.tts(
@@ -676,17 +621,17 @@ class TTS_Convert:
         else:
             speech_segment = self._numpy_to_segment(wav)
 
-            if tts_item.strip_silence:
-                silence = detect_silence(speech_segment, min_silence_len=100, silence_thresh=-50)
-                speech_segment = speech_segment[:silence[-1][0]]
+            # Strip some silence away to make pauses easier to control
+            silence = detect_silence(speech_segment, min_silence_len=self.silence_length, silence_thresh=self.silence_threshold)
+            speech_segment = speech_segment[:silence[-1][0]]
+
+            if isinstance(speech_segment, AudioSegment):
                 speech_segment = speech_segment.apply_gain(-20 - speech_segment.dBFS)
-                # with open('/tmp/tts-rms.log', 'a+') as f:
-                #     f.write(f'{segment.rms}\n')
 
             segment += speech_segment
 
-        if tts_item.pause_post > 0:
-            segment += AudioSegment.silent(duration=tts_item.pause_post)
+        if tts_item.properties.pause_post > 0:
+            segment += AudioSegment.silent(duration=tts_item.properties.pause_post)
 
         return segment
 
@@ -788,6 +733,11 @@ class TTS_Convert:
 
         log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
         audio_normalized = normalize(segment)
+
+        folder = os.path.dirname(os.path.abspath(output_filename))
+
+        if not os.path.exists(folder):
+            os.makedirs(folder, exist_ok=True)
 
         if format == 'mp3':
             audio_normalized.export(output_filename, format=format, bitrate='320k')

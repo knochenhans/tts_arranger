@@ -1,4 +1,4 @@
-from tts_convert import TTS_Convert, TTS_Item
+from tts_convert import TTS_Convert, TTS_Item, TTS_Item_Properties
 
 t = TTS_Convert()
 t.initialize()
@@ -10,9 +10,12 @@ speaker_2 = TTS_Convert.default_speakers[1]
 
 tts_items = []
 
-tts_items.append(TTS_Item('This is some text', speaker_1))
-tts_items.append(TTS_Item('This is some text with a short pause before and a long after', speaker_1, pause_pre=200, pause_post=2000))
-tts_items.append(TTS_Item('This is a text by another speaker', speaker_2))
-tts_items.append(TTS_Item('The following quote will be read by the second speaker: “Just like this!” he said.', speaker_1))
+p1 = TTS_Item_Properties(speaker_1)
+p2 = TTS_Item_Properties(speaker_2)
 
-t.speak(tts_items, '/tmp/test1.mp3')
+tts_items.append(TTS_Item('This is a test', p1))
+tts_items.append(TTS_Item('This is a test', p2))
+tts_items.append(TTS_Item('This is a test', p2))
+tts_items.append(TTS_Item('This is a test', p1))
+
+t.synthesize_and_export(tts_items, '/tmp/test2.mp3')
