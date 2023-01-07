@@ -94,6 +94,28 @@ class TTS_Convert:
         if speakers:
             self.default_speakers = speakers
 
+        self.replace = {}
+
+        # Load general replace list
+        with open(os.path.dirname(os.path.realpath(__file__)) + '/replace.csv', 'r') as file:
+            reader = csv.reader(file, delimiter='\t')
+            for row in reader:
+                self.replace[row[0]] = row[1]
+
+        # Load language specific replace list
+        lang = 'en'
+
+        model_splitted = model.split('/')
+
+        if model_splitted:
+            if len(model_splitted) >= 2: 
+                lang = model_splitted[1]
+            
+        with open(os.path.dirname(os.path.realpath(__file__)) + f'/replace_{lang}.csv', 'r') as file:
+            reader = csv.reader(file, delimiter='\t')
+            for row in reader:
+                self.replace[row[0]] = row[1]
+
     # def __del__(self):
     #     self.temp_dir.cleanup()
     #     self.synthesizer = None
@@ -177,62 +199,21 @@ class TTS_Convert:
 
         text = tts_item.text
 
-        text = text.replace(u'\xa0', ' ')
-        text = re.sub(r'\.{3,}', r'', text)
-
-        # Merge multiple interpunction symbols
-        text = re.sub(r'\.+', r'.', text)
-        text = re.sub(r'\?+', r'?', text)
-        text = re.sub(r'\!+', r'!', text)
-
-        # text = re.sub(r'[\(\)]', r'—', text)
-        text = re.sub(r'…', r'', text)
-        text = re.sub(r'´', r'', text)
-        text = re.sub(r'[<>]\b', r'', text)
-
-        # TODO: Find a more elegant solution
-        text = re.sub(r'\bVIII\b', '8', text)
-        text = re.sub(r'\bIII\b', '3', text)
-        text = re.sub(r'\bVII\b', '7', text)
-        text = re.sub(r'\bIV\b', '4', text)
-        text = re.sub(r'\bVI\b', '6', text)
-        text = re.sub(r'\bIX\b', '9', text)
-        text = re.sub(r'\bII\b', '2', text)
-        text = re.sub(r'\bV\b', '5', text)
-        #text = re.sub(r'\bX\b', '10', text)
-
         # Remove Japanese characters etc.
         text = ''.join(filter(lambda character: ord(character) < 0x3000, text))
 
-        # Word replacing
-        text = re.sub(r'\bDOS\b', 'Dos', text)
-
-        text = re.sub(r'\bMr\.', 'Mister', text)
-        text = re.sub(r'\bMs\.', 'Miss', text)
-        text = re.sub(r'\bMrs\.', 'Misses', text)
-
-        if self.model.startswith('tts_models/en/'):
-            text = re.sub(r'\bDr\.', 'Doctor', text)
-            text = re.sub(r'\bST\b', 'Estea', text)
-        else:
-            text = re.sub(r'\bDr\.', 'Doktor', text)
-
-        # Text emojis
-        text = re.sub(r'[:;][\(\)]', '', text)
-
-        # Shorten URLs
-        text = re.sub(r'(?:https?://)([^/]+)(?:\S+)', r'\1', text)
-
-        text = re.sub(r'\s-\s', r'—', text)
+        # Replace problematic characters, abbreviations etc
+        for k, v in self.replace.items():
+            text = re.sub(k, v, text)
 
         tts_item.text = text
 
         tts_items = [tts_item]
 
         tts_items = self._break_single(tts_items, r'\n', pause_post=250)
-        # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
         tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=150)
         tts_items = self._break_single(tts_items, r'[—–]', pause_post=300)
+        # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
         # tts_items = self.break_single(tts_items, '…')
 
         # Break items if too long (memory consumption)
