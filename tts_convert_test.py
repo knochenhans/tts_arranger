@@ -7,12 +7,14 @@ class Test(unittest.TestCase):
     def test_break1(self):
         t = TTS_Convert(multi=True)
 
-        tts_item = TTS_Item('This. Is: A t:est!', 'test', 10, 10, True)
+        tts_item = TTS_Item('This. Is: A t:est!', 'p330')
 
         tts_items = t._prepare_item(tts_item)
 
         self.assertEqual(tts_items[0].text, 'This. Is')
-        self.assertEqual(tts_items[1].text, 'A t:est!')
+        self.assertEqual(tts_items[1].length, 150)
+        self.assertEqual(tts_items[2].text, 'A t:est!')
+        self.assertEqual(tts_items[3].length, 500)
 
     # def test_break2(self):
     #     t = TTS_Convert(multi=True)
@@ -68,8 +70,10 @@ Do you mean pidgin Danish, perhaps? :''', '')
 
         tts_items = t._prepare_item(tts_item)
         self.assertEqual(tts_items[0].text, 'Lovely story!')
-        self.assertEqual(tts_items[1].text,
-                         'Do you mean pidgin Danish, perhaps?')
+        self.assertEqual(tts_items[1].length, 500)
+        self.assertEqual(tts_items[2].length, 250)
+        self.assertEqual(tts_items[3].text, 'Do you mean pidgin Danish, perhaps?')
+        self.assertEqual(tts_items[4].length, 750)
 
     # def test_punctuation1(self):
     #     t = TTS_Convert(multi=True)
@@ -86,15 +90,26 @@ Do you mean pidgin Danish, perhaps? :''', '')
     def test_punctuation2(self):
         t = TTS_Convert(multi=True)
 
-        tts_item = TTS_Item(
-            'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II.', '')
+        tts_item = TTS_Item('Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II.', '')
 
         tts_items = t._prepare_item(tts_item)
-        self.assertEqual(
-            tts_items[0].text, 'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure')
-        self.assertEqual(tts_items[1].text,
-                         'not that Ken likely knew this or cared,')
-        self.assertEqual(tts_items[2].text, 'to the little Apple 2.')
+        self.assertEqual(tts_items[0].text, 'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure')
+        self.assertEqual(tts_items[1].length, 300)
+        self.assertEqual(tts_items[2].text, 'not that Ken likely knew this or cared,')
+        self.assertEqual(tts_items[3].length, 300)
+        self.assertEqual(tts_items[4].text, 'to the little Apple 2.')
+        self.assertEqual(tts_items[5].length, 500)
+
+    def test_punctuation3(self):
+        t = TTS_Convert(multi=True)
+
+        tts_item = TTS_Item('a — b.', '')
+
+        tts_items = t._prepare_item(tts_item)
+        self.assertEqual(tts_items[0].text, 'a')
+        self.assertEqual(tts_items[1].length, 300)
+        self.assertEqual(tts_items[2].text, 'b.')
+        self.assertEqual(tts_items[3].length, 500)
 
     # def test_punctuation3(self):
     #     t = TTS_Convert(multi=True)
@@ -102,18 +117,13 @@ Do you mean pidgin Danish, perhaps? :''', '')
     #     tts_item = TTS_Item('Much of what led to designs like The Wizard and the Princess — the lack of understood “best practices” for game design, primitive technology, the simple inexperience of the designers themselves — I’ve already mentioned here and elsewhere. Certainly, as I’ve particularly harped, it was difficult with a Scott Adams- or Hi-Res-Adventures-level parser and world model to find a ground for challenging puzzles that were not unfair; the leap from trivial to impossible being made in one seemingly innocuous hop, as it were.', '')
 
     #     tts_items = t._prepare_item(tts_item)
-    #     self.assertEqual(
-    #         tts_items[0].text, 'Much of what led to designs like The Wizard and the Princess')
+    #     self.assertEqual(tts_items[0].text, 'Much of what led to designs like The Wizard and the Princess')
     #     self.assertEqual(tts_items[1].text, 'the lack of understood')
     #     self.assertEqual(tts_items[2].text, 'best practices')
-    #     self.assertEqual(
-    #         tts_items[3].text, 'for game design, primitive technology, the simple inexperience of the designers themselves')
-    #     self.assertEqual(
-    #         tts_items[4].text, 'I\'ve already mentioned here and elsewhere.')
-    #     self.assertEqual(
-    #         tts_items[5].text, 'Certainly, as I\'ve particularly harped, it was difficult with a Scott Adams- or Hi-Res-Adventures-level parser and world model to find a ground for challenging puzzles that were not unfair')
-    #     self.assertEqual(
-    #         tts_items[6].text, 'the leap from trivial to impossible being made in one seemingly innocuous hop, as it were.')
+    #     self.assertEqual(tts_items[3].text, 'for game design, primitive technology, the simple inexperience of the designers themselves')
+    #     self.assertEqual(tts_items[4].text, 'I\'ve already mentioned here and elsewhere.')
+    #     self.assertEqual(tts_items[5].text, 'Certainly, as I\'ve particularly harped, it was difficult with a Scott Adams- or Hi-Res-Adventures-level parser and world model to find a ground for challenging puzzles that were not unfair')
+    #     self.assertEqual(tts_items[6].text, 'the leap from trivial to impossible being made in one seemingly innocuous hop, as it were.')
 
     # def test_start_end(self):
     #     t = TTS_Convert(multi=True)
