@@ -2,65 +2,22 @@ import contextlib
 import copy
 import csv
 import datetime
-import gc
-import io
 import os
 import re
 import string
 import sys
 import time
 from dataclasses import dataclass
-from enum import Enum, auto
 
-import numpy
-import numpy as np
-import scipy.io.wavfile
 import TTS
 from pydub import AudioSegment
 from pydub.effects import normalize
 from pydub.silence import detect_silence
-from TTS.tts.utils.speakers import SpeakerManager
 from TTS.utils.manage import ModelManager
 from TTS.utils.synthesizer import Synthesizer
+from audio import compress, numpy_to_segment
 
-
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
-class LOG_TYPE(Enum):
-    INFO = auto()
-    WARNING = auto()
-    ERROR = auto()
-
-
-def log(log_type: LOG_TYPE, message: str):
-    format = f'{bcolors.ENDC}'
-
-    if log_type == LOG_TYPE.INFO:
-        format = f'{bcolors.HEADER}'
-    elif log_type == LOG_TYPE.WARNING:
-        format = f'{bcolors.WARNING}'
-    elif log_type == LOG_TYPE.ERROR:
-        format = f'{bcolors.FAIL}'
-
-    print(format + message + f'{bcolors.ENDC}')
-
-
-# @dataclass
-# class TTS_Item_Properties:
-#     speaker: str = ''
-#     speaker_idx: int = 0
-#     pause_pre: int = 0
-#     pause_post: int = 0
+from log import LOG_TYPE, bcolors, log
 
 
 @dataclass
@@ -95,6 +52,8 @@ class TTS_Convert:
         self.pause_question_exclamation = 1000
         self.pause_parentheses = 300
         self.pause_dash = 300
+        self.pause_newline = 250
+        self.pause_colon = 100
 
         if not preferred_speakers:
             preferred_speakers = []
@@ -157,7 +116,8 @@ class TTS_Convert:
             )
 
             # Get speaker list from model
-            self.speakers = list(self.synthesizer.tts_model.speaker_manager.name_to_id.keys())
+            if self.synthesizer.tts_model:
+                self.speakers = list(self.synthesizer.tts_model.speaker_manager.name_to_id.keys())
 
     # def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
     #     final_items = []
@@ -219,8 +179,8 @@ class TTS_Convert:
 
         tts_items = [tts_item]
 
-        tts_items = self._break_single(tts_items, r'\n', pause_post=250)
-        tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=150)
+        tts_items = self._break_single(tts_items, r'\n', pause_post=self.pause_newline)
+        tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=self.pause_colon)
         tts_items = self._break_single(tts_items, r'[—–]', pause_post=self.pause_dash)
         # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
         # tts_items = self.break_single(tts_items, '…')
@@ -438,17 +398,6 @@ class TTS_Convert:
 
         return final_items
 
-    # TODO: Is this still needed?
-    # def convert_to_audiosegment(self, tts_items: list[TTS_Item]) -> AudioSegment:
-    #     final_items = self.preprocess_items(tts_items)
-
-    #     segments = AudioSegment.empty()
-
-    #     for tts_item in final_items:
-    #         segments += self.synthesize_tts_item(tts_item)
-
-    #     return segments
-
     def preprocess_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
         final_items = []
 
@@ -577,7 +526,7 @@ class TTS_Convert:
 
                 raise Exception(f'Error synthesizing "{tts_item.text}: {e}"')
             else:
-                speech_segment = self._numpy_to_segment(wav)
+                speech_segment = numpy_to_segment(wav, self.synthesizer.output_sample_rate)
 
                 # If length is predefined, add padding if necessary
                 if int(speech_segment.duration_seconds / 1000) < tts_item.length:
@@ -597,84 +546,6 @@ class TTS_Convert:
 
         return segment
 
-    def _numpy_to_segment(self, numpy_wav) -> AudioSegment:
-        # Convert tts output wave into pydub segment
-        wav = numpy.array(numpy_wav).astype(numpy.float32)
-        wav_io = io.BytesIO()
-        scipy.io.wavfile.write(wav_io, self.synthesizer.output_sample_rate, wav)
-        wav_io.seek(0)
-        return AudioSegment.from_wav(wav_io)
-
-    def _segment_to_numpy(self, segment):
-        samples = [s.get_array_of_samples() for s in segment.split_to_mono()]
-
-        fp_arr = np.array(samples).T.astype(np.float64)
-        fp_arr /= np.iinfo(samples[0].typecode).max
-
-        return fp_arr
-
-    def _compress(self, threshold: float, ratio: float, makeup: float, attack: float, release: float, segment: AudioSegment) -> AudioSegment:
-        if ratio < 1.0:
-            print('Ratio must be > 1.0 for compression to occur! You are expanding.')
-        if ratio == 1.0:
-            print('Signal is unaffected.')
-
-        data = self._segment_to_numpy(segment)
-
-        try:
-            ch = len(data[0, ])
-        except:
-            ch = 1
-
-        if ch == 1:
-            data = data.reshape(-1, 1)
-        n = len(data)
-
-        data[np.where(data == 0)] = 0.00001
-
-        data_dB = 20 * np.log10(abs(data))
-
-        dataC = data_dB.copy()
-
-        a = np.exp(-np.log10(9) / (44100 * attack * 1.0E-3))
-        re = np.exp(-np.log10(9) / (44100 * release * 1.0E-3))
-
-        log(LOG_TYPE.INFO, '(1/3)')
-
-        for k in range(ch):
-            for i in range(n):
-                if dataC[i, k] > threshold:
-                    dataC[i, k] = threshold + (dataC[i, k] - threshold) / (ratio)
-
-        gain = np.zeros(n)
-        sgain = np.zeros(n)
-
-        gain = np.subtract(dataC, data_dB)
-        sgain = gain.copy()
-
-        log(LOG_TYPE.INFO, '(2/3)')
-
-        for k in range(ch):
-            for i in range(1, n):
-                if sgain[i - 1, k] >= sgain[i, k]:
-                    sgain[i, k] = a * sgain[i - 1, k] + (1 - a) * sgain[i, k]
-                if sgain[i - 1, k] < sgain[i, k]:
-                    sgain[i, k] = re*sgain[i - 1, k] + (1 - re)*sgain[i, k]
-
-        dataCs = np.zeros(n)
-        dataCs = data_dB + sgain + makeup
-
-        dataCs_bit = 10.0 ** ((dataCs) / 20.0)
-
-        log(LOG_TYPE.INFO, '(3/3)')
-
-        for k in range(ch):
-            for i in range(n):
-                if data[i, k] < 0.0:
-                    dataCs_bit[i, k] = -1.0 * dataCs_bit[i, k]
-
-        return self._numpy_to_segment(dataCs_bit)
-
     def export(self, segment: AudioSegment, output_filename: str) -> None:
         # Clean up to free up some memory
         # self.synthesizer = None
@@ -689,7 +560,7 @@ class TTS_Convert:
             format = file_format
 
         log(LOG_TYPE.INFO, f'Applying compression:')
-        segment = self._compress(-20.0, 4.0, 4.5, 5.0, 15.0, segment)
+        segment = compress(-20.0, 4.0, 4.5, 5.0, 15.0, segment, self.synthesizer.output_sample_rate)
         # self.audio = normalize(compress_dynamic_range(
         #     self.audio, threshold=-20, release=15))
 
