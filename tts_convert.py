@@ -34,10 +34,9 @@ class TTS_Item:
 
 
 class TTS_Convert:
-    def __init__(self, model='tts_models/en/vctk/vits', vocoder='', multi=True, preferred_speakers=None) -> None:
+    def __init__(self, model='tts_models/en/vctk/vits', vocoder='', preferred_speakers=None) -> None:
         self.model = model
         self.vocoder = vocoder
-        self.multi = multi
         self.silence_length = 100
         self.silence_threshold = -60
         # self.pause_post_regular =
@@ -505,17 +504,18 @@ class TTS_Convert:
 
                 speaker = ''
 
-                if self.multi:
-                    speaker = tts_item.speaker
+                if self.synthesizer.tts_model:
+                    if self.synthesizer.tts_model.num_speakers > 1:
+                        speaker = tts_item.speaker
 
-                    # Use index if no explicit speaker name is given, wrap around speakers to avoid undefined indexes
-                    if not speaker:
-                        speaker = self.speakers[tts_item.speaker_idx % len(self.speakers)]
+                        # Use index if no explicit speaker name is given, wrap around speakers to avoid undefined indexes
+                        if not speaker:
+                            speaker = self.speakers[tts_item.speaker_idx % len(self.speakers)]
 
-                        if self.preferred_speakers:
-                            # if len(self.preferred_speakers) >= tts_item.speaker_idx:
-                            if self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] in self.speakers:
-                                speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)]
+                            if self.preferred_speakers:
+                                # if len(self.preferred_speakers) >= tts_item.speaker_idx:
+                                if self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] in self.speakers:
+                                    speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)]
 
                 with contextlib.redirect_stdout(None):
                     wav = self.synthesizer.tts(
