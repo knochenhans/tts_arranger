@@ -117,7 +117,8 @@ class TTS_Convert:
 
             # Get speaker list from model
             if self.synthesizer.tts_model:
-                self.speakers = list(self.synthesizer.tts_model.speaker_manager.name_to_id.keys())
+                if self.synthesizer.tts_model.num_speakers > 1:
+                    self.speakers = list(self.synthesizer.tts_model.speaker_manager.name_to_id.keys())
 
     # def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
     #     final_items = []
@@ -478,7 +479,8 @@ class TTS_Convert:
                 time_total += time_now - time_last
                 characters_total += len(tts_item.text)
 
-                time_needed = ((time_total / characters_total) * characters_sum) - time_total
+                if characters_total > 0:
+                    time_needed = ((time_total / characters_total) * characters_sum) - time_total
 
                 # Report progress
                 if callback:
@@ -526,11 +528,11 @@ class TTS_Convert:
 
                 raise Exception(f'Error synthesizing "{tts_item.text}: {e}"')
             else:
-                speech_segment = numpy_to_segment(wav, self.synthesizer.output_sample_rate)
+                speech_segment = numpy_to_segment(wav, int(self.synthesizer.output_sample_rate))
 
                 # If length is predefined, add padding if necessary
-                if int(speech_segment.duration_seconds / 1000) < tts_item.length:
-                    segment += AudioSegment.silent(duration=tts_item.length - int(speech_segment.duration_seconds / 1000))
+                if int(speech_segment.duration_seconds * 1000) < tts_item.length:
+                    speech_segment += AudioSegment.silent(int(tts_item.length - speech_segment.duration_seconds * 1000), int(self.synthesizer.output_sample_rate))
                 else:
                     # Strip some silence away to make pauses easier to control
                     silence = detect_silence(speech_segment, min_silence_len=self.silence_length, silence_thresh=self.silence_threshold)
@@ -542,7 +544,7 @@ class TTS_Convert:
                 segment += speech_segment
         else:
             if tts_item.length > 0:
-                segment += AudioSegment.silent(duration=tts_item.length)
+                segment += AudioSegment.silent(tts_item.length, int(self.synthesizer.output_sample_rate))
 
         return segment
 
