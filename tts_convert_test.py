@@ -14,7 +14,7 @@ class Test(unittest.TestCase):
         self.assertEqual(tts_items[0].text, 'This. Is')
         self.assertEqual(tts_items[1].length, 150)
         self.assertEqual(tts_items[2].text, 'A t:est!')
-        self.assertEqual(tts_items[3].length, 500)
+        self.assertEqual(tts_items[3].length, 1000)
 
     # def test_break2(self):
     #     t = TTS_Convert(multi=True)
@@ -55,8 +55,7 @@ class Test(unittest.TestCase):
     def test_url(self):
         t = TTS_Convert()
 
-        tts_item = TTS_Item(
-            'https://stackoverflow.com/questions/17730788/search-and-replace-with-whole-word-only-option', '')
+        tts_item = TTS_Item('https://stackoverflow.com/questions/17730788/search-and-replace-with-whole-word-only-option', '')
 
         tts_items = t._prepare_item(tts_item)
         self.assertEqual(tts_items[0].text, 'stackoverflow.com')
@@ -64,16 +63,15 @@ class Test(unittest.TestCase):
     def test_endings(self):
         t = TTS_Convert()
 
-        tts_item = TTS_Item(
-            '''Lovely story!
+        tts_item = TTS_Item('''Lovely story!
 Do you mean pidgin Danish, perhaps? :''', '')
 
         tts_items = t._prepare_item(tts_item)
         self.assertEqual(tts_items[0].text, 'Lovely story!')
-        self.assertEqual(tts_items[1].length, 500)
+        self.assertEqual(tts_items[1].length, 1000)
         self.assertEqual(tts_items[2].length, 250)
         self.assertEqual(tts_items[3].text, 'Do you mean pidgin Danish, perhaps?')
-        self.assertEqual(tts_items[4].length, 750)
+        self.assertEqual(tts_items[4].length, 1000)
 
     # def test_punctuation1(self):
     #     t = TTS_Convert(multi=True)
@@ -98,7 +96,7 @@ Do you mean pidgin Danish, perhaps? :''', '')
         self.assertEqual(tts_items[2].text, 'not that Ken likely knew this or cared,')
         self.assertEqual(tts_items[3].length, 300)
         self.assertEqual(tts_items[4].text, 'to the little Apple 2.')
-        self.assertEqual(tts_items[5].length, 500)
+        self.assertEqual(tts_items[5].length, 750)
 
     def test_punctuation3(self):
         t = TTS_Convert(multi=True)
@@ -109,7 +107,7 @@ Do you mean pidgin Danish, perhaps? :''', '')
         self.assertEqual(tts_items[0].text, 'a')
         self.assertEqual(tts_items[1].length, 300)
         self.assertEqual(tts_items[2].text, 'b.')
-        self.assertEqual(tts_items[3].length, 500)
+        self.assertEqual(tts_items[3].length, 750)
 
     # def test_punctuation3(self):
     #     t = TTS_Convert(multi=True)
