@@ -70,6 +70,11 @@ class TTS_Item:
     speaker_idx: int = 0
     length: int = 0
 
+    def __post_init__(self):
+        # Mark pauses by invalidating speaker index
+        if self.text == '' and self.length > 0:
+            self.speaker_idx = -1
+
 
 class TTS_Convert:
     def __init__(self, model='tts_models/en/vctk/vits', vocoder='', multi=True, preferred_speakers=None) -> None:
