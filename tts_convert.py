@@ -111,7 +111,7 @@ class TTS_Convert:
         self.replace = {}
 
         # Load general replace list
-        with open(os.path.dirname(os.path.realpath(__file__)) + '/replace.csv', 'r') as file:
+        with open(os.path.dirname(os.path.realpath(__file__)) + '/replace', 'r') as file:
             reader = csv.reader(file, delimiter='\t')
             for row in reader:
                 self.replace[row[0]] = row[1]
@@ -125,7 +125,7 @@ class TTS_Convert:
             if len(model_splitted) >= 2:
                 lang = model_splitted[1]
 
-        with open(os.path.dirname(os.path.realpath(__file__)) + f'/replace_{lang}.csv', 'r') as file:
+        with open(os.path.dirname(os.path.realpath(__file__)) + f'/replace_{lang}', 'r') as file:
             reader = csv.reader(file, delimiter='\t')
             for row in reader:
                 self.replace[row[0]] = row[1]
