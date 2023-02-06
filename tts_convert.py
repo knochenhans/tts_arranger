@@ -457,6 +457,44 @@ class TTS_Convert:
 
         #log(LOG_TYPE.INFO, f'{len(tts_items)} items broken down into {len(final_items)} items')
 
+        return self._merge_similar_items(final_items)
+
+    def _merge_similar_items(self, items=[]) -> list:
+        final_items = []
+
+        if items:
+            start_item = -1
+            merged_item = TTS_Item()
+
+            for i, item in enumerate(items):
+                if start_item < 0:
+                    # Scanning not started
+                    start_item = i
+                    merged_item = item
+                else:
+                    # Scanning started
+                    if merged_item.speaker == item.speaker and merged_item.speaker_idx == item.speaker_idx:
+                        # Starting item and current are similar, add to merge item text and length
+                        merged_item.text += item.text
+                        merged_item.length += item.length
+                    else:
+                        # Starting item and current are not similar, add last and current item, set this item as new starting item
+                        if final_items:
+                            if final_items[-1] != merged_item:
+                                final_items.append(merged_item)
+                        else:
+                            final_items.append(merged_item)
+                        final_items.append(item)
+                        merged_item = item
+                        start_item = i
+
+                if i == len(items) - 1:
+                    if final_items:
+                        if final_items[-1] != merged_item:
+                            final_items.append(merged_item)
+                    else:
+                        final_items.append(merged_item)
+
         return final_items
 
     def synthesize_and_export(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
