@@ -15,8 +15,8 @@ from pydub.effects import normalize
 from pydub.silence import detect_silence
 from TTS.utils.manage import ModelManager
 from TTS.utils.synthesizer import Synthesizer
-from audio import compress, numpy_to_segment
 
+from audio import compress, numpy_to_segment
 from log import LOG_TYPE, bcolors, log
 
 
@@ -33,7 +33,7 @@ class TTS_Item:
             self.speaker_idx = -1
 
 
-class TTS_Convert:
+class TTS_Arranger:
     def __init__(self, model='tts_models/en/vctk/vits', vocoder='', preferred_speakers=None) -> None:
         self.model = model
         self.vocoder = vocoder
@@ -159,7 +159,7 @@ class TTS_Convert:
 
     def _prepare_item(self, tts_item: TTS_Item) -> list[TTS_Item]:
         # try:
-        #     speaker_idx = TTS_Convert.default_speakers.index(tts_item.speaker)
+        #     speaker_idx = TTS_Arranger.default_speakers.index(tts_item.speaker)
         # except ValueError:
         #     log(LOG_TYPE.ERROR, f'Speaker index "{tts_item.speaker}" is unknown, falling back to default speaker.')
         #     speaker_idx = 0

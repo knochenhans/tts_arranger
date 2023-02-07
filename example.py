@@ -1,7 +1,7 @@
-from tts_convert import TTS_Convert, TTS_Item
+from tts_arranger import TTS_Arranger, TTS_Item
 
-t = TTS_Convert()
-# t = TTS_Convert(model='tts_models/de/thorsten/tacotron2-DDC', vocoder='vocoder_models/de/thorsten/hifigan_v1', multi=False)
+t = TTS_Arranger()
+# t = TTS_Arranger(model='tts_models/de/thorsten/tacotron2-DDC', vocoder='vocoder_models/de/thorsten/hifigan_v1')
 t.initialize()
 
 tts_items = []
