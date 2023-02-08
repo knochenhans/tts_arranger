@@ -8,6 +8,7 @@ import string
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import TTS
 from pydub import AudioSegment
@@ -16,12 +17,21 @@ from pydub.silence import detect_silence
 from TTS.utils.manage import ModelManager
 from TTS.utils.synthesizer import Synthesizer
 
-from audio import compress, numpy_to_segment
-from log import LOG_TYPE, bcolors, log
+from .utils.audio import compress, numpy_to_segment
+from .utils.log import LOG_TYPE, bcolors, log
 
 
 @dataclass
 class TTS_Item:
+    """
+    Represents a tts item containing various information
+
+    Args:
+        text (str): Text to be synthesized, can be left empty in combination with length > 0 to create pause
+        speaker (str): speaker name to be used
+        speaker_idx (int): speaker index to be used if no speaker name is given; wraps around based on the actual available speaker indexes per model
+        length (int): minimum length in milliseconds; will be padded if actual synthesized text fragment is shorter and ignored if it is longer     
+    """
     text: str = ''
     speaker: str = ''
     speaker_idx: int = 0
@@ -34,6 +44,15 @@ class TTS_Item:
 
 
 class TTS_Arranger:
+    """
+    Offers functionality for processing a list of TTS_Items
+
+    Args:
+        model (str): model to be used, defaults to 'tts_models/en/vctk/vits'
+        vocoder (str): vocoder to be used
+        preferred_speakers (list): list containing strings of preferred speaker names to be used instead of all available speakers of the selected model (not yet implemented)
+    """
+
     def __init__(self, model='tts_models/en/vctk/vits', vocoder='', preferred_speakers=None) -> None:
         self.model = model
         self.vocoder = vocoder
@@ -68,8 +87,10 @@ class TTS_Arranger:
 
         self.replace = {}
 
+        source_dir = Path(__file__).resolve().parent
+
         # Load general replace list
-        with open(os.path.dirname(os.path.realpath(__file__)) + '/replace', 'r') as file:
+        with open(str(source_dir) + '/data/replace', 'r') as file:
             reader = csv.reader(file, delimiter='\t')
             for row in reader:
                 self.replace[row[0]] = row[1]
@@ -83,7 +104,7 @@ class TTS_Arranger:
             if len(model_splitted) >= 2:
                 lang = model_splitted[1]
 
-        with open(os.path.dirname(os.path.realpath(__file__)) + f'/replace_{lang}', 'r') as file:
+        with open(str(source_dir) + f'/data/replace_{lang}', 'r') as file:
             reader = csv.reader(file, delimiter='\t')
             for row in reader:
                 self.replace[row[0]] = row[1]
@@ -94,9 +115,11 @@ class TTS_Arranger:
     #     gc.collect()
 
     def initialize(self):
+        """
+        Initializes the TTS system and fills the speaker list
+        """
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
-
-        self.manager = ModelManager(os.path.dirname(TTS.__file__) + '/.models.json')
+        self.manager = ModelManager(str(Path(TTS.__file__).resolve().parent) + '/.models.json')
 
         with contextlib.redirect_stdout(None):
             model_path, config_path, model_item = self.manager.download_model(self.model)
@@ -148,6 +171,9 @@ class TTS_Arranger:
     #     return final_items
 
     def _minimize_tailing_punctuation(self, text: str) -> str:
+        """
+        Minimize tailing punctuation to work around issues with some models
+        """
         lenght = 0
 
         for i in reversed(text):
@@ -158,6 +184,9 @@ class TTS_Arranger:
         return text
 
     def _prepare_item(self, tts_item: TTS_Item) -> list[TTS_Item]:
+        """
+        Preprocess item in various ways (character replacement, splitting, etc.) and return a list of resulting items
+        """
         # try:
         #     speaker_idx = TTS_Arranger.default_speakers.index(tts_item.speaker)
         # except ValueError:
@@ -250,6 +279,9 @@ class TTS_Arranger:
         return final_items
 
     def _break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, pause_post: int = 0) -> list[TTS_Item]:
+        """
+        Break item at specific single character
+        """
         final_items = []
 
         for tts_item in tts_items:
@@ -287,6 +319,9 @@ class TTS_Arranger:
         return final_items
 
     def _get_character(self, text: str, pos: int) -> str:
+        """
+        Get character at a specific position in a string
+        """
         character = ''
 
         if pos > 0 and pos < len(text):
@@ -294,6 +329,9 @@ class TTS_Arranger:
         return character
 
     def _break_items(self, tts_items: list[TTS_Item], start_end: tuple = (), pause_pre: int = 0, pause_post: int = 0) -> list[TTS_Item]:
+        """
+        Break items in list of items based on opening and closing characters (like parenthesis) and return new list
+        """
         final_items = []
 
         if tts_items:
@@ -399,6 +437,9 @@ class TTS_Arranger:
         return final_items
 
     def preprocess_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
+        """
+        Preprocess items
+        """
         final_items = []
 
         for tts_item in tts_items:
@@ -409,6 +450,9 @@ class TTS_Arranger:
         return self._merge_similar_items(final_items)
 
     def _merge_similar_items(self, items=[]) -> list:
+        """
+        Merge similar items for smoother synthesizing and avoiding unwanted pauses
+        """
         final_items = []
 
         if items:
@@ -446,7 +490,15 @@ class TTS_Arranger:
 
         return final_items
 
-    def synthesize_and_export(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
+    def synthesize_and_write(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
+        """
+        Synthesize and write list of items as an audio file
+
+        Args:
+            tts_items (list[TTS_Item]): List of items to be synthesized
+            output_filename (str): Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
+            callback (function): Reference to function to be called after synthesizing of an item if finished, parameters: index (int), total number of items (int)
+        """
         time_total = 0.0
         time_needed = 0.0
 
@@ -493,9 +545,12 @@ class TTS_Arranger:
                 log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}": {e}')
                 sys.exit()
 
-        self.export(segments, output_filename)
+        self.write(segments, output_filename)
 
     def synthesize_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
+        """
+        Synthesize a single item and return a pydub AudioSegment
+        """
         segment = AudioSegment.empty()
         # if self.synthesizer is not None:
         if tts_item.text:
@@ -548,7 +603,10 @@ class TTS_Arranger:
 
         return segment
 
-    def export(self, segment: AudioSegment, output_filename: str) -> None:
+    def write(self, segment: AudioSegment, output_filename: str) -> None:
+        """
+        Compress, convert and write AudioSegment as a given output file path and name
+        """
         # Clean up to free up some memory
         # self.synthesizer = None
         # gc.collect()

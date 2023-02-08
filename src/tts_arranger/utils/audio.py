@@ -4,7 +4,7 @@ import numpy as np
 import scipy.io.wavfile
 from pydub import AudioSegment
 
-from log import LOG_TYPE, log
+from .log import LOG_TYPE, log
 
 
 def numpy_to_segment(numpy_wav, sample_rate) -> AudioSegment:

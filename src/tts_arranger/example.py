@@ -7,7 +7,7 @@ t.initialize()
 tts_items = []
 
 tts_items.append(TTS_Item('This is a test', 'p330'))
-tts_items.append(TTS_Item('This is a test', 'ED\n', length=5000))
-tts_items.append(TTS_Item(length=2000))
+tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 'ED\n', length=10000))
+tts_items.append(TTS_Item(length=2000)) # Insert pause
 
-t.synthesize_and_export(tts_items, '/tmp/test2.mp3')
+t.synthesize_and_write(tts_items, '/tmp/test2.mp3')

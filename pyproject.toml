@@ -1,0 +1,29 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+authors = [
+  {name = "Andre Jonas", email = "nipsky@gmail.com"},
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+description = "Simplifies arranging text fragments with multiple speakers and processing it with coqui.ai TTS"
+name = "tts_arranger"
+readme = "README.md"
+requires-python = ">=3.7"
+version = "0.0.1"
+
+dependencies = [
+  "numpy>=1.22.4",
+  "pydub>=0.25.1",
+  "scipy>=1.9.0",
+  "TTS>=0.10.2",
+]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/knochenhans/tts_arranger/issues"
+"Homepage" = "https://github.com/knochenhans/tts_arranger"
