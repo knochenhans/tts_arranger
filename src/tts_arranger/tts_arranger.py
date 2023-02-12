@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import TTS
+from num2words import num2words
 from pydub import AudioSegment
 from pydub.effects import normalize
 from pydub.silence import detect_silence
@@ -122,7 +123,7 @@ class TTS_Arranger:
         self.manager = ModelManager(str(Path(TTS.__file__).resolve().parent) + '/.models.json')
 
         with contextlib.redirect_stdout(None):
-            model_path, config_path, model_item = self.manager.download_model(self.model)
+            model_path, config_path, _ = self.manager.download_model(self.model)
 
             vocoder_path = ''
             vocoder_config_path = ''
@@ -192,6 +193,39 @@ class TTS_Arranger:
         # except ValueError:
         #     log(LOG_TYPE.ERROR, f'Speaker index "{tts_item.speaker}" is unknown, falling back to default speaker.')
         #     speaker_idx = 0
+
+        # Some tweaks for tts_models/de/thorsten/tacotron2-DDC
+        if self.model == 'tts_models/de/thorsten/tacotron2-DDC':
+            str_months = ('Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember')
+
+            # Ordinal numbers
+            start = 0
+            while result := re.search(r'\b[0-9]+\.', tts_item.text[start:]):
+                len_original = 0
+                numword = ''
+
+                # Only when followed by month names
+                if tts_item.text[start + result.span()[1]:].strip().startswith(str_months):
+                    match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
+                    len_original = len(match)
+                    numword = num2words(match, lang='de', to='ordinal')
+                    tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
+                start += result.span()[1] - len_original + len(numword)
+
+            # Year numbers
+            start = 0
+            while result := re.search(r'\b[0-9]{4,4}\b', tts_item.text[start:]):
+                len_original = 0
+                numword = ''
+
+                if tts_item.text[:start + result.span()[0]].strip().endswith(('Jahr', 'in', 'vor', 'nach') + str_months):
+                    match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
+
+                    if int(match) < 2000:
+                        len_original = len(match)
+                        numword = num2words(match, lang='de', to='year')
+                        tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
+                start += result.span()[1] - len_original + len(numword)
 
         # Some general preprocessing
 
