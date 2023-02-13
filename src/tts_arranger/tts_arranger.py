@@ -551,7 +551,7 @@ class TTS_Arranger:
 
         for idx, tts_item in enumerate(tts_items):
             if tts_item.text:
-                log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)} ({tts_item.speaker}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)} "({tts_item.speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
             else:
                 log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
 
