@@ -188,127 +188,130 @@ class TTS_Arranger:
         """
         Preprocess item in various ways (character replacement, splitting, etc.) and return a list of resulting items
         """
-        # try:
-        #     speaker_idx = TTS_Arranger.default_speakers.index(tts_item.speaker)
-        # except ValueError:
-        #     log(LOG_TYPE.ERROR, f'Speaker index "{tts_item.speaker}" is unknown, falling back to default speaker.')
-        #     speaker_idx = 0
 
-        # Some tweaks for tts_models/de/thorsten/tacotron2-DDC
-        if self.model == 'tts_models/de/thorsten/tacotron2-DDC':
-            str_months = ('Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember')
+        if tts_item.speaker_idx != -1:
+            # try:
+            #     speaker_idx = TTS_Arranger.default_speakers.index(tts_item.speaker)
+            # except ValueError:
+            #     log(LOG_TYPE.ERROR, f'Speaker index "{tts_item.speaker}" is unknown, falling back to default speaker.')
+            #     speaker_idx = 0
 
-            # Ordinal numbers
-            start = 0
-            while result := re.search(r'\b[0-9]+\.', tts_item.text[start:]):
-                len_original = 0
-                numword = ''
+            # Some tweaks for tts_models/de/thorsten/tacotron2-DDC
+            if self.model == 'tts_models/de/thorsten/tacotron2-DDC':
+                str_months = ('Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember')
 
-                # Only when followed by month names
-                if tts_item.text[start + result.span()[1]:].strip().startswith(str_months):
-                    match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
-                    len_original = len(match)
-                    numword = num2words(match, lang='de', to='ordinal')
-                    tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
-                start += result.span()[1] - len_original + len(numword)
-
-            # Year numbers
-            start = 0
-            while result := re.search(r'\b[0-9]{4,4}\b', tts_item.text[start:]):
-                len_original = 0
-                numword = ''
-
-                if tts_item.text[:start + result.span()[0]].strip().endswith(('Jahr', 'in', 'vor', 'nach') + str_months):
-                    match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
-
-                    if int(match) < 2000:
+                # Ordinal numbers
+                start = 0
+                while result := re.search(r'\b[0-9]+\.', tts_item.text[start:]):
+                    len_original = 0
+                    numword = ''
+                    # When followed by month names
+                    if tts_item.text[start + result.span()[1]:].strip().startswith(str_months):
+                        match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
                         len_original = len(match)
-                        numword = num2words(match, lang='de', to='year')
+                        numword = num2words(match, lang='de', to='ordinal')
                         tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
-                start += result.span()[1] - len_original + len(numword)
+                    start += result.span()[1] - len_original + len(numword)
 
-        # Some general preprocessing
+                # Year numbers
+                start = 0
+                while result := re.search(r'\b[0-9]{4,4}\b', tts_item.text[start:]):
+                    len_original = 0
+                    numword = ''
+                    # When followed by month names
+                    if tts_item.text[:start + result.span()[0]].strip().endswith(('Jahr', 'in', 'vor', 'nach') + str_months):
+                        match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
 
-        text = tts_item.text
+                        if int(match) < 2000:
+                            len_original = len(match)
+                            numword = num2words(match, lang='de', to='year')
+                            tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
+                    start += result.span()[1] - len_original + len(numword)
 
-        # Remove Japanese characters etc.
-        text = ''.join(filter(lambda character: ord(character) < 0x3000, text))
+            # Some general preprocessing
 
-        # Replace problematic characters, abbreviations etc
-        for k, v in self.replace.items():
-            text = re.sub(k, v, text)
-
-        tts_item.text = text
-
-        tts_items = [tts_item]
-
-        tts_items = self._break_single(tts_items, r'\n', pause_post=self.pause_newline)
-        tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=self.pause_colon)
-        tts_items = self._break_single(tts_items, r'[—–]', pause_post=self.pause_dash)
-        # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
-        # tts_items = self.break_single(tts_items, '…')
-
-        # Break items if too long (memory consumption)
-        # TODO: disabled for now as recent versions of TTS don’t seem to leak memory that much
-        # tts_items = self.find_and_break(tts_items, [
-        #                                 '. ', '! ', '? ', ': ', ';', ') ', '] ', '} ', ', ', ' '], self.max_chars)
-
-        # For quotes, use a secondary speaker by shifting the current index up by 1
-        # TODO: disabled for now because it breaks the flow too much
-        # if self.quotes:
-        #     tts_items = self.break_speakers(tts_items, ('“', '”'), True, pause_pre=100, pause_post=100)
-        #     tts_items = self.break_speakers(tts_items, ('‘', '’'), True, pause_pre=100, pause_post=100)
-        #     tts_items = self.break_speakers(tts_items, ('„', '“'), True, pause_pre=100, pause_post=100)
-        #     tts_items = self.break_speakers(tts_items, ('‚', '‘'), True, pause_pre=100, pause_post=100)
-        #     tts_items = self.break_speakers(tts_items, ('»', '«'), True, pause_pre=100, pause_post=100)
-        #     tts_items = self.break_speakers(tts_items, ('«', '»'), True, pause_pre=100, pause_post=100)
-        #     tts_items = self.break_speakers(tts_items, ('"', '"'), True, pause_pre=100, pause_post=100)
-
-        tts_items = self._break_items(tts_items, ('(', ')'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
-        tts_items = self._break_items(tts_items, ('—', '—'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
-        tts_items = self._break_items(tts_items, ('– ', ' –'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
-        # tts_items = self.break_start_end(tts_items, ('- ', ' -'), pause_pre=300, pause_post=300)
-        # tts_items = self.break_start_end(tts_items, (r'\s[-–—]-?\s', r'\s[-–—]-?\s'), pause_post=150)
-        # tts_items = self.break_start_end(tts_items, (r'\(', r'\)'), pause_post=150)
-        tts_items = self._break_items(tts_items, ('*', '*'))
-
-        final_items = []
-
-        for tts_item in tts_items:
             text = tts_item.text
 
-            if not text and tts_item.length > 0:
-                final_items.append(tts_item)
+            # Remove Japanese characters etc.
+            text = ''.join(filter(lambda character: ord(character) < 0x3000, text))
 
-            # text = re.sub(r'([\.\?\!;:]) ', r'\1\n', text)
-            text = re.sub(r'[–—]', r'-', text)
-            text = re.sub(r'[„“”]', r'"', text)
-            text = re.sub(r'[‘’]', r"'", text)
+            # Replace problematic characters, abbreviations etc
+            for k, v in self.replace.items():
+                text = re.sub(k, v, text)
 
-            # Remove all remaining punctuation after first occurrence
-            # text = re.sub(r'([\.\?\!;:])\s?[\.\?\!;:,\)\"\'.\]]+', r'\1', text)
-            text = self._minimize_tailing_punctuation(text)
+            tts_item.text = text
 
-            # Strip starting punctuation and normalize ending punctuation
-            text = text.strip().lstrip(string.punctuation).strip()
+            tts_items = [tts_item]
 
-            if self.model != 'tts_models/en/vctk/vits':
-                # Add a full stop if necessary to avoid synthesizing problems with some models
-                text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)
+            tts_items = self._break_single(tts_items, r'\n', pause_post=self.pause_newline)
+            tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=self.pause_colon)
+            tts_items = self._break_single(tts_items, r'[—–]', pause_post=self.pause_dash)
+            # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
+            # tts_items = self.break_single(tts_items, '…')
 
-            if len(text) > 0:
-                if re.search(r'[a-zA-Z0-9]', text):
-                    tts_item.text = text
+            # Break items if too long (memory consumption)
+            # TODO: disabled for now as recent versions of TTS don’t seem to leak memory that much
+            # tts_items = self.find_and_break(tts_items, [
+            #                                 '. ', '! ', '? ', ': ', ';', ') ', '] ', '} ', ', ', ' '], self.max_chars)
+
+            # For quotes, use a secondary speaker by shifting the current index up by 1
+            # TODO: disabled for now because it breaks the flow too much
+            # if self.quotes:
+            #     tts_items = self.break_speakers(tts_items, ('“', '”'), True, pause_pre=100, pause_post=100)
+            #     tts_items = self.break_speakers(tts_items, ('‘', '’'), True, pause_pre=100, pause_post=100)
+            #     tts_items = self.break_speakers(tts_items, ('„', '“'), True, pause_pre=100, pause_post=100)
+            #     tts_items = self.break_speakers(tts_items, ('‚', '‘'), True, pause_pre=100, pause_post=100)
+            #     tts_items = self.break_speakers(tts_items, ('»', '«'), True, pause_pre=100, pause_post=100)
+            #     tts_items = self.break_speakers(tts_items, ('«', '»'), True, pause_pre=100, pause_post=100)
+            #     tts_items = self.break_speakers(tts_items, ('"', '"'), True, pause_pre=100, pause_post=100)
+
+            tts_items = self._break_items(tts_items, ('(', ')'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
+            tts_items = self._break_items(tts_items, ('—', '—'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
+            tts_items = self._break_items(tts_items, ('– ', ' –'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
+            # tts_items = self.break_start_end(tts_items, ('- ', ' -'), pause_pre=300, pause_post=300)
+            # tts_items = self.break_start_end(tts_items, (r'\s[-–—]-?\s', r'\s[-–—]-?\s'), pause_post=150)
+            # tts_items = self.break_start_end(tts_items, (r'\(', r'\)'), pause_post=150)
+            tts_items = self._break_items(tts_items, ('*', '*'))
+
+            final_items = []
+
+            for tts_item in tts_items:
+                text = tts_item.text
+
+                if not text and tts_item.length > 0:
                     final_items.append(tts_item)
 
-                    if text[-1] in ['.', ':']:
-                        final_items.append(TTS_Item(length=self.pause_sentence))
-                    elif text[-1] in ['!', '?']:
-                        final_items.append(TTS_Item(length=self.pause_question_exclamation))
+                # text = re.sub(r'([\.\?\!;:]) ', r'\1\n', text)
+                text = re.sub(r'[–—]', r'-', text)
+                text = re.sub(r'[„“”]', r'"', text)
+                text = re.sub(r'[‘’]', r"'", text)
 
-        # if len(final_items) > 0:
-        #     tts_items[-1].properties.pause_pre += pause_pre
-        #     tts_items[-1].properties.pause_post += pause_post
+                # Remove all remaining punctuation after first occurrence
+                # text = re.sub(r'([\.\?\!;:])\s?[\.\?\!;:,\)\"\'.\]]+', r'\1', text)
+                text = self._minimize_tailing_punctuation(text)
+
+                # Strip starting punctuation and normalize ending punctuation
+                text = text.strip().lstrip(string.punctuation).strip()
+
+                if self.model != 'tts_models/en/vctk/vits':
+                    # Add a full stop if necessary to avoid synthesizing problems with some models
+                    text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)
+
+                if len(text) > 0:
+                    if re.search(r'[a-zA-Z0-9]', text):
+                        tts_item.text = text
+                        final_items.append(tts_item)
+
+                        if text[-1] in ['.', ':']:
+                            final_items.append(TTS_Item(length=self.pause_sentence))
+                        elif text[-1] in ['!', '?']:
+                            final_items.append(TTS_Item(length=self.pause_question_exclamation))
+
+            # if len(final_items) > 0:
+            #     tts_items[-1].properties.pause_pre += pause_pre
+            #     tts_items[-1].properties.pause_post += pause_post
+        else:
+            final_items = [tts_item]
 
         return final_items
 
@@ -475,13 +478,12 @@ class TTS_Arranger:
         Preprocess items
         """
         final_items = []
+        merged_items = self._merge_similar_items(tts_items)
 
-        for tts_item in tts_items:
+        for tts_item in merged_items:
             final_items += self._prepare_item(tts_item)
 
-        #log(LOG_TYPE.INFO, f'{len(tts_items)} items broken down into {len(final_items)} items')
-
-        return self._merge_similar_items(final_items)
+        return final_items
 
     def _merge_similar_items(self, items=[]) -> list:
         """
@@ -502,7 +504,8 @@ class TTS_Arranger:
                     # Scanning started
                     if merged_item.speaker == item.speaker and merged_item.speaker_idx == item.speaker_idx:
                         # Starting item and current are similar, add to merge item text and length
-                        merged_item.text += item.text
+                        if merged_item.text and item.text:
+                            merged_item.text += ' ' + item.text
                         merged_item.length += item.length
                     else:
                         # Starting item and current are not similar, add last and current item, set this item as new starting item
