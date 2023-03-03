@@ -13,12 +13,11 @@ from pathlib import Path
 import TTS
 from num2words import num2words
 from pydub import AudioSegment
-from pydub.effects import normalize
 from pydub.silence import detect_silence
 from TTS.utils.manage import ModelManager
 from TTS.utils.synthesizer import Synthesizer
 
-from .utils.audio import compress, numpy_to_segment
+from .utils.audio import numpy_to_segment
 from .utils.log import LOG_TYPE, bcolors, log
 
 
@@ -615,9 +614,6 @@ class TTS_Arranger:
                         speaker_name=speaker,
                     )
             except Exception as e:
-                # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
-                #     f.write(f'Error synthesizing "{tts_item.text}"\n')
-
                 raise Exception(f'Error synthesizing "{tts_item.text}: {e}"')
             else:
                 speech_segment = numpy_to_segment(wav, int(self.synthesizer.output_sample_rate))
@@ -656,20 +652,16 @@ class TTS_Arranger:
         if file_format:
             format = file_format
 
-        log(LOG_TYPE.INFO, f'Applying compression:')
-        segment = compress(-20.0, 4.0, 4.5, 5.0, 15.0, segment, self.synthesizer.output_sample_rate)
-        # self.audio = normalize(compress_dynamic_range(
-        #     self.audio, threshold=-20, release=15))
-
         log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
-        audio_normalized = normalize(segment)
 
         folder = os.path.dirname(os.path.abspath(output_filename))
 
         if not os.path.exists(folder):
             os.makedirs(folder, exist_ok=True)
 
-        if format == 'mp3':
-            audio_normalized.export(output_filename, format=format, bitrate='320k')
-        else:
-            audio_normalized.export(output_filename, format=format)
+        comp_expansion = 12.5
+        comp_raise = 0.0001
+
+        # Apply dynamic compression
+        # segment.export(output_filename, format, parameters=['-filter', 'speechnorm=e=25:r=0.0001:l=1', '-filter', 'loudnorm=tp=-1.0:offset=7'])
+        segment.export(output_filename, format, parameters=['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1'])
