@@ -25,13 +25,19 @@ from .utils.log import LOG_TYPE, bcolors, log
 @dataclass
 class TTS_Item:
     """
-    Represents a tts item containing various information
+    Represents a TTS item containing various information.
 
-    Args:
-        text (str): Text to be synthesized, can be left empty in combination with length > 0 to create pause
-        speaker (str): speaker name to be used
-        speaker_idx (int): speaker index to be used if no speaker name is given; wraps around based on the actual available speaker indexes per model
-        length (int): minimum length in milliseconds; will be padded if actual synthesized text fragment is shorter and ignored if it is longer     
+    :param text: The text to be synthesized. Can be left empty in combination with length > 0 to create a pause.
+    :type text: str
+
+    :param speaker: The name of the speaker to be used.
+    :type speaker: str
+
+    :param speaker_idx: The index of the speaker to be used if no speaker name is given. Wraps around based on the actual available speaker indexes per model.
+    :type speaker_idx: int
+
+    :param length: The minimum length in milliseconds. Will be padded if the actual synthesized text fragment is shorter, and ignored if it is longer.
+    :type length: int
     """
     text: str = ''
     speaker: str = ''
@@ -45,16 +51,22 @@ class TTS_Item:
 
 
 class TTS_Arranger:
-    """
-    Offers functionality for processing a list of TTS_Items
-
-    Args:
-        model (str): model to be used, defaults to 'tts_models/en/vctk/vits'
-        vocoder (str): vocoder to be used
-        preferred_speakers (list): list containing strings of preferred speaker names to be used instead of all available speakers of the selected model (not yet implemented)
-    """
-
     def __init__(self, model='', vocoder='', preferred_speakers: list[str] | None = None) -> None:
+        """
+        Initializes a new instance of the TTS class.
+
+        :param model: Name of the text-to-speech model to use.
+        :type model: str
+
+        :param vocoder: Name of the vocoder to use.
+        :type vocoder: str
+
+        :param preferred_speakers: A list of preferred speaker names for multi-speaker models to be used instead of the available speakers of the selected model (not yet implemented).
+                                If set to None, the default speaker(s) will be used.
+        :type preferred_speakers: list[str] or None
+
+        :return: None
+        """
         if not model:
             model = 'tts_models/en/vctk/vits'
 
@@ -115,9 +127,11 @@ class TTS_Arranger:
     #     self.synthesizer = None
     #     gc.collect()
 
-    def initialize(self):
+    def initialize(self) -> None:
         """
-        Initializes the TTS system and fills the speaker list
+        Initializes the text-to-speech (TTS) system, downloads the specified models, and populates the speaker list.
+
+        :return: None
         """
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
         self.manager = ModelManager(str(Path(TTS.__file__).resolve().parent) + '/.models.json')
@@ -173,20 +187,73 @@ class TTS_Arranger:
 
     def _minimize_tailing_punctuation(self, text: str) -> str:
         """
-        Minimize tailing punctuation to work around issues with some models
+        Minimize trailing punctuation to work around issues with some models.
+
+        :param text: The input string to be processed.
+        :type text: str
+
+        :return: The processed string with minimized trailing punctuation.
+        :rtype: str
         """
-        lenght = 0
+        length = 0
 
         for i in reversed(text):
             if i in string.punctuation + ' ':
-                lenght += 1
+                length += 1
             else:
-                return text[:len(text) - (lenght - 1)]
+                return text[:len(text) - (length - 1)]
         return text
+
+    def _de_thorsten_tacotron2_DDC_tweaks(self, tts_item: TTS_Item) -> TTS_Item:
+        """
+        Apply tweaks for tts_models/de/thorsten/tacotron2-DDC.
+
+        :param tts_item: The input TTS item to be processed.
+        :type tts_item: TTS_Item
+
+        :return: The processed TTS item with applied tweaks.
+        :rtype: TTS_Item
+        """
+        str_months = ('Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember')
+
+        # Ordinal numbers
+        start = 0
+        while result := re.search(r'\b[0-9]+\.', tts_item.text[start:]):
+            len_original = 0
+            numword = ''
+            # When followed by month names
+            if tts_item.text[start + result.span()[1]:].strip().startswith(str_months):
+                match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
+                len_original = len(match)
+                numword = num2words(match, lang='de', to='ordinal')
+                tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
+            start += result.span()[1] - len_original + len(numword)
+
+        # Year numbers
+        start = 0
+        while result := re.search(r'\b[0-9]{4,4}\b', tts_item.text[start:]):
+            len_original = 0
+            numword = ''
+            # When followed by month names
+            if tts_item.text[:start + result.span()[0]].strip().endswith(('Jahr', 'in', 'vor', 'nach') + str_months):
+                match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
+
+                if int(match) < 2000:
+                    len_original = len(match)
+                    numword = num2words(match, lang='de', to='year')
+                    tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
+            start += result.span()[1] - len_original + len(numword)
+        return tts_item
 
     def _prepare_item(self, tts_item: TTS_Item) -> list[TTS_Item]:
         """
-        Preprocess item in various ways (character replacement, splitting, etc.) and return a list of resulting items
+        Preprocess the given input TTS item by performing character replacement, splitting, and other operations as needed.
+
+        :param tts_item: The input TTS item to preprocess.
+        :type tts_item: TTS_Item
+
+        :return: A list of TTS items resulting from the preprocessing.
+        :rtype: list[TTS_Item]
         """
 
         if tts_item.speaker_idx != -1:
@@ -196,40 +263,10 @@ class TTS_Arranger:
             #     log(LOG_TYPE.ERROR, f'Speaker index "{tts_item.speaker}" is unknown, falling back to default speaker.')
             #     speaker_idx = 0
 
-            # Some tweaks for tts_models/de/thorsten/tacotron2-DDC
             if self.model == 'tts_models/de/thorsten/tacotron2-DDC':
-                str_months = ('Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember')
+                tts_item = self._de_thorsten_tacotron2_DDC_tweaks(tts_item)
 
-                # Ordinal numbers
-                start = 0
-                while result := re.search(r'\b[0-9]+\.', tts_item.text[start:]):
-                    len_original = 0
-                    numword = ''
-                    # When followed by month names
-                    if tts_item.text[start + result.span()[1]:].strip().startswith(str_months):
-                        match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
-                        len_original = len(match)
-                        numword = num2words(match, lang='de', to='ordinal')
-                        tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
-                    start += result.span()[1] - len_original + len(numword)
-
-                # Year numbers
-                start = 0
-                while result := re.search(r'\b[0-9]{4,4}\b', tts_item.text[start:]):
-                    len_original = 0
-                    numword = ''
-                    # When followed by month names
-                    if tts_item.text[:start + result.span()[0]].strip().endswith(('Jahr', 'in', 'vor', 'nach') + str_months):
-                        match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
-
-                        if int(match) < 2000:
-                            len_original = len(match)
-                            numword = num2words(match, lang='de', to='year')
-                            tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
-                    start += result.span()[1] - len_original + len(numword)
-
-            # Some general preprocessing
-
+            # General preprocessing
             text = tts_item.text
 
             # Remove Japanese characters etc.
@@ -243,9 +280,9 @@ class TTS_Arranger:
 
             tts_items = [tts_item]
 
-            tts_items = self._break_single(tts_items, r'\n', pause_post=self.pause_newline)
-            tts_items = self._break_single(tts_items, r'[;:]\s', pause_post=self.pause_colon)
-            tts_items = self._break_single(tts_items, r'[—–]', pause_post=self.pause_dash)
+            tts_items = self._break_single(tts_items, r'\n', pause_post_ms=self.pause_newline)
+            tts_items = self._break_single(tts_items, r'[;:]\s', pause_post_ms=self.pause_colon)
+            tts_items = self._break_single(tts_items, r'[—–]', pause_post_ms=self.pause_dash)
             # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
             # tts_items = self.break_single(tts_items, '…')
 
@@ -265,9 +302,9 @@ class TTS_Arranger:
             #     tts_items = self.break_speakers(tts_items, ('«', '»'), True, pause_pre=100, pause_post=100)
             #     tts_items = self.break_speakers(tts_items, ('"', '"'), True, pause_pre=100, pause_post=100)
 
-            tts_items = self._break_items(tts_items, ('(', ')'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
-            tts_items = self._break_items(tts_items, ('—', '—'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
-            tts_items = self._break_items(tts_items, ('– ', ' –'), pause_pre=self.pause_parentheses, pause_post=self.pause_parentheses)
+            tts_items = self._break_items(tts_items, ('(', ')'), pause_pre_ms=self.pause_parentheses, pause_post_ms=self.pause_parentheses)
+            tts_items = self._break_items(tts_items, ('—', '—'), pause_pre_ms=self.pause_parentheses, pause_post_ms=self.pause_parentheses)
+            tts_items = self._break_items(tts_items, ('– ', ' –'), pause_pre_ms=self.pause_parentheses, pause_post_ms=self.pause_parentheses)
             # tts_items = self.break_start_end(tts_items, ('- ', ' -'), pause_pre=300, pause_post=300)
             # tts_items = self.break_start_end(tts_items, (r'\s[-–—]-?\s', r'\s[-–—]-?\s'), pause_post=150)
             # tts_items = self.break_start_end(tts_items, (r'\(', r'\)'), pause_post=150)
@@ -315,9 +352,24 @@ class TTS_Arranger:
 
         return final_items
 
-    def _break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, pause_post: int = 0) -> list[TTS_Item]:
+    def _break_single(self, tts_items: list[TTS_Item], break_at: str, keep: bool = False, pause_post_ms: int = 0) -> list[TTS_Item]:
         """
-        Break item at specific single character
+        Break the given list of input TTS items at the specified single character and return a list of resulting input TTS items.
+
+        :param tts_items: The list of input TTS items to break.
+        :type tts_items: list[TTS_Item]
+
+        :param break_at: The single character at which to break the input TTS items.
+        :type break_at: str
+
+        :param keep: Whether to keep the breaking character in the resulting TTS items. Default is False.
+        :type keep: bool
+
+        :param pause_post: The duration of a pause (in ms) to insert after each broken TTS item. Default is 0.
+        :type pause_post: int
+
+        :return: A list of TTS items resulting from the breaking.
+        :rtype: list[TTS_Item]
         """
         final_items = []
 
@@ -343,8 +395,8 @@ class TTS_Arranger:
 
                         # From last group to end of current group
                         final_items.append(TTS_Item(item_text, tts_item.speaker, tts_item.speaker_idx, tts_item.length))
-                        if pause_post > 0:
-                            final_items.append(TTS_Item(length=pause_post))
+                        if pause_post_ms > 0:
+                            final_items.append(TTS_Item(length=pause_post_ms))
                         last_start = m.end()
 
                 # From end of last group to end of text
@@ -357,7 +409,16 @@ class TTS_Arranger:
 
     def _get_character(self, text: str, pos: int) -> str:
         """
-        Get character at a specific position in a string
+        Get the character at the specified position in the given string and return it as a string.
+
+        :param text: The string to get the character from.
+        :type text: str
+
+        :param pos: The position of the character to get.
+        :type pos: int
+
+        :return: The character at the specified position, or an empty string if the position is out of bounds.
+        :rtype: str
         """
         character = ''
 
@@ -365,14 +426,29 @@ class TTS_Arranger:
             character = text[pos]
         return character
 
-    def _break_items(self, tts_items: list[TTS_Item], start_end: tuple = (), pause_pre: int = 0, pause_post: int = 0) -> list[TTS_Item]:
+    def _break_items(self, tts_items: list[TTS_Item], start_end: tuple = (), pause_pre_ms: int = 0, pause_post_ms: int = 0) -> list[TTS_Item]:
         """
-        Break items in list of items based on opening and closing characters (like parenthesis) and return new list
+        Break items in a list of TTS items based on opening and closing characters (like parenthesis) and return a new list.
+
+        :param tts_items: A list of TTS items to be broken down.
+        :type tts_items: list[TTS_Item]
+
+        :param start_end: A tuple of the opening and closing characters used to break down the items, defaults to ().
+        :type start_end: tuple[int, int]
+
+        :param pause_pre_ms: The duration of a pause (in ms) to be inserted before the opening character, defaults to 0.
+        :type pause_pre_ms: int
+
+        :param pause_post_ms: The duration of a pause (in ms) to be inserted after the closing character, defaults to 0.
+        :type pause_post_ms: int
+
+        :return: A new list of TTS items that have been broken down based on the specified opening and closing characters.
+        :rtype: list[TTS_Item]
         """
         final_items = []
 
         if tts_items:
-            lenght = len(start_end[0])
+            length = len(start_end[0])
 
             opened = False
             current_speaker = ''
@@ -419,7 +495,7 @@ class TTS_Arranger:
                             if pos == idx:
                                 if len(final_items) > 0:
                                     final_items[-1].text += c
-                                    pos += lenght
+                                    pos += length
                     else:
                         # If open and closing pattern are not the same
                         if c == start_end[0]:
@@ -430,15 +506,15 @@ class TTS_Arranger:
                             if self._get_character(tts_item.text, idx + 1) in string.punctuation + ' ':
                                 add_item = True
 
-                                if pause_pre > 0:
-                                    final_items.append(TTS_Item(length=pause_pre))
+                                if pause_pre_ms > 0:
+                                    final_items.append(TTS_Item(length=pause_pre_ms))
 
                                 # print(f'Close')
                         elif c in ['.', ',', ';', ':']:
                             if pos == idx:
                                 if len(final_items) > 0:
                                     final_items[-1].text += c
-                                    pos += lenght
+                                    pos += length
 
                     if add_item:
                         # Add item resulting from breaking
@@ -457,8 +533,8 @@ class TTS_Arranger:
                         found = add_item
 
                 if found:
-                    if pause_post > 0:
-                        final_items.append(TTS_Item(length=pause_post))
+                    if pause_post_ms > 0:
+                        final_items.append(TTS_Item(length=pause_post_ms))
 
                 # Add rest / regular item
                 new_item = copy.copy(tts_item)
@@ -475,7 +551,13 @@ class TTS_Arranger:
 
     def preprocess_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
         """
-        Preprocess items
+        Preprocesses a list of TTS items.
+
+        :param tts_items: A list of TTS items to be preprocessed.
+        :type tts_items: list[TTS_Item]
+
+        :return: A new list of preprocessed TTS items.
+        :rtype: list[TTS_Item]
         """
         final_items = []
         merged_items = self._merge_similar_items(tts_items)
@@ -488,6 +570,12 @@ class TTS_Arranger:
     def _merge_similar_items(self, items=[]) -> list:
         """
         Merge similar items for smoother synthesizing and avoiding unwanted pauses
+
+        :param items: A list of TTS items to merge
+        :type items: list
+
+        :return: A list of merged TTS items
+        :rtype: list
         """
         final_items: list[TTS_Item] = []
 
@@ -531,10 +619,17 @@ class TTS_Arranger:
         """
         Synthesize and write list of items as an audio file
 
-        Args:
-            tts_items (list[TTS_Item]): List of items to be synthesized
-            output_filename (str): Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
-            callback (function): Reference to function to be called after synthesizing of an item if finished, parameters: index (int), total number of items (int)
+        :param tts_items: List of TTS items to be synthesized
+        :type tts_items: list
+
+        :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
+        :type output_filename: str
+
+        :param callback: Reference to function to be called after synthesizing of an item is finished
+        :type callback: function
+
+        :return: None
+        :rtype: None
         """
         time_total = 0.0
         time_needed = 0.0
@@ -586,7 +681,13 @@ class TTS_Arranger:
 
     def synthesize_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
         """
-        Synthesize a single item and return a pydub AudioSegment
+        Synthesize a single item and return a PyDub AudioSegment object
+
+        :param tts_item: TTS item to be synthesized
+        :type tts_item: TTS_Item
+
+        :return: AudioSegment object of synthesized audio
+        :rtype: AudioSegment
         """
         segment = AudioSegment.empty()
 
@@ -638,6 +739,15 @@ class TTS_Arranger:
     def write(self, segment: AudioSegment, output_filename: str) -> None:
         """
         Compress, convert and write AudioSegment as a given output file path and name
+
+        :param segment: AudioSegment to be written
+        :type segment: AudioSegment
+
+        :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
+        :type output_filename: str
+
+        :return: None
+        :rtype: None
         """
         # Clean up to free up some memory
         # self.synthesizer = None
