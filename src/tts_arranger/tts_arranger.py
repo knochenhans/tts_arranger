@@ -644,23 +644,23 @@ class TTS_Arranger:
         # gc.collect()
 
         # Set default format to mp3
-        format = 'mp3'
-
-        file_format = os.path.splitext(output_filename)[1][1:]
-
-        if file_format:
-            format = file_format
-
-        log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
+        format = os.path.splitext(output_filename)[1][1:] or 'mp3'
 
         folder = os.path.dirname(os.path.abspath(output_filename))
 
         if not os.path.exists(folder):
             os.makedirs(folder, exist_ok=True)
 
+        # Ensure output file name has a file extension
+        output_filename = os.path.splitext(output_filename)[0] + '.' + format
+
+        log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
+
         comp_expansion = 12.5
         comp_raise = 0.0001
 
         # Apply dynamic compression
         # segment.export(output_filename, format, parameters=['-filter', 'speechnorm=e=25:r=0.0001:l=1', '-filter', 'loudnorm=tp=-1.0:offset=7'])
-        segment.export(output_filename, format, parameters=['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1'])
+        params = ['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1']
+        bitrate = '320k' if format == 'mp3' else None
+        segment.export(output_filename, format, parameters=params, bitrate=bitrate)
