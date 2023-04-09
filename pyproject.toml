@@ -15,14 +15,14 @@ description = "Simplifies arranging text fragments with multiple speakers and pr
 name = "tts_arranger"
 readme = "README.md"
 requires-python = ">=3.7"
-version = "0.0.4"
+version = "0.0.5"
 
 dependencies = [
   "numpy>=1.22.4",
   "pydub>=0.25.1",
   "scipy>=1.9.0",
-  "TTS>=0.10.2",
-  "num2words>=0.5.11"
+  "TTS>=0.13.0",
+  "num2words>=0.5.11",
 ]
 
 [project.urls]
