@@ -1,9 +1,7 @@
-from tts_writer import TTS_Writer  # type: ignore
-
-from tts_arranger import TTS_Item  # type: ignore
-
-from items.tts_chapter import TTS_Chapter  # type: ignore
-from items.tts_project import TTS_Project  # type: ignore
+from tts_arranger.items.tts_chapter import TTS_Chapter  # type: ignore
+from tts_arranger.items.tts_item import TTS_Item  # type: ignore
+from tts_arranger.items.tts_project import TTS_Project  # type: ignore
+from tts_arranger.tts_writer import TTS_Writer  # type: ignore
 
 items1 = []
 items1.append(TTS_Item('This is a test:', speaker_idx=0))
