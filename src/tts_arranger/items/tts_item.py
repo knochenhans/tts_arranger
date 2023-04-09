@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class TTS_Item:
+class TTS_Item():
     """
     Represents a TTS item containing various information.
 

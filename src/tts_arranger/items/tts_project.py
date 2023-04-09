@@ -2,10 +2,9 @@ import datetime
 import pickle
 from dataclasses import dataclass, field
 
-from tts_chapter import TTS_Chapter  # type: ignore
-from tts_item import TTS_Item  # type: ignore
-
 from ..utils.log import LOG_TYPE, log
+from .tts_chapter import TTS_Chapter  # type: ignore
+from .tts_item import TTS_Item  # type: ignore
 
 
 @dataclass

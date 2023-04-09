@@ -1,6 +1,7 @@
 import unittest
 
-from tts_arranger import TTS_Processor, TTS_Item
+from tts_arranger import TTS_Processor
+from tts_arranger.items.tts_item import TTS_Item
 
 
 class Test(unittest.TestCase):

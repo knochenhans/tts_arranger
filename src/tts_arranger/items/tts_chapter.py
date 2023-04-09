@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 
 from pydub import AudioSegment  # type: ignore
-from tts_item import TTS_Item  # type: ignore
+
+from .tts_item import TTS_Item  # type: ignore
 
 
 @dataclass

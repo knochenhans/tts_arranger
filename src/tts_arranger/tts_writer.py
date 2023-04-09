@@ -12,11 +12,11 @@ from pathvalidate._filename import sanitize_filename
 from PIL import Image
 from pydub import AudioSegment  # type: ignore
 
-from tts_arranger import TTS_Item, TTS_Processor  # type: ignore
-from tts_arranger.utils.log import LOG_TYPE, bcolors, log  # type: ignore
-
-from .items.tts_chapter import TTS_Chapter
-from .items.tts_project import TTS_Project
+from .items.tts_chapter import TTS_Chapter  # type: ignore
+from .items.tts_item import TTS_Item  # type: ignore
+from .items.tts_project import TTS_Project  # type: ignore
+from .tts_processor import TTS_Processor
+from .utils.log import LOG_TYPE, bcolors, log  # type: ignore
 
 
 class TTS_Writer():
@@ -104,7 +104,7 @@ class TTS_Writer():
         cumulative_time = 0
 
         for i, chapter in enumerate(chapters):
-            print(f'for {i}, {chapter.title} in enumerate(chapters):')
+            # print(f'for {i}, {chapter.title} in enumerate(chapters):')
             audio = AudioSegment.empty()
 
             temp_format = 'mp4'
@@ -117,7 +117,7 @@ class TTS_Writer():
             log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}')
 
             for j, tts_item in enumerate(chapter.tts_items):
-                print(f'for {j}, tts_item in enumerate(chapter.tts_items):')
+                # print(f'for {j}, tts_item in enumerate(chapter.tts_items):')
                 if tts_item.text:
                     log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)} ("{tts_item.speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
                 else:
@@ -128,7 +128,7 @@ class TTS_Writer():
                 if callback is not None:
                     # callback(i + 1, len(chapters), j + 1, len(chapter.tts_items), chapter.title, current_total_items, total_items)
                     # callback((i * len(chapter.tts_items) + j + 1) / (len(chapters) * len(chapter.tts_items)) * 100)
-                    print(f'callback(100/({len(chapters)} * {len(chapter.tts_items)} * ({i} + {j}), tts_item)')
+                    # print(f'callback(100/({len(chapters)} * {len(chapter.tts_items)} * ({i} + {j}), tts_item)')
                     callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
 
             current_total_items += len(chapter.tts_items)
