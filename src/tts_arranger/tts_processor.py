@@ -7,51 +7,24 @@ import re
 import string
 import sys
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Optional
 
-import TTS
-from num2words import num2words
-from pydub import AudioSegment
-from pydub.silence import detect_silence
-from TTS.utils.manage import ModelManager
-from TTS.utils.synthesizer import Synthesizer
+import numpy as np  # type: ignore
+import TTS  # type: ignore
+from num2words import num2words  # type: ignore
+from pydub import AudioSegment  # type: ignore
+from pydub.silence import detect_silence  # type: ignore
+from TTS.utils.manage import ModelManager  # type: ignore
+from TTS.utils.synthesizer import Synthesizer  # type: ignore
 
+from .items.tts_item import TTS_Item
 from .utils.audio import numpy_to_segment
 from .utils.log import LOG_TYPE, bcolors, log
 
 
-@dataclass
-class TTS_Item:
-    """
-    Represents a TTS item containing various information.
-
-    :param text: The text to be synthesized. Can be left empty in combination with length > 0 to create a pause.
-    :type text: str
-
-    :param speaker: The name of the speaker to be used.
-    :type speaker: str
-
-    :param speaker_idx: The index of the speaker to be used if no speaker name is given. Wraps around based on the actual available speaker indexes per model.
-    :type speaker_idx: int
-
-    :param length: The minimum length in milliseconds. Will be padded if the actual synthesized text fragment is shorter, and ignored if it is longer.
-    :type length: int
-    """
-    text: str = ''
-    speaker: str = ''
-    speaker_idx: int = 0
-    length: int = 0
-
-    def __post_init__(self):
-        # Mark pauses by invalidating speaker index
-        if self.text == '' and self.length > 0:
-            self.speaker_idx = -1
-
-
-class TTS_Arranger:
-    def __init__(self, model='', vocoder='', preferred_speakers: list[str] | None = None) -> None:
+class TTS_Processor:
+    def __init__(self, model='', vocoder: str = '', preferred_speakers: Optional[list[str]] = None) -> None:
         """
         Initializes a new instance of the TTS class.
 
@@ -67,10 +40,7 @@ class TTS_Arranger:
 
         :return: None
         """
-        if not model:
-            model = 'tts_models/en/vctk/vits'
-
-        self.model = model
+        self.model = model or 'tts_models/en/vctk/vits'
         self.vocoder = vocoder
         self.silence_length = 100
         self.silence_threshold = -60
@@ -103,23 +73,15 @@ class TTS_Arranger:
         source_dir = Path(__file__).resolve().parent
 
         # Load general replace list
-        with open(str(source_dir) + '/data/replace', 'r') as file:
-            reader = csv.reader(file, delimiter='\t')
-            for row in reader:
+        with open(source_dir / 'data/replace', 'r') as file:
+            for row in csv.reader(file, delimiter='\t'):
                 self.replace[row[0]] = row[1]
 
         # Load language specific replace list
-        lang = 'en'
+        lang = self.model.split('/')[1] if '/' in self.model else 'en'
 
-        model_splitted = model.split('/')
-
-        if model_splitted:
-            if len(model_splitted) >= 2:
-                lang = model_splitted[1]
-
-        with open(str(source_dir) + f'/data/replace_{lang}', 'r') as file:
-            reader = csv.reader(file, delimiter='\t')
-            for row in reader:
+        with open(source_dir / f'data/replace_{lang}', 'r') as file:
+            for row in csv.reader(file, delimiter='\t'):
                 self.replace[row[0]] = row[1]
 
     # def __del__(self):
@@ -134,28 +96,24 @@ class TTS_Arranger:
         :return: None
         """
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
-        self.manager = ModelManager(str(Path(TTS.__file__).resolve().parent) + '/.models.json')
+        models_dir = Path(TTS.__file__).resolve().parent / '.models.json'
+        self.manager = ModelManager(str(models_dir))
 
         with contextlib.redirect_stdout(None):
-            model_path, config_path, _ = self.manager.download_model(self.model)
-
-            vocoder_path = ''
-            vocoder_config_path = ''
-
-            if self.vocoder:
-                vocoder_path, vocoder_config_path, _ = self.manager.download_model(self.vocoder)
+            (model_path, config_path, _), (vocoder_path, vocoder_config_path, _) = [
+                self.manager.download_model(m) if m else ('', '', '') for m in (self.model, self.vocoder)
+            ]
 
             self.synthesizer = Synthesizer(
                 tts_checkpoint=model_path,
                 tts_config_path=config_path,
                 vocoder_checkpoint=vocoder_path,
-                vocoder_config=vocoder_config_path,
+                vocoder_config=vocoder_config_path if self.vocoder else '',
             )
 
             # Get speaker list from model
-            if self.synthesizer.tts_model:
-                if self.synthesizer.tts_model.num_speakers > 1:
-                    self.speakers = list(self.synthesizer.tts_model.speaker_manager.name_to_id.keys())
+            if self.synthesizer.tts_model and self.synthesizer.tts_model.num_speakers > 1:
+                self.speakers = list(self.synthesizer.tts_model.speaker_manager.name_to_id.keys())
 
     # def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
     #     final_items = []
@@ -185,25 +143,6 @@ class TTS_Arranger:
 
     #     return final_items
 
-    def _minimize_tailing_punctuation(self, text: str) -> str:
-        """
-        Minimize trailing punctuation to work around issues with some models.
-
-        :param text: The input string to be processed.
-        :type text: str
-
-        :return: The processed string with minimized trailing punctuation.
-        :rtype: str
-        """
-        length = 0
-
-        for i in reversed(text):
-            if i in string.punctuation + ' ':
-                length += 1
-            else:
-                return text[:len(text) - (length - 1)]
-        return text
-
     def _de_thorsten_tacotron2_DDC_tweaks(self, tts_item: TTS_Item) -> TTS_Item:
         """
         Apply tweaks for tts_models/de/thorsten/tacotron2-DDC.
@@ -217,17 +156,14 @@ class TTS_Arranger:
         str_months = ('Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember')
 
         # Ordinal numbers
-        start = 0
-        while result := re.search(r'\b[0-9]+\.', tts_item.text[start:]):
-            len_original = 0
-            numword = ''
-            # When followed by month names
-            if tts_item.text[start + result.span()[1]:].strip().startswith(str_months):
-                match = tts_item.text[start + result.span()[0]:start + result.span()[1]]
-                len_original = len(match)
-                numword = num2words(match, lang='de', to='ordinal')
-                tts_item.text = tts_item.text[:start + result.span()[0]] + numword + tts_item.text[start + result.span()[1]:]
-            start += result.span()[1] - len_original + len(numword)
+        def replace_number(match):
+            num = match.group(0)
+            if tts_item.text[match.end():].strip().startswith(str_months):
+                return num2words(num, lang='de', to='ordinal')
+            else:
+                return num
+
+        tts_item.text = re.sub(r'\b[0-9]+\.', replace_number, tts_item.text)
 
         # Year numbers
         start = 0
@@ -325,7 +261,7 @@ class TTS_Arranger:
 
                 # Remove all remaining punctuation after first occurrence
                 # text = re.sub(r'([\.\?\!;:])\s?[\.\?\!;:,\)\"\'.\]]+', r'\1', text)
-                text = self._minimize_tailing_punctuation(text)
+                text = text.rstrip(string.punctuation + ' ')
 
                 # Strip starting punctuation and normalize ending punctuation
                 text = text.strip().lstrip(string.punctuation).strip()
@@ -420,11 +356,9 @@ class TTS_Arranger:
         :return: The character at the specified position, or an empty string if the position is out of bounds.
         :rtype: str
         """
-        character = ''
-
-        if pos > 0 and pos < len(text):
-            character = text[pos]
-        return character
+        if 0 <= pos < len(text):
+            return text[pos]
+        return ''
 
     def _break_items(self, tts_items: list[TTS_Item], start_end: tuple = (), pause_pre_ms: int = 0, pause_post_ms: int = 0) -> list[TTS_Item]:
         """
@@ -695,17 +629,9 @@ class TTS_Arranger:
             try:
                 speaker = ''
 
-                if self.synthesizer.tts_model:
-                    if self.synthesizer.tts_model.num_speakers > 1:
-                        speaker = tts_item.speaker
-
-                        # Use index if no explicit speaker name is given, wrap around speakers to avoid undefined indexes
-                        if not speaker:
-                            speaker = self.speakers[tts_item.speaker_idx % len(self.speakers)]
-
-                            if self.preferred_speakers:
-                                if self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] in self.speakers:
-                                    speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)]
+                if self.synthesizer.tts_model and self.synthesizer.tts_model.num_speakers > 1:
+                    speaker = tts_item.speaker or self.speakers[tts_item.speaker_idx % len(self.speakers)]
+                    speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] if self.preferred_speakers and speaker in self.speakers else speaker
 
                 # Suppress tts output
                 with contextlib.redirect_stdout(None):
@@ -716,7 +642,7 @@ class TTS_Arranger:
             except Exception as e:
                 raise Exception(f'Error synthesizing "{tts_item.text}: {e}"')
             else:
-                speech_segment = numpy_to_segment(wav, int(self.synthesizer.output_sample_rate))
+                speech_segment = numpy_to_segment(np.array(wav), int(self.synthesizer.output_sample_rate))
 
                 # If length is predefined, add padding if necessary
                 if int(speech_segment.duration_seconds * 1000) < tts_item.length:

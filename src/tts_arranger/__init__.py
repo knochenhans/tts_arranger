@@ -1,1 +1,1 @@
-from .tts_arranger import TTS_Arranger, TTS_Item
+from .tts_processor import TTS_Processor, TTS_Item

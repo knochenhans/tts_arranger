@@ -2,6 +2,7 @@ from enum import Enum, auto
 
 
 class bcolors:
+    """Colors for console output."""
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
@@ -14,19 +15,29 @@ class bcolors:
 
 
 class LOG_TYPE(Enum):
+    """Log types."""
     INFO = auto()
     WARNING = auto()
     ERROR = auto()
 
 
 def log(log_type: LOG_TYPE, message: str):
-    format = f'{bcolors.ENDC}'
+    """
+    Print a colored message to the console based on the log type.
+
+    :param log_type: The log type (INFO, WARNING, or ERROR).
+    :type log_type: LOG_TYPE
+
+    :param message: The message to print.
+    :type message: str
+    """
+    format = bcolors.ENDC
 
     if log_type == LOG_TYPE.INFO:
-        format = f'{bcolors.HEADER}'
+        format = bcolors.HEADER
     elif log_type == LOG_TYPE.WARNING:
-        format = f'{bcolors.WARNING}'
+        format = bcolors.WARNING
     elif log_type == LOG_TYPE.ERROR:
-        format = f'{bcolors.FAIL}'
+        format = bcolors.FAIL
 
-    print(format + message + f'{bcolors.ENDC}')
+    print(format + message + bcolors.ENDC)
