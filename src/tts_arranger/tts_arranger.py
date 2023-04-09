@@ -9,6 +9,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import TTS
 from num2words import num2words
@@ -53,7 +54,10 @@ class TTS_Arranger:
         preferred_speakers (list): list containing strings of preferred speaker names to be used instead of all available speakers of the selected model (not yet implemented)
     """
 
-    def __init__(self, model='tts_models/en/vctk/vits', vocoder='', preferred_speakers=None) -> None:
+    def __init__(self, model='', vocoder='', preferred_speakers: list[str] | None = None) -> None:
+        if not model:
+            model = 'tts_models/en/vctk/vits'
+
         self.model = model
         self.vocoder = vocoder
         self.silence_length = 100
@@ -63,7 +67,7 @@ class TTS_Arranger:
         # self.quotes = quotes
         self.current_speaker_idx = 0
 
-        self.speakers = []
+        self.speakers: list[str] = []
 
         # Config
         self.pause_sentence = 750
@@ -73,10 +77,7 @@ class TTS_Arranger:
         self.pause_newline = 250
         self.pause_colon = 100
 
-        if not preferred_speakers:
-            preferred_speakers = []
-
-        self.preferred_speakers = []
+        self.preferred_speakers = preferred_speakers or []
 
         # if not self.default_speakers:
         #     with open(os.path.dirname(os.path.realpath(__file__)) + '/speakers', 'r') as speaker_file:
@@ -488,7 +489,7 @@ class TTS_Arranger:
         """
         Merge similar items for smoother synthesizing and avoiding unwanted pauses
         """
-        final_items = []
+        final_items: list[TTS_Item] = []
 
         if items:
             start_item = -1
@@ -526,7 +527,7 @@ class TTS_Arranger:
 
         return final_items
 
-    def synthesize_and_write(self, tts_items: list[TTS_Item], output_filename: str, callback=None):
+    def synthesize_and_write(self, tts_items: list[TTS_Item], output_filename: str, callback: Callable[[int, int], None] | None = None):
         """
         Synthesize and write list of items as an audio file
 
@@ -570,7 +571,7 @@ class TTS_Arranger:
                     time_needed = ((time_total / characters_total) * characters_sum) - time_total
 
                 # Report progress
-                if callback:
+                if callback is not None:
                     callback(idx, len(tts_items))
             except KeyboardInterrupt:
                 log(LOG_TYPE.ERROR, 'Stopped by user.')
@@ -588,11 +589,9 @@ class TTS_Arranger:
         Synthesize a single item and return a pydub AudioSegment
         """
         segment = AudioSegment.empty()
-        # if self.synthesizer is not None:
+
         if tts_item.text:
             try:
-                # Suppress tts output
-
                 speaker = ''
 
                 if self.synthesizer.tts_model:
@@ -604,10 +603,10 @@ class TTS_Arranger:
                             speaker = self.speakers[tts_item.speaker_idx % len(self.speakers)]
 
                             if self.preferred_speakers:
-                                # if len(self.preferred_speakers) >= tts_item.speaker_idx:
                                 if self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] in self.speakers:
                                     speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)]
 
+                # Suppress tts output
                 with contextlib.redirect_stdout(None):
                     wav = self.synthesizer.tts(
                         text=tts_item.text,
