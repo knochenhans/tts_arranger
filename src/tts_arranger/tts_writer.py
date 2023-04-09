@@ -232,12 +232,13 @@ class TTS_Writer():
 
                 finally:
                     # Prepare chapter metadata
-                    metadata = ';FFMETADATA1\n'
+                    metadata_lines = [';FFMETADATA1\n']
 
-                    for i, chapter in enumerate(self.project.tts_chapters):
-                        metadata += f'[CHAPTER]\nSTART={chapter.start_time}\nEND={chapter.end_time}\ntitle={self.project.tts_chapters[i].title}\n'
+                    for chapter in self.project.tts_chapters:
+                        metadata_lines.append(f'[CHAPTER]\nSTART={chapter.start_time}\nEND={chapter.end_time}\ntitle={chapter.title}\n')
 
-                    metadata_filename = temp_dir + '/metadata'
+                    metadata = ''.join(metadata_lines)
+                    metadata_filename = f'{temp_dir}/metadata'
 
                     # Write all the custom metadata to the new metadata file
                     with open(metadata_filename, 'w') as metadata_file:
@@ -251,8 +252,7 @@ class TTS_Writer():
                     output_path = output_filename + output_extension
 
                     # Create directory if needed
-                    if not os.path.exists(self.project_path):
-                        os.makedirs(self.project_path, exist_ok=True)
+                    os.makedirs(self.project_path, exist_ok=True)
 
                     # Concatenate all files, adding metadata and cover image (if set)
                     if self.output_format == 'm4b':
@@ -291,8 +291,7 @@ class TTS_Writer():
 
                     else:
                         # For all other formats, don’t concatenate, just reuse the tempfiles
-                        if not os.path.exists(output_filename):
-                            os.makedirs(output_filename, exist_ok=True)
+                        os.makedirs(output_filename, exist_ok=True)
 
                         for name, file in self.temp_files:
                             destination = output_filename + '/' + f'{name}.{self.output_format}'

@@ -684,8 +684,7 @@ class TTS_Processor:
 
         folder = os.path.dirname(os.path.abspath(output_filename))
 
-        if not os.path.exists(folder):
-            os.makedirs(folder, exist_ok=True)
+        os.makedirs(folder, exist_ok=True)
 
         # Ensure output file name has a file extension
         output_filename = os.path.splitext(output_filename)[0] + '.' + format
