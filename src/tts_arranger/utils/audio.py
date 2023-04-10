@@ -1,5 +1,6 @@
-import numpy as np
 import io
+
+import numpy as np
 import scipy.io.wavfile  # type: ignore
 from pydub import AudioSegment  # type: ignore
 
