@@ -332,11 +332,16 @@ class TTS_Writer():
                     for name, file in self.temp_files:
                         output_chapter_filename = os.path.join(output_filename, name + output_extension)
 
+                        output_args = {'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}
+
+                        if self.output_format is 'mp3':
+                            output_args['audio_bitrate'] = '320k'
+
                         # Convert to target format, adding metadata
                         (
                             ffmpeg
                             .input(file)
-                            .output(output_chapter_filename, **{'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
+                            .output(output_chapter_filename, **output_args, loglevel='error')
                             .run(overwrite_output=True)
                         )
 
