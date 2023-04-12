@@ -324,6 +324,7 @@ class TTS_Writer():
                     subprocess.call(cmd)
 
                     output_files.append(output_path)
+                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}.')
                 else:
                     # Don’t concatenate, convert the chapter temp files to the target format
                     os.makedirs(output_filename, exist_ok=True)
@@ -340,7 +341,9 @@ class TTS_Writer():
                         )
 
                         output_files.append(output_chapter_filename)
-                
+                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under {output_filename}.')
+
+                image_added = False
                 for output_file in output_files:
                     # Add image
                     output_path_with_image = output_file + '_tmp' + output_extension
@@ -354,5 +357,7 @@ class TTS_Writer():
                             self._add_image(image, output_file, output_path_with_image)
                             os.remove(output_file)
                             os.rename(output_path_with_image, output_file)
+                            image_added = True
 
-        log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}.')
+                if image_added:
+                    log(LOG_TYPE.SUCCESS, 'Project image added to final output for all files.')
