@@ -247,112 +247,112 @@ class TTS_Writer():
         :raises: ValueError if `project_filename` is not a valid file path.
         """
 
-        if self.project.tts_chapters:
-            with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as temp_dir:
-                try:
-                    log(LOG_TYPE.INFO, f'Synthesizing {self.project.title}')
+        if not self.project.tts_chapters:
+            log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting')
+            return
 
-                    if self.model and self.vocoder:
-                        t = TTS_Processor(self.model, self.vocoder)
-                    else:
-                        match self.project.lang_code:
-                            case 'en':
-                                self.model = 'tts_models/en/vctk/vits'
-                                self.vocoder = ''
-                            case 'de':
-                                self.model = 'tts_models/de/thorsten/tacotron2-DDC'
-                                self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
+        with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as temp_dir:
+            try:
+                log(LOG_TYPE.INFO, f'Synthesizing {self.project.title}')
 
-                        t = TTS_Processor(self.model, self.vocoder)
+                if self.model and self.vocoder:
+                    t = TTS_Processor(self.model, self.vocoder)
+                else:
+                    match self.project.lang_code:
+                        case 'en':
+                            self.model = 'tts_models/en/vctk/vits'
+                            self.vocoder = ''
+                        case 'de':
+                            self.model = 'tts_models/de/thorsten/tacotron2-DDC'
+                            self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
+                        case _:
+                            raise ValueError(f'Language code {self.project.lang_code} not supported')
 
-                    self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback)
+                    t = TTS_Processor(self.model, self.vocoder)
 
-                except Exception as e:
-                    log(LOG_TYPE.ERROR, f'Synthesizing {self.project.title} failed: {e}')
-                    sys.exit(1)
+                self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback)
 
-                finally:
-                    # Prepare chapter metadata
-                    metadata_lines = [';FFMETADATA1\n']
+            except Exception as e:
+                log(LOG_TYPE.ERROR, f'Synthesizing {self.project.title} failed: {e}')
+                sys.exit(1)
 
-                    for chapter in self.project.tts_chapters:
-                        metadata_lines.append(f'[CHAPTER]\nSTART={chapter.start_time}\nEND={chapter.end_time}\ntitle={chapter.title}\n')
+            finally:
+                # Prepare chapter metadata
+                metadata_lines = [';FFMETADATA1\n']
 
-                    metadata = ''.join(metadata_lines)
-                    metadata_filename = f'{temp_dir}/metadata'
+                for chapter in self.project.tts_chapters:
+                    metadata_lines.append(f'[CHAPTER]\nSTART={chapter.start_time}\nEND={chapter.end_time}\ntitle={chapter.title}\n')
 
-                    # Write all the custom metadata to the new metadata file
-                    with open(metadata_filename, 'w') as metadata_file:
-                        metadata_file.write(metadata)
+                metadata = ''.join(metadata_lines)
+                metadata_filename = os.path.join(temp_dir, 'metadata')
 
-                    output_filename = os.path.join(self.project_path, '') + str(sanitize_filename(project_filename))
-                    output_extension = '.' + self.output_format
+                # Write all the custom metadata to the new metadata file
+                with open(metadata_filename, 'w') as metadata_file:
+                    metadata_file.write(metadata)
 
-                    # Shorten path if needed
-                    output_filename = output_filename[:255 - len(output_extension)]
-                    output_path = output_filename + output_extension
+                output_filename = os.path.join(self.project_path, sanitize_filename(project_filename))
+                output_extension = f'.{self.output_format}'
 
-                    output_files: list[str] = []
+                # Shorten path if needed
+                output_filename = output_filename[:255 - len(output_extension)]
+                output_path = output_filename + output_extension
 
-                    # Create directory if needed
-                    os.makedirs(self.project_path, exist_ok=True)
+                output_files: list[str] = []
 
-                    # Concatenate all files, adding metadata and cover image (if set)
-                    if concat:
-                        infiles = []
+                # Create directory if needed
+                os.makedirs(self.project_path, exist_ok=True)
 
-                        for _, file in self.temp_files:
-                            infiles.append(ffmpeg.input(file))
+                # Concatenate all files, adding metadata and cover image (if set)
+                if concat:
+                    infiles = [ffmpeg.input(file) for _, file in self.temp_files]
 
-                        metadata_input = ffmpeg.input(f'{metadata_filename}')
+                    metadata_input = ffmpeg.input(metadata_filename)
 
-                        if self.output_format not in ['m4b', 'm4a']:
-                            log(LOG_TYPE.WARNING, f'Chapters are only possible for m4b/m4a at the moment.')
+                    if self.output_format not in ['m4b', 'm4a']:
+                        log(LOG_TYPE.WARNING, f'Chapters are only possible for m4b/m4a at the moment.')
 
-                        cmd = (
+                    cmd = (
+                        ffmpeg
+                        .concat(*infiles, v=0, a=1)
+                        .output(metadata_input, output_path, map_metadata=1, **{'metadata': f'title={self.project.title}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
+                        .compile(overwrite_output=True)
+                    )
+
+                    # Remove last map parameter (workaround for ffmpeg-python bug)
+                    cmd = self._remove_last_arg(cmd, '-map')
+
+                    subprocess.call(cmd)
+
+                    output_files.append(output_path)
+                else:
+                    # Don’t concatenate, convert the chapter temp files to the target format
+                    os.makedirs(output_filename, exist_ok=True)
+
+                    for name, file in self.temp_files:
+                        output_chapter_filename = os.path.join(output_filename, name + output_extension)
+
+                        # Convert to target format, adding metadata
+                        (
                             ffmpeg
-                            .concat(*infiles, v=0, a=1)
-                            .output(metadata_input, output_path, map_metadata=1, **{'metadata': f'title={self.project.title}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
-                            .compile(overwrite_output=True)
+                            .input(file)
+                            .output(output_chapter_filename, **{'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
+                            .run(overwrite_output=True)
                         )
 
-                        # Remove last map parameter (workaround for ffmpeg-python bug)
-                        cmd = self._remove_last_arg(cmd, '-map')
+                        output_files.append(output_chapter_filename)
+                
+                for output_file in output_files:
+                    # Add image
+                    output_path_with_image = output_file + '_tmp' + output_extension
 
-                        subprocess.call(cmd)
+                    if self.project.image_bytes:
+                        image_bytes = base64.b64decode(self.project.image_bytes)
+                        image_file = io.BytesIO(image_bytes)
+                        image = Image.open(image_file)
 
-                        output_files.append(output_path)
-                    else:
-                        # Don’t concatenate, convert the chapter temp files to the target format
-                        os.makedirs(output_filename, exist_ok=True)
+                        if image.format:
+                            self._add_image(image, output_file, output_path_with_image)
+                            os.remove(output_file)
+                            os.rename(output_path_with_image, output_file)
 
-                        for name, file in self.temp_files:
-                            output_chapter_filename = os.path.join(output_filename, '') + name + output_extension
-
-                            # Convert to target format, adding metadata
-                            (
-                                ffmpeg
-                                .input(file)
-                                .output(output_chapter_filename, **{'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
-                                .run(overwrite_output=True)
-                            )
-
-                            output_files.append(output_chapter_filename)
-                    
-                    for output_file in output_files:
-                        # Add image
-                        output_path_with_image = output_file + '_tmp' + output_extension
-
-                        if self.project.image_bytes:
-                            image_bytes = base64.b64decode(self.project.image_bytes)
-                            image_file = io.BytesIO(image_bytes)
-                            image = Image.open(image_file)
-
-                            if image.format:
-                                self._add_image(image, output_file, output_path_with_image)
-                                os.remove(output_file)
-                                os.rename(output_path_with_image, output_file)
-
-            log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}.')
-        else:
-            log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting')
+        log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}.')
