@@ -67,7 +67,7 @@ class TTS_Writer():
         result = ffmpeg.probe(file_name, cmd='ffprobe', show_entries='format=duration')
         return int(float(result['format']['duration']) * self.NANOSECONDS_IN_ONE_SECOND)
 
-    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_arranger: TTS_Processor, callback: Callable[[float, TTS_Item], None] | None = None) -> None:
+    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Callable[[float, TTS_Item], None] | None = None) -> None:
         """
         Private method for synthesizing chapters into audio.
 
@@ -90,9 +90,9 @@ class TTS_Writer():
         log(LOG_TYPE.INFO, f'Preprocessing items')
 
         for chapter in chapters:
-            chapter.tts_items = tts_arranger.preprocess_items(chapter.tts_items)
+            chapter.tts_items = tts_processor.preprocess_items(chapter.tts_items)
 
-        tts_arranger.initialize()
+        tts_processor.initialize()
 
         total_items = 0
 
@@ -123,7 +123,7 @@ class TTS_Writer():
                 else:
                     log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
 
-                audio += tts_arranger.synthesize_tts_item(tts_item)
+                audio += tts_processor.synthesize_tts_item(tts_item)
 
                 if callback is not None:
                     # callback(i + 1, len(chapters), j + 1, len(chapter.tts_items), chapter.title, current_total_items, total_items)
@@ -162,19 +162,24 @@ class TTS_Writer():
             chapter.end_time = cumulative_time + self._get_nanoseconds_for_file(filename)
             cumulative_time = chapter.end_time
 
-        del tts_arranger
+        del tts_processor
 
-    def _remove_first_arg(self, cmd, arg: str):
-        if cmd:
-            index = cmd.index(arg)
+    def _remove_last_arg(self, cmd: list[str], arg: str) -> list[str]:
+        """
+        Remove the last occurrence of the given argument from the provided list.
 
-            if index:
-                cmd.pop(index)
-                cmd.pop(index)
+        :param cmd: A list of strings to be searched and modified.
+        :type cmd: list of str
 
-        return cmd
+        :param arg: A string representing the argument to be removed from `cmd`.
+        :type arg: str
 
-    def _remove_last_arg(self, cmd, arg: str):
+        :return: A modified version of the original list `cmd` with the last occurrence of `arg` removed.
+        :rtype: list of str
+
+        :raises ValueError: If `cmd` is empty or `arg` is not found in `cmd`.
+        """
+
         if cmd:
             cmd.reverse()
 
@@ -187,7 +192,23 @@ class TTS_Writer():
             cmd.reverse()
         return cmd
 
-    def _add_image(self, image: Image.Image, input_file, output_file):
+    def _add_image(self, image: Image.Image, input_file: str, output_file: str) -> None:
+        """
+        Add an image to the final audio file and save the result to a new file.
+
+        :param image: The image to add to the audio file.
+        :type image: PIL.Image.Image
+
+        :param input_file: The path to the input audio file.
+        :type input_file: str
+
+        :param output_file: The path to save the resulting audio file.
+        :type output_file: str
+        :return: None
+
+        :raises: ValueError if the provided `image` is not a PIL Image instance, or if either `input_file` or `output_file` are not valid file paths.
+        """
+
         image_width, image_height = image.size
 
         with tempfile.TemporaryDirectory() as temp_dir:
