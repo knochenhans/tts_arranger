@@ -1,6 +1,12 @@
+import base64
 import datetime
+from io import BytesIO
 import pickle
 from dataclasses import dataclass, field
+from PIL import Image
+
+
+import requests
 
 from ..utils.log import LOG_TYPE, log
 from .tts_chapter import TTS_Chapter  # type: ignore
@@ -106,3 +112,50 @@ class TTS_Project():
                 pickle.dump(self, file)
         except IOError:
             log(LOG_TYPE.WARNING, f'TTS Project export file "{filename}" could not be opened for writing.')
+
+    def _add_image(self, image: Image.Image) -> None:
+        """
+        Prepares the specified image and adds it to the project.
+
+        :param image: The image to be added.
+        :type image: Image.Image
+
+        :return: None
+        """
+        format = image.format
+
+        if image.format == 'PNG' and image.mode != 'RGBA':
+            image = image.convert('RGBA')
+            background = Image.new('RGBA', image.size, (255, 255, 255))
+            image = Image.alpha_composite(background, image)
+
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+
+        image_file = BytesIO()
+        image.save(image_file, format=format)
+        self.image_bytes = base64.b64encode(image_file.getvalue())
+
+    def add_image(self, image_file: str) -> None:
+        """
+        Opens the image from the given path and adds it via the private function.
+
+        :param image_file: The file path of the image to be added.
+        :type image_file: str
+
+        :return: None
+        """
+        image = Image.open(image_file)
+        self._add_image(image)
+
+    def add_image_from_url(self, image_url: str) -> None:
+        """
+        Opens the image from the given URL and adds it via the private function.
+
+        :param image_url: The URL of the image to be added.
+        :type image_url: str
+
+        :return: None
+        """
+        image = Image.open(requests.get(image_url, stream=True).raw)
+        self._add_image(image)
