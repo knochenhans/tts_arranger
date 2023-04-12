@@ -104,12 +104,8 @@ class TTS_Writer():
         cumulative_time = 0
 
         for i, chapter in enumerate(chapters):
-            # print(f'for {i}, {chapter.title} in enumerate(chapters):')
             audio = AudioSegment.empty()
 
-            # temp_format = 'mp4'
-
-            # if self.output_format != 'm4b':
             temp_format = 'wav'
 
             filename = temp_dir + '/' + f'tts_part_{i}.{temp_format}'
@@ -117,7 +113,6 @@ class TTS_Writer():
             log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}')
 
             for j, tts_item in enumerate(chapter.tts_items):
-                # print(f'for {j}, tts_item in enumerate(chapter.tts_items):')
                 if tts_item.text:
                     log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)} ("{tts_item.speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
                 else:
@@ -126,9 +121,6 @@ class TTS_Writer():
                 audio += tts_processor.synthesize_tts_item(tts_item)
 
                 if callback is not None:
-                    # callback(i + 1, len(chapters), j + 1, len(chapter.tts_items), chapter.title, current_total_items, total_items)
-                    # callback((i * len(chapter.tts_items) + j + 1) / (len(chapters) * len(chapter.tts_items)) * 100)
-                    # print(f'callback(100/({len(chapters)} * {len(chapter.tts_items)} * ({i} + {j}), tts_item)')
                     callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
 
             current_total_items += len(chapter.tts_items)
@@ -139,21 +131,6 @@ class TTS_Writer():
             chapter_title = f'{i + 1:0{num_zeros}} - {chapter.title}'
 
             filename_out = temp_dir + '/' + f'tts_part_{i}.{temp_format}'
-
-            # If the target format is not m4b, write individual files for chapters
-            if self.output_format != 'm4b':
-                title = self.project.title
-
-                if self.project.subtitle:
-                    title += ' - ' + self.project.subtitle
-
-                # Convert to target format, adding metadata
-                (
-                    ffmpeg
-                    .input(filename)
-                    .output(filename_out, **{'metadata': f'title={chapter_title}', 'metadata:': f'album={title}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
-                    .run(overwrite_output=True)
-                )
 
             # Add temp files for concatenating later
             self.temp_files.append((chapter_title, filename_out))
@@ -249,7 +226,7 @@ class TTS_Writer():
         format = 'wav'
         segment.export(output_filename, format, parameters=params, bitrate=bitrate)
 
-    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', callback: Callable[[float, TTS_Item], None] | None = None) -> None:
+    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Callable[[float, TTS_Item], None] | None = None) -> None:
         """
         Synthesize and write the output audio files for the given project.
 
@@ -259,8 +236,12 @@ class TTS_Writer():
         :param temp_dir_prefix: An optional prefix for the temporary directory name used during synthesis.
         :type temp_dir_prefix: str
 
+        :param concat: A boolean value indicating whether to concatenate the audio files into a single file or not. Defaults to True.
+        :type concat: bool
+
         :param callback: An optional callback function that will be called periodically during synthesis with progress information.
         :type callback: Callable[[float, TTS_Item], None] | None
+
         :return: None
 
         :raises: ValueError if `project_filename` is not a valid file path.
@@ -311,17 +292,22 @@ class TTS_Writer():
                     output_filename = output_filename[:255 - len(output_extension)]
                     output_path = output_filename + output_extension
 
+                    output_files: list[str] = []
+
                     # Create directory if needed
                     os.makedirs(self.project_path, exist_ok=True)
 
                     # Concatenate all files, adding metadata and cover image (if set)
-                    if self.output_format == 'm4b':
+                    if concat:
                         infiles = []
 
                         for _, file in self.temp_files:
                             infiles.append(ffmpeg.input(file))
 
                         metadata_input = ffmpeg.input(f'{metadata_filename}')
+
+                        if self.output_format not in ['m4b', 'm4a']:
+                            log(LOG_TYPE.WARNING, f'Chapters are only possible for m4b/m4a at the moment.')
 
                         cmd = (
                             ffmpeg
@@ -335,8 +321,27 @@ class TTS_Writer():
 
                         subprocess.call(cmd)
 
+                        output_files.append(output_path)
+                    else:
+                        # Don’t concatenate, convert the chapter temp files to the target format
+                        os.makedirs(output_filename, exist_ok=True)
+
+                        for name, file in self.temp_files:
+                            output_chapter_filename = os.path.join(output_filename, '') + name + output_extension
+
+                            # Convert to target format, adding metadata
+                            (
+                                ffmpeg
+                                .input(file)
+                                .output(output_chapter_filename, **{'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
+                                .run(overwrite_output=True)
+                            )
+
+                            output_files.append(output_chapter_filename)
+                    
+                    for output_file in output_files:
                         # Add image
-                        output_path_with_image = output_filename + '_tmp' + output_extension
+                        output_path_with_image = output_file + '_tmp' + output_extension
 
                         if self.project.image_bytes:
                             image_bytes = base64.b64decode(self.project.image_bytes)
@@ -344,19 +349,10 @@ class TTS_Writer():
                             image = Image.open(image_file)
 
                             if image.format:
-                                log(LOG_TYPE.INFO, f'Adding first found image as cover')
-                                self._add_image(image, output_path, output_path_with_image)
-                                os.remove(output_path)
-                                os.rename(output_path_with_image, output_path)
+                                self._add_image(image, output_file, output_path_with_image)
+                                os.remove(output_file)
+                                os.rename(output_path_with_image, output_file)
 
-                    else:
-                        # For all other formats, don’t concatenate, just reuse the tempfiles
-                        os.makedirs(output_filename, exist_ok=True)
-
-                        for name, file in self.temp_files:
-                            destination = output_filename + '/' + f'{name}.{self.output_format}'
-                            os.rename(file, destination)
-
-            log(LOG_TYPE.SUCCESS, f'Synthesizing {self.project.title} finished, file saved under {output_path}.')
+            log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}.')
         else:
             log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting')
