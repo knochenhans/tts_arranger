@@ -348,21 +348,24 @@ class TTS_Writer():
                         output_files.append(output_chapter_filename)
                     log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under {output_filename}.')
 
-                image_added = False
-                for output_file in output_files:
-                    # Add image
-                    output_path_with_image = output_file + '_tmp' + output_extension
-
-                    if self.project.image_bytes:
+                if self.project.image_bytes:
+                    if self.output_format in ['m4b', 'm4a', 'mp3']:
                         image_bytes = base64.b64decode(self.project.image_bytes)
                         image_file = io.BytesIO(image_bytes)
                         image = Image.open(image_file)
 
                         if image.format:
-                            self._add_image(image, output_file, output_path_with_image)
-                            os.remove(output_file)
-                            os.rename(output_path_with_image, output_file)
-                            image_added = True
+                            image_added = False
+                            for output_file in output_files:
+                                # Add image
+                                output_path_with_image = output_file + '_tmp' + output_extension
 
-                if image_added:
-                    log(LOG_TYPE.SUCCESS, 'Project image added to final output for all files.')
+                                self._add_image(image, output_file, output_path_with_image)
+                                os.remove(output_file)
+                                os.rename(output_path_with_image, output_file)
+                                image_added = True
+
+                            if image_added:
+                                log(LOG_TYPE.SUCCESS, 'Project image added to final output for all files.')
+                    else:
+                        log(LOG_TYPE.WARNING, f'Images are only possible for m4b/m4a and mp3 at the moment.')
