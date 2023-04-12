@@ -2,7 +2,7 @@
 from tts_arranger import (TTS_Chapter, TTS_Item, TTS_Project,
                           TTS_Simple_Writer, TTS_Writer)
 
-# Simple example using Simple Writer
+# Simple example using Simple Writer (using a simple list of TTS items)
 
 tts_items = []
 
@@ -29,8 +29,11 @@ chapter.append(TTS_Chapter(items2, 'Chapter 2'))
 
 project = TTS_Project(chapter, 'Project title', 'This is a subtitle', author='Some author')
 
-writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/')
-writer.synthesize_and_write(project.author + ' - ' + project.title)
+# Add a cover image
+project.add_image_from_url('https://coqui.ai/static/38a06ec53309f617be3eb3b8b9367abf/598c3/logo-wordmark.png')
+
+writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/', output_format='mp3')
+writer.synthesize_and_write(project.author + ' - ' + project.title, concat=False)
 
 # German example using Thorsten voice (no multispeaker support)
 
@@ -46,7 +49,7 @@ chapter = []
 chapter.append(TTS_Chapter(items1, 'Kapitel 1'))
 chapter.append(TTS_Chapter(items2, 'Kapitel 2'))
 
-project = TTS_Project(chapter, 'Projektname', 'Dies ist ein Untertitel', author='Ein Autor')
+project = TTS_Project(chapter, 'Projektname', 'Dies ist ein Untertitel', author='Ein Autor', lang_code='de')
 
 writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/', model='tts_models/de/thorsten/tacotron2-DDC', vocoder='vocoder_models/de/thorsten/hifigan_v1')
 writer.synthesize_and_write(project.author + ' - ' + project.title)
