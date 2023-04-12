@@ -244,25 +244,34 @@ class TTS_Processor:
 
             for tts_item in tts_items:
                 text = tts_item.text
+                if tts_item.text:
 
-                if not text and tts_item.length > 0:
-                    final_items.append(tts_item)
+                    if not text and tts_item.length > 0:
+                        final_items.append(tts_item)
 
-                # text = re.sub(r'([\.\?\!;:]) ', r'\1\n', text)
-                text = re.sub(r'[–—]', r'-', text)
-                text = re.sub(r'[„“”]', r'"', text)
-                text = re.sub(r'[‘’]', r"'", text)
+                    # text = re.sub(r'([\.\?\!;:]) ', r'\1\n', text)
+                    text = re.sub(r'[–—]', r'-', text)
+                    text = re.sub(r'[„“”]', r'"', text)
+                    text = re.sub(r'[‘’]', r"'", text)
 
-                # Remove all remaining punctuation after first occurrence
-                # text = re.sub(r'([\.\?\!;:])\s?[\.\?\!;:,\)\"\'.\]]+', r'\1', text)
-                text = text.rstrip(string.punctuation + ' ')
+                    # Remove all remaining punctuation after first occurrence
+                    punctuation_regex = '[' + re.escape(string.punctuation) + ']'
+                    regex = r'(' + punctuation_regex + r'(?:\s+)?)+$'
 
-                # Strip starting punctuation and normalize ending punctuation
-                text = text.strip().lstrip(string.punctuation).strip()
+                    match = re.search(regex, text)
 
-                if self.model != 'tts_models/en/vctk/vits':
-                    # Add a full stop if necessary to avoid synthesizing problems with some models
-                    text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)
+                    if match:
+                        matched_text = match.group(0)
+                        if len(matched_text) > 2:
+                            first_char = matched_text[0]
+                            text = re.sub(regex, first_char, text)
+
+                    # Strip starting punctuation and normalize ending punctuation
+                    text = text.strip().lstrip(string.punctuation).strip()
+
+                    if self.model != 'tts_models/en/vctk/vits':
+                        # Add a full stop if necessary to avoid synthesizing problems with some models
+                        text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)
 
                 if len(text) > 0:
                     if re.search(r'[a-zA-Z0-9]', text):
@@ -273,6 +282,9 @@ class TTS_Processor:
                             final_items.append(TTS_Item(length=self.pause_sentence))
                         elif text[-1] in ['!', '?']:
                             final_items.append(TTS_Item(length=self.pause_question_exclamation))
+                else:
+                    if tts_item.length > 0:
+                        final_items.append(tts_item)
 
             # if len(final_items) > 0:
             #     tts_items[-1].properties.pause_pre += pause_pre
