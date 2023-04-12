@@ -1,6 +1,8 @@
 import contextlib
 import copy
 import csv
+import json
+import os
 import re
 import string
 from pathlib import Path
@@ -68,17 +70,13 @@ class TTS_Processor:
 
         source_dir = Path(__file__).resolve().parent
 
-        # Load general replace list
-        with open(source_dir / 'data/replace', 'r') as file:
-            for row in csv.reader(file, delimiter='\t'):
-                self.replace[row[0]] = row[1]
+        lang = self.model.split('/')[1]
 
-        # Load language specific replace list
-        lang = self.model.split('/')[1] if '/' in self.model else 'en'
-
-        with open(source_dir / f'data/replace_{lang}', 'r') as file:
-            for row in csv.reader(file, delimiter='\t'):
-                self.replace[row[0]] = row[1]
+        for file_path in ['data/replace.json', f'data/replace_{lang}.json']:
+            with open(os.path.join(source_dir, file_path), 'r') as file:
+                data = file.read()
+                # Convert the data to a Python dictionary and update the replace dict
+                self.replace.update(json.loads(data))
 
     # def __del__(self):
     #     self.temp_dir.cleanup()
