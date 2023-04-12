@@ -13,7 +13,7 @@ class Test(unittest.TestCase):
         tts_items = t._prepare_item(tts_item)
 
         self.assertEqual(tts_items[0].text, 'This. Is')
-        self.assertEqual(tts_items[1].length, 150)
+        self.assertEqual(tts_items[1].length, 100)
         self.assertEqual(tts_items[2].text, 'A t:est!')
         self.assertEqual(tts_items[3].length, 1000)
 
