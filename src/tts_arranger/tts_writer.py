@@ -107,10 +107,10 @@ class TTS_Writer():
             # print(f'for {i}, {chapter.title} in enumerate(chapters):')
             audio = AudioSegment.empty()
 
-            temp_format = 'mp4'
+            # temp_format = 'mp4'
 
-            if self.output_format != 'm4b':
-                temp_format = 'wav'
+            # if self.output_format != 'm4b':
+            temp_format = 'wav'
 
             filename = temp_dir + '/' + f'tts_part_{i}.{temp_format}'
 
@@ -133,7 +133,7 @@ class TTS_Writer():
 
             current_total_items += len(chapter.tts_items)
 
-            tts_arranger.write(audio, filename)
+            self._write_temp_audio(audio, filename)
 
             num_zeros = len(str(len(self.temp_files)))
             chapter_title = f'{i + 1:0{num_zeros}} - {chapter.title}'
@@ -205,7 +205,46 @@ class TTS_Writer():
                 .run(overwrite_output=True)
             )
 
-    def synthesize_project(self, project_filename: str, temp_dir_prefix: str = '', callback: Callable[[float, TTS_Item], None] | None = None):
+    def _write_temp_audio(self, segment: AudioSegment, output_filename: str) -> None:
+        """
+        Convert and write chapter AudioSegment as temporary audio file for later concatenation
+
+        :param segment: AudioSegment to be written
+        :type segment: AudioSegment
+
+        :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
+        :type output_filename: str
+
+        :return: None
+        :rtype: None
+        """
+
+        comp_expansion = 12.5
+        comp_raise = 0.0001
+
+        # Apply dynamic compression
+        params = ['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1']
+        bitrate = '320k'
+        format = 'wav'
+        segment.export(output_filename, format, parameters=params, bitrate=bitrate)
+
+    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', callback: Callable[[float, TTS_Item], None] | None = None) -> None:
+        """
+        Synthesize and write the output audio files for the given project.
+
+        :param project_filename: The project name.
+        :type project_filename: str
+
+        :param temp_dir_prefix: An optional prefix for the temporary directory name used during synthesis.
+        :type temp_dir_prefix: str
+
+        :param callback: An optional callback function that will be called periodically during synthesis with progress information.
+        :type callback: Callable[[float, TTS_Item], None] | None
+        :return: None
+
+        :raises: ValueError if `project_filename` is not a valid file path.
+        """
+
         if self.project.tts_chapters:
             with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as temp_dir:
                 try:
