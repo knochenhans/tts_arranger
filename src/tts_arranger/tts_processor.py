@@ -20,7 +20,7 @@ from TTS.utils.synthesizer import Synthesizer  # type: ignore
 
 from .items.tts_item import TTS_Item
 from .utils.audio import numpy_to_segment
-from .utils.log import LOG_TYPE, bcolors, log
+from .utils.log import LOG_TYPE, log
 
 
 class TTS_Processor:

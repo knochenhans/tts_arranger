@@ -19,6 +19,7 @@ class LOG_TYPE(Enum):
     INFO = auto()
     WARNING = auto()
     ERROR = auto()
+    SUCCESS = auto()
 
 
 def log(log_type: LOG_TYPE, message: str):
@@ -31,13 +32,12 @@ def log(log_type: LOG_TYPE, message: str):
     :param message: The message to print.
     :type message: str
     """
-    format = bcolors.ENDC
+    COLORS = {
+        LOG_TYPE.INFO: bcolors.HEADER,
+        LOG_TYPE.WARNING: bcolors.WARNING,
+        LOG_TYPE.ERROR: bcolors.FAIL,
+        LOG_TYPE.SUCCESS: bcolors.OKGREEN,
+    }
 
-    if log_type == LOG_TYPE.INFO:
-        format = bcolors.HEADER
-    elif log_type == LOG_TYPE.WARNING:
-        format = bcolors.WARNING
-    elif log_type == LOG_TYPE.ERROR:
-        format = bcolors.FAIL
-
-    print(format + message + bcolors.ENDC)
+    color_code = COLORS.get(log_type, bcolors.ENDC)
+    print(color_code + message + bcolors.ENDC)

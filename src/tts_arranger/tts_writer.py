@@ -297,6 +297,6 @@ class TTS_Writer():
                             destination = output_filename + '/' + f'{name}.{self.output_format}'
                             os.rename(file, destination)
 
-            log(LOG_TYPE.INFO, f'Synthesizing {self.project.title} finished, file saved under {output_path}.')
+            log(LOG_TYPE.SUCCESS, f'Synthesizing {self.project.title} finished, file saved under {output_path}.')
         else:
             log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting')
