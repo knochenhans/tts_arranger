@@ -108,7 +108,7 @@ class TTS_Writer():
 
             temp_format = 'wav'
 
-            filename = temp_dir + '/' + f'tts_part_{i}.{temp_format}'
+            filename = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
 
             log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}')
 
@@ -130,7 +130,7 @@ class TTS_Writer():
             num_zeros = len(str(len(self.temp_files)))
             chapter_title = f'{i + 1:0{num_zeros}} - {chapter.title}'
 
-            filename_out = temp_dir + '/' + f'tts_part_{i}.{temp_format}'
+            filename_out = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
 
             # Add temp files for concatenating later
             self.temp_files.append((chapter_title, filename_out))
@@ -190,7 +190,7 @@ class TTS_Writer():
 
         with tempfile.TemporaryDirectory() as temp_dir:
             audio = ffmpeg.input(input_file)['a']
-            image_path = temp_dir + '/tts_image.jpeg'
+            image_path = os.path.join(temp_dir, 'tts_image.jpeg')
 
             # Fix for ffmpeg problem when image size is not divisible by 2
             image.crop((0, 0, math.ceil(image_width/2)*2, math.ceil(image_height/2)*2)).save(image_path)
