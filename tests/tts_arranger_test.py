@@ -1,7 +1,9 @@
+import os
 import unittest
+from tempfile import TemporaryDirectory
 
-from tts_arranger import TTS_Processor
-from tts_arranger.items.tts_item import TTS_Item
+from tts_arranger import (TTS_Chapter, TTS_Item, TTS_Processor, TTS_Project,
+                          TTS_Writer)
 
 
 class Test(unittest.TestCase):
@@ -315,3 +317,33 @@ Do you mean pidgin Danish, perhaps? :''', '')
         # tts_items = t.break_speakers(tts_items, ('"', '"'), True)
 
         self.assertEqual(tts_items[0].text, 'candle-')
+
+    def test_synthesize_and_write(self):
+        items1 = []
+        items1.append(TTS_Item('This is a test:', speaker_idx=0))
+        items1.append(TTS_Item('This is another test:',  speaker_idx=1))
+
+        items2 = []
+        items2.append(TTS_Item('Another test',  speaker_idx=0))
+        items2.append(TTS_Item('This is getting boring!',  speaker_idx=1))
+
+        chapter = []
+        chapter.append(TTS_Chapter(items1, 'Chapter 1'))
+        chapter.append(TTS_Chapter(items2, 'Chapter 2'))
+
+        project = TTS_Project(chapter, 'Project title', 'This is a subtitle', author='Some author')
+
+        with TemporaryDirectory() as tmpdir:
+            output_dir = tmpdir
+            output_format = 'mp3'
+
+            writer = TTS_Writer(project, output_dir, output_format=output_format)
+            writer.synthesize_and_write(project.author + ' - ' + project.title)
+
+            output_file_path = os.path.join(output_dir, f'{project.author} - {project.title}.{output_format}')
+
+            # Ensure that the output file was created
+            self.assertTrue(os.path.exists(output_file_path))
+
+            # Ensure that the output file has a non-zero size
+            self.assertGreater(os.path.getsize(output_file_path), 0)
