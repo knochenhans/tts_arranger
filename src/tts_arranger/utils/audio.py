@@ -19,10 +19,10 @@ def numpy_to_segment(numpy_wav: np.ndarray, sample_rate: int) -> AudioSegment:
     :rtype: AudioSegment
     """
     wav = numpy_wav.astype(np.float32)
-    wav_io = io.BytesIO()
-    scipy.io.wavfile.write(wav_io, sample_rate, wav)
-    wav_io.seek(0)
-    return AudioSegment.from_wav(wav_io)
+    with io.BytesIO() as wav_io:
+        scipy.io.wavfile.write(wav_io, sample_rate, wav)
+        wav_io.seek(0)
+        return AudioSegment.from_wav(wav_io)
 
 
 def segment_to_numpy(segment: AudioSegment) -> np.ndarray:
