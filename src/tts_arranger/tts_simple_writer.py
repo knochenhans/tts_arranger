@@ -83,7 +83,7 @@ class TTS_Simple_Writer():
                 sys.exit()
 
         self._write(segments, output_filename)
-        log(LOG_TYPE.SUCCESS, f'Synthesizing finished, file saved under {output_filename}.')
+        log(LOG_TYPE.SUCCESS, f'Synthesizing finished, file saved as {output_filename}')
 
     def _write(self, segment: AudioSegment, output_filename: str) -> None:
         """

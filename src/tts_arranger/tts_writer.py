@@ -324,7 +324,7 @@ class TTS_Writer():
                     subprocess.call(cmd)
 
                     output_files.append(output_path)
-                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}.')
+                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}')
                 else:
                     # Don’t concatenate, convert the chapter temp files to the target format
                     os.makedirs(output_filename, exist_ok=True)
@@ -346,7 +346,7 @@ class TTS_Writer():
                         )
 
                         output_files.append(output_chapter_filename)
-                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under {output_filename}.')
+                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under {output_filename}/')
 
                 if self.project.image_bytes:
                     if self.output_format in ['m4b', 'm4a', 'mp3']:
