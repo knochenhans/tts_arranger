@@ -507,7 +507,7 @@ class TTS_Processor:
 
         return final_items
 
-    def _merge_similar_items(self, items=[]) -> list:
+    def _merge_similar_items(self, items: list[TTS_Item]) -> list[TTS_Item]:
         """
         Merge similar items for smoother synthesizing and avoiding unwanted pauses
 
@@ -515,43 +515,40 @@ class TTS_Processor:
         :type items: list
 
         :return: A list of merged TTS items
-        :rtype: list
+        :rtype: list[TTS_Item]
         """
+
         final_items: list[TTS_Item] = []
+        merged_item: Optional[TTS_Item] = None
 
         if items:
-            start_item = -1
-            merged_item = TTS_Item()
-
-            for i, item in enumerate(items):
-                if start_item < 0:
+            for item in items:
+                if not merged_item:
                     # Scanning not started
-                    start_item = i
                     merged_item = item
+                elif merged_item.speaker == item.speaker and merged_item.speaker_idx == item.speaker_idx:
+                    # Starting item and current are similar, add to merge item text and length
+                    if merged_item.text and item.text:
+                        merged_item = merged_item.__class__(
+                            text=f'{merged_item.text.strip()} {item.text.strip()}',
+                            speaker=merged_item.speaker,
+                            speaker_idx=merged_item.speaker_idx,
+                            length=merged_item.length + item.length
+                        )
+                    else:
+                        merged_item = merged_item.__class__(
+                            text=f'{merged_item.text}{item.text}',
+                            speaker=merged_item.speaker,
+                            speaker_idx=merged_item.speaker_idx,
+                            length=merged_item.length + item.length
+                        )
                 else:
-                    # Scanning started
-                    if merged_item.speaker == item.speaker and merged_item.speaker_idx == item.speaker_idx:
-                        # Starting item and current are similar, add to merge item text and length
-                        if merged_item.text and item.text:
-                            merged_item.text += ' ' + item.text
-                        merged_item.length += item.length
-                    else:
-                        # Starting item and current are not similar, add last and current item, set this item as new starting item
-                        if final_items:
-                            if final_items[-1] != merged_item:
-                                final_items.append(merged_item)
-                        else:
-                            final_items.append(merged_item)
-                        final_items.append(item)
-                        merged_item = item
-                        start_item = i
+                    # Starting item and current are not similar, add last and current item, set this item as new starting item
+                    final_items.append(merged_item)
+                    merged_item = item
 
-                if i == len(items) - 1:
-                    if final_items:
-                        if final_items[-1] != merged_item:
-                            final_items.append(merged_item)
-                    else:
-                        final_items.append(merged_item)
+            if merged_item is not None:
+                final_items.append(merged_item)
 
         return final_items
 
