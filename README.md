@@ -13,11 +13,11 @@ from tts_arranger import (TTS_Chapter, TTS_Item, TTS_Project,
 tts_items = []
 
 tts_items.append(TTS_Item('This is a test', 'p330'))
-tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 'ED\n', length=10000))
+tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 'p273', length=10000))
 tts_items.append(TTS_Item(length=2000))  # Insert pause
 
 simple_writer = TTS_Simple_Writer(tts_items)
-simple_writer.synthesize_and_write('/tmp/tts_arranger_example_output/test2.mp3')
+simple_writer.synthesize_and_write('/tmp/tts_arranger_example_output/test.mp3')
 
 # English example using tts_models/en/vctk/vits (with multispeaker support)
 
@@ -38,6 +38,6 @@ project = TTS_Project(chapter, 'Project title', 'This is a subtitle', author='So
 # Add a cover image
 project.add_image_from_url('https://coqui.ai/static/38a06ec53309f617be3eb3b8b9367abf/598c3/logo-wordmark.png')
 
-writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/', output_format='mp3')
-writer.synthesize_and_write(project.author + ' - ' + project.title, concat=False)
+writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/')
+writer.synthesize_and_write(project.author + ' - ' + project.title)
 ```
