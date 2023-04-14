@@ -1,6 +1,6 @@
 # TTS Arranger
 
-A set of classes that simplify arranging text fragments with multiple speakers and processing it using coqui.ai TTS.
+A library that simplifies arranging text items fragments with multiple speakers and processing them using coqui.ai TTS to write audio files. 
 
 # Examples
 
