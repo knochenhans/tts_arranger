@@ -528,20 +528,12 @@ class TTS_Processor:
                     merged_item = item
                 elif merged_item.speaker == item.speaker and merged_item.speaker_idx == item.speaker_idx:
                     # Starting item and current are similar, add to merge item text and length
-                    if merged_item.text and item.text:
-                        merged_item = merged_item.__class__(
-                            text=f'{merged_item.text.strip()} {item.text.strip()}',
-                            speaker=merged_item.speaker,
-                            speaker_idx=merged_item.speaker_idx,
-                            length=merged_item.length + item.length
-                        )
-                    else:
-                        merged_item = merged_item.__class__(
-                            text=f'{merged_item.text}{item.text}',
-                            speaker=merged_item.speaker,
-                            speaker_idx=merged_item.speaker_idx,
-                            length=merged_item.length + item.length
-                        )
+                    merged_item = merged_item.__class__(
+                        text=f'{merged_item.text}{item.text}',
+                        speaker=merged_item.speaker,
+                        speaker_idx=merged_item.speaker_idx,
+                        length=merged_item.length + item.length
+                    )
                 else:
                     # Starting item and current are not similar, add last and current item, set this item as new starting item
                     final_items.append(merged_item)
