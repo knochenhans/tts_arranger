@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from PIL import Image
 
 
-import requests
+import requests  # type: ignore
 
 from ..utils.log import LOG_TYPE, log
 from .tts_chapter import TTS_Chapter  # type: ignore
