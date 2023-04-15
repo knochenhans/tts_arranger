@@ -112,28 +112,29 @@ class TTS_Writer():
 
             log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}')
 
-            for j, tts_item in enumerate(chapter.tts_items):
-                if tts_item.text:
-                    log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)} ("{tts_item.speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
-                else:
-                    log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
+            if len(chapter.tts_items) > 0:
+                for j, tts_item in enumerate(chapter.tts_items):
+                    if tts_item.text:
+                        log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)} ("{tts_item.speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                    else:
+                        log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
 
-                audio += tts_processor.synthesize_tts_item(tts_item)
+                    audio += tts_processor.synthesize_tts_item(tts_item)
 
-                if callback is not None:
-                    callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
+                    if callback is not None:
+                        callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
 
-            current_total_items += len(chapter.tts_items)
+                current_total_items += len(chapter.tts_items)
 
-            self._write_temp_audio(audio, filename)
+                self._write_temp_audio(audio, filename)
 
-            num_zeros = len(str(len(self.temp_files)))
-            chapter_title = f'{i + 1:0{num_zeros}} - {chapter.title}'
+                num_zeros = len(str(len(self.temp_files)))
+                chapter_title = f'{i + 1:0{num_zeros}} - {chapter.title}'
 
-            filename_out = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
+                filename_out = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
 
-            # Add temp files for concatenating later
-            self.temp_files.append((chapter_title, filename_out))
+                # Add temp files for concatenating later
+                self.temp_files.append((chapter_title, filename_out))
 
             chapter.start_time = cumulative_time
             chapter.end_time = cumulative_time + self._get_nanoseconds_for_file(filename)
