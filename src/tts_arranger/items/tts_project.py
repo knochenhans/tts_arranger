@@ -159,3 +159,12 @@ class TTS_Project():
         """
         image = Image.open(requests.get(image_url, stream=True).raw)
         self._add_image(image)
+
+    def clean_empty_chapters(self):
+        final_chapters: list[TTS_Chapter] = []
+
+        for chapter in self.tts_chapters:
+            if len(chapter.tts_items) > 0:
+                final_chapters.append(chapter)
+
+        self.tts_chapters = final_chapters
