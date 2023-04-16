@@ -69,6 +69,19 @@ class TTS_Project():
                 log(LOG_TYPE.WARNING, f'TTS Project export file "{filename}" could not be opened for reading.')
         return TTS_Project()
 
+    @classmethod
+    def from_items(cls, tts_items: list[TTS_Item]):
+        """
+        Convenience method to create a TTS project from a list of TTS items.
+
+        :param filename: A list with TTS item to create TTS project from (containing a single chapter containing the items).
+        :type filename: str
+
+        :return: A TTS project object loaded from the JSON file.
+        :rtype: TTS_Project
+        """
+        return TTS_Project([TTS_Chapter(tts_items)])
+
     def merge_from_project(self, project) -> None:
         """
         Method to merge the contents of another TTS project into this one.
