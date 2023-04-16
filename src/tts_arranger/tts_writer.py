@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from typing import Callable
+from typing import Callable, Optional
 
 import ffmpeg  # type: ignore
 from pathvalidate._filename import sanitize_filename
@@ -24,7 +24,7 @@ class TTS_Writer():
     Class to process TTS projects (containing of chapters each containing a number of items) and to finally write an audio file including chapter metadata and chapter info
     """
 
-    def __init__(self, project: TTS_Project = TTS_Project(),  base_path: str = '', output_format='m4b', model: str = '', vocoder: str = '') -> None:
+    def __init__(self, project: TTS_Project = TTS_Project(),  base_path: str = '', output_format='m4b', model: str = '', vocoder: str = '', preferred_speakers: Optional[list[str]] = None) -> None:
         """
         Constructor for the TTS_Writer class.
 
@@ -53,6 +53,7 @@ class TTS_Writer():
         self.vocoder = vocoder
 
         self.temp_files: list[tuple[str, str]] = []
+        self.preferred_speakers = preferred_speakers or []
 
     def _get_nanoseconds_for_file(self, file_name):
         """
@@ -115,7 +116,8 @@ class TTS_Writer():
             if len(chapter.tts_items) > 0:
                 for j, tts_item in enumerate(chapter.tts_items):
                     if tts_item.text:
-                        log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)} ("{tts_item.speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                        speaker = tts_item.speaker or self.preferred_speakers[tts_item.speaker_idx]
+                        log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)} ("{speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
                     else:
                         log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
 
@@ -257,7 +259,7 @@ class TTS_Writer():
                 log(LOG_TYPE.INFO, f'Synthesizing {self.project.title}')
 
                 if self.model and self.vocoder:
-                    t = TTS_Processor(self.model, self.vocoder)
+                    t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
                 else:
                     match self.project.lang_code:
                         case 'en':
@@ -269,7 +271,7 @@ class TTS_Writer():
                         case _:
                             raise ValueError(f'Language code {self.project.lang_code} not supported')
 
-                    t = TTS_Processor(self.model, self.vocoder)
+                    t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
 
                 self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback)
 

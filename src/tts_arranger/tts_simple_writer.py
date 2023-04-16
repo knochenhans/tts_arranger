@@ -2,6 +2,7 @@ import datetime
 import os
 import sys
 import time
+from typing import Optional
 
 from pydub import AudioSegment  # type: ignore
 
@@ -15,10 +16,11 @@ class TTS_Simple_Writer():
     Simple writer class that takes a list of TTS items (in contrast to a more complex TTS_Project object), synthesizes, and writes them as a final audio file
     """
 
-    def __init__(self, tts_items: list[TTS_Item]):
+    def __init__(self, tts_items: list[TTS_Item], preferred_speakers: Optional[list[str]] = None):
         self.tts_items = tts_items
 
         self.final_segment: AudioSegment
+        self.preferred_speakers = preferred_speakers or []
 
     def synthesize_and_write(self, output_filename: str):
         """
@@ -51,7 +53,8 @@ class TTS_Simple_Writer():
 
         for idx, tts_item in enumerate(tts_items):
             if tts_item.text:
-                log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)} "({tts_item.speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                speaker = tts_item.speaker or self.preferred_speakers[tts_item.speaker_idx]
+                log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)} "({speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
             else:
                 log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
 
