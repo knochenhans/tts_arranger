@@ -18,7 +18,7 @@ from TTS.utils.synthesizer import Synthesizer  # type: ignore
 
 from .items.tts_item import TTS_Item
 from .utils.audio import numpy_to_segment
-from .utils.log import LOG_TYPE, log
+from .utils.log import LOG_TYPE, bcolors, log
 
 
 class TTS_Processor:
@@ -89,7 +89,7 @@ class TTS_Processor:
 
         :return: None
         """
-        log(LOG_TYPE.INFO, f'Initializing speech synthesizer')
+        log(LOG_TYPE.INFO, f'Initializing speech synthesizer.')
         models_dir = Path(TTS.__file__).resolve().parent / '.models.json'
         self.manager = ModelManager(str(models_dir))
 
@@ -564,6 +564,14 @@ class TTS_Processor:
                     speaker = tts_item.speaker or self.speakers[tts_item.speaker_idx % len(self.speakers)]
                     speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] if self.preferred_speakers and speaker in self.speakers else speaker
 
+                # Add a symbol to mark if not speaker was specified and it was derived from the speaker index
+                speaker_mark = ''
+
+                if not tts_item.speaker:
+                    speaker_mark = '*'
+
+                log(LOG_TYPE.INFO, f'("{speaker}"{speaker_mark}, {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+
                 # Suppress tts output
                 with contextlib.redirect_stdout(None):
                     wav = self.synthesizer.tts(
@@ -571,7 +579,7 @@ class TTS_Processor:
                         speaker_name=speaker,
                     )
             except Exception as e:
-                raise Exception(f'Error synthesizing "{tts_item.text}: {e}"')
+                raise Exception(f'Error synthesizing "{tts_item.text}: {e}".')
             else:
                 speech_segment = numpy_to_segment(np.array(wav), int(self.synthesizer.output_sample_rate))
 

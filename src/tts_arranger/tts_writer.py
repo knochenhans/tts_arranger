@@ -112,31 +112,32 @@ class TTS_Writer():
             filename = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
 
             if len(chapters) > 1:
-                log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}')
+                log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}.')
 
             if len(chapter.tts_items) > 0:
                 for j, tts_item in enumerate(chapter.tts_items):
                     if tts_item.text:
-                        speaker = tts_item.speaker or self.preferred_speakers[tts_item.speaker_idx]
-                        log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)} ("{speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                        log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)}:{bcolors.ENDC}')
                     else:
-                        log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
+                        log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}.')
 
+                    # Synthesize audio from TTS item text
                     audio += tts_processor.synthesize_tts_item(tts_item)
 
                     if callback is not None:
                         callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
 
-                current_total_items += len(chapter.tts_items)
-
+                # Write synthesized audio as temp file
                 self._write_temp_audio(audio, filename)
+
+                current_total_items += len(chapter.tts_items)
 
                 num_zeros = len(str(len(self.temp_files)))
                 chapter_title = f'{i + 1:0{num_zeros}} - {chapter.title}'
 
                 filename_out = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
 
-                # Add temp files for concatenating later
+                # Add temp file for concatenating later
                 self.temp_files.append((chapter_title, filename_out))
 
             chapter.start_time = cumulative_time
@@ -252,12 +253,12 @@ class TTS_Writer():
         """
 
         if not self.project.tts_chapters:
-            log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting')
+            log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting.')
             return
 
         with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as temp_dir:
             try:
-                log(LOG_TYPE.INFO, f'Synthesizing {self.project.title}')
+                log(LOG_TYPE.INFO, f'Synthesizing project "{self.project.title}".')
 
                 if self.model and self.vocoder:
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
@@ -270,14 +271,14 @@ class TTS_Writer():
                             self.model = 'tts_models/de/thorsten/tacotron2-DDC'
                             self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
                         case _:
-                            raise ValueError(f'Language code {self.project.lang_code} not supported')
+                            raise ValueError(f'Language code "{self.project.lang_code}" not supported')
 
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
 
                 self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback)
 
             except Exception as e:
-                log(LOG_TYPE.ERROR, f'Synthesizing {self.project.title} failed: {e}')
+                log(LOG_TYPE.ERROR, f'Synthesizing project "{self.project.title}" failed: {e}.')
                 sys.exit(1)
 
             finally:
@@ -328,7 +329,7 @@ class TTS_Writer():
                     subprocess.call(cmd)
 
                     output_files.append(output_path)
-                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as {output_path}')
+                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as "{output_path}".')
                 else:
                     # Don’t concatenate, convert the chapter temp files to the target format
                     os.makedirs(output_filename, exist_ok=True)
@@ -350,7 +351,7 @@ class TTS_Writer():
                         )
 
                         output_files.append(output_chapter_filename)
-                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under {output_filename}/')
+                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under "{output_filename}/".')
 
                 if self.project.image_bytes:
                     if self.output_format in ['m4b', 'm4a', 'mp3']:

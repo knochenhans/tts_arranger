@@ -53,13 +53,12 @@ class TTS_Simple_Writer():
 
         for idx, tts_item in enumerate(tts_items):
             if tts_item.text:
-                speaker = tts_item.speaker or self.preferred_speakers[tts_item.speaker_idx]
-                log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)} "({speaker}", {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)}:{bcolors.ENDC}')
             else:
-                log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC} {tts_item.text}')
+                log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}.')
 
             if time_needed:
-                log(LOG_TYPE.INFO, f'(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))})')
+                log(LOG_TYPE.INFO, f'(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))}).')
 
             time_last = time.time()
 
@@ -82,11 +81,11 @@ class TTS_Simple_Writer():
             except Exception as e:
                 # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
                 #     f.write(f'Error synthesizing "{output_filename}"\n')
-                log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}": {e}')
+                log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}": {e}.')
                 sys.exit()
 
         self._write(segments, output_filename)
-        log(LOG_TYPE.SUCCESS, f'Synthesizing finished, file saved as {output_filename}')
+        log(LOG_TYPE.SUCCESS, f'Synthesizing finished, file saved as "{output_filename}".')
 
     def _write(self, segment: AudioSegment, output_filename: str) -> None:
         """
@@ -115,7 +114,7 @@ class TTS_Simple_Writer():
         # Ensure output file name has a file extension
         output_filename = os.path.splitext(output_filename)[0] + '.' + format
 
-        log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}')
+        log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}.')
 
         comp_expansion = 12.5
         comp_raise = 0.0001
