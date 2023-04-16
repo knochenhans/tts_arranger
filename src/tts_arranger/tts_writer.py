@@ -88,7 +88,7 @@ class TTS_Writer():
         :rtype: None
         """
 
-        log(LOG_TYPE.INFO, f'Preprocessing items')
+        log(LOG_TYPE.INFO, f'Preprocessing items.')
 
         for chapter in chapters:
             chapter.tts_items = tts_processor.preprocess_items(chapter.tts_items)
@@ -231,7 +231,7 @@ class TTS_Writer():
         format = 'wav'
         segment.export(output_filename, format, parameters=params, bitrate=bitrate)
 
-    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Callable[[float, TTS_Item], None] | None = None) -> None:
+    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Callable[[float, TTS_Item], None] | None = None, max_pause_duration=0) -> None:
         """
         Synthesize and write the output audio files for the given project.
 
@@ -275,6 +275,7 @@ class TTS_Writer():
 
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
 
+                self.project.optimize(max_pause_duration)
                 self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback)
 
             except Exception as e:
