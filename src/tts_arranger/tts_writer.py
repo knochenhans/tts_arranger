@@ -111,7 +111,8 @@ class TTS_Writer():
 
             filename = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
 
-            log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}')
+            if len(chapters) > 1:
+                log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}')
 
             if len(chapter.tts_items) > 0:
                 for j, tts_item in enumerate(chapter.tts_items):
