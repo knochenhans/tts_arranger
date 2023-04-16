@@ -335,7 +335,7 @@ class TTS_Writer():
 
                         output_args = {'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}
 
-                        if self.output_format is 'mp3':
+                        if self.output_format == 'mp3':
                             output_args['audio_bitrate'] = '320k'
 
                         # Convert to target format, adding metadata
