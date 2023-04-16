@@ -499,48 +499,11 @@ class TTS_Processor:
         :return: A new list of preprocessed TTS items.
         :rtype: list[TTS_Item]
         """
-        final_items = []
-        merged_items = self._merge_similar_items(tts_items)
-
-        for tts_item in merged_items:
-            final_items += self._prepare_item(tts_item)
-
-        return final_items
-
-    def _merge_similar_items(self, items: list[TTS_Item]) -> list[TTS_Item]:
-        """
-        Merge similar items for smoother synthesizing and avoiding unwanted pauses
-
-        :param items: A list of TTS items to merge
-        :type items: list
-
-        :return: A list of merged TTS items
-        :rtype: list[TTS_Item]
-        """
 
         final_items: list[TTS_Item] = []
-        merged_item: Optional[TTS_Item] = None
 
-        if items:
-            for item in items:
-                if not merged_item:
-                    # Scanning not started
-                    merged_item = item
-                elif merged_item.speaker == item.speaker and merged_item.speaker_idx == item.speaker_idx:
-                    # Starting item and current are similar, add to merge item text and length
-                    merged_item = merged_item.__class__(
-                        text=f'{merged_item.text}{item.text}',
-                        speaker=merged_item.speaker,
-                        speaker_idx=merged_item.speaker_idx,
-                        length=merged_item.length + item.length
-                    )
-                else:
-                    # Starting item and current are not similar, add last and current item, set this item as new starting item
-                    final_items.append(merged_item)
-                    merged_item = item
-
-            if merged_item is not None:
-                final_items.append(merged_item)
+        for tts_item in tts_items:
+            final_items += self._prepare_item(tts_item)
 
         return final_items
 

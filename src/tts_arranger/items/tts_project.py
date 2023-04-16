@@ -3,6 +3,7 @@ import datetime
 from io import BytesIO
 import pickle
 from dataclasses import dataclass, field
+from typing import Optional
 from PIL import Image
 
 
@@ -169,3 +170,16 @@ class TTS_Project():
                 final_chapters.append(chapter)
 
         self.tts_chapters = final_chapters
+
+    def optimize(self, max_pause_duration=0) -> None:
+        """
+        Merge similar items for smoother synthesizing and avoiding unwanted pauses
+
+        :param max_pause_duration: Maximum duration auf merged pauses
+        :type max_pause_duration: int
+
+        :return: None
+        """
+
+        for chapter in self.tts_chapters:
+            chapter.optimize(max_pause_duration)
