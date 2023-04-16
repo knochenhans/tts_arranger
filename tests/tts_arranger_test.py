@@ -94,11 +94,11 @@ Do you mean pidgin Danish, perhaps? :''', '')
         tts_item = TTS_Item('Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II.', '')
 
         tts_items = t._prepare_item(tts_item)
-        self.assertEqual(tts_items[0].text, 'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure')
+        self.assertEqual(tts_items[0].text, 'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure ')
         self.assertEqual(tts_items[1].length, 300)
         self.assertEqual(tts_items[2].text, 'not that Ken likely knew this or cared,')
         self.assertEqual(tts_items[3].length, 300)
-        self.assertEqual(tts_items[4].text, 'to the little Apple 2.')
+        self.assertEqual(tts_items[4].text, ' to the little Apple 2.')
         self.assertEqual(tts_items[5].length, 750)
 
     def test_punctuation3(self):
@@ -107,9 +107,9 @@ Do you mean pidgin Danish, perhaps? :''', '')
         tts_item = TTS_Item('a — b.', '')
 
         tts_items = t._prepare_item(tts_item)
-        self.assertEqual(tts_items[0].text, 'a')
+        self.assertEqual(tts_items[0].text, 'a ')
         self.assertEqual(tts_items[1].length, 300)
-        self.assertEqual(tts_items[2].text, 'b.')
+        self.assertEqual(tts_items[2].text, ' b.')
         self.assertEqual(tts_items[3].length, 750)
 
     # def test_punctuation3(self):
@@ -398,3 +398,17 @@ Do you mean pidgin Danish, perhaps? :''', '')
         self.assertEqual(items[1].length, 100)
         self.assertEqual(items[2].text, ' 3')
         self.assertEqual(items[3].length, 100)
+
+    def test_merge_items4(self):
+        item = TTS_Item('1 (1234), test')
+        t = TTS_Processor()
+        tts_items = t._prepare_item(item)
+        
+        project = TTS_Project()
+        project.tts_chapters.append(TTS_Chapter(tts_items))
+        project.optimize(max_pause_duration=100)
+        items = project.tts_chapters[0].tts_items
+
+        self.assertEqual(items[0].text, '1 ')
+        self.assertEqual(items[2].text, '1234,')
+        self.assertEqual(items[4].text, ' test')
