@@ -267,7 +267,7 @@ class TTS_Processor:
                             text = re.sub(regex, first_char, text)
 
                     # Strip starting punctuation and normalize ending punctuation
-                    text = text.strip().lstrip(string.punctuation).strip()
+                    text = text.lstrip(string.punctuation)
 
                     if self.model != 'tts_models/en/vctk/vits':
                         # Add a full stop if necessary to avoid synthesizing problems with some models
@@ -342,7 +342,7 @@ class TTS_Processor:
                         last_start = m.end()
 
                 # From end of last group to end of text
-                text = text[last_start:].strip()
+                text = text[last_start:]
 
                 if text:
                     final_items.append(TTS_Item(text, tts_item.speaker, tts_item.speaker_idx, tts_item.length))
@@ -406,7 +406,7 @@ class TTS_Processor:
 
                 for idx, c in enumerate(tts_item.text):
                     new_item = copy.copy(tts_item)
-                    new_item.text = tts_item.text[pos:idx].strip()
+                    new_item.text = tts_item.text[pos:idx]
                     new_item.speaker = tts_item.speaker
                     current_speaker = tts_item.speaker
                     current_speaker_idx = tts_item.speaker_idx
@@ -478,7 +478,7 @@ class TTS_Processor:
 
                 # Add rest / regular item
                 new_item = copy.copy(tts_item)
-                new_item.text = tts_item.text[pos:].strip()
+                new_item.text = tts_item.text[pos:]
                 new_item.speaker = current_speaker
                 new_item.speaker_idx = current_speaker_idx
                 new_item.length = tts_item.length

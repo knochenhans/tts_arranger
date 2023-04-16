@@ -21,5 +21,6 @@
   "\\bDOS\\b": "Dos",
   "\\bMr\\.": "Mister",
   "\\bMs\\.": "Miss",
-  "\\bMrs\\.": "Misses"
+  "\\bMrs\\.": "Misses",
+  "-{2,}": "—"
 }
