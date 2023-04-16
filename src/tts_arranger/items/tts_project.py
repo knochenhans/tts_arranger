@@ -82,7 +82,7 @@ class TTS_Project():
         if isinstance(project, TTS_Project):
             self.tts_chapters += project.tts_chapters
 
-    def add(self, items: list[TTS_Item]) -> None:
+    def append(self, items: list[TTS_Item]) -> None:
         """
         Method to add a list of TTS items to the last TTS chapter of this TTS project.
 
@@ -100,7 +100,7 @@ class TTS_Project():
 
     def to_json_file(self, filename: str) -> None:
         """
-        Method to save this TTS project to a JSON file.
+        Method to save the TTS project to a JSON file.
 
         :param filename: A string representing the name of the JSON file to be saved.
         :type filename: str
