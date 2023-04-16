@@ -347,3 +347,54 @@ Do you mean pidgin Danish, perhaps? :''', '')
 
             # Ensure that the output file has a non-zero size
             self.assertGreater(os.path.getsize(output_file_path), 0)
+
+    def test_merge_items1(self):
+        items = []
+        items.append(TTS_Item('1 '))
+        items.append(TTS_Item('2'))
+        items.append(TTS_Item(' 3'))
+
+        project = TTS_Project()
+        project.tts_chapters.append(TTS_Chapter(items))
+        project.optimize()
+        items = project.tts_chapters[0].tts_items
+
+        self.assertEqual(items[0].text, '1 2 3')
+
+    def test_merge_items2(self):
+        items = []
+        items.append(TTS_Item('1 '))
+        items.append(TTS_Item(length=1000))
+        items.append(TTS_Item('2'))
+        items.append(TTS_Item(length=1000))
+        items.append(TTS_Item(' 3'))
+
+        project = TTS_Project()
+        project.tts_chapters.append(TTS_Chapter(items))
+        project.optimize()
+        items = project.tts_chapters[0].tts_items
+
+        self.assertEqual(items[0].text, '1 ')
+        self.assertEqual(items[1].length, 1000)
+        self.assertEqual(items[2].text, '2')
+        self.assertEqual(items[3].length, 1000)
+        self.assertEqual(items[4].text, ' 3')
+
+    def test_merge_items3(self):
+        items = []
+        items.append(TTS_Item('1 '))
+        items.append(TTS_Item('2'))
+        items.append(TTS_Item(length=1000))
+        items.append(TTS_Item(length=1000))
+        items.append(TTS_Item(' 3'))
+        items.append(TTS_Item(length=1000))
+
+        project = TTS_Project()
+        project.tts_chapters.append(TTS_Chapter(items))
+        project.optimize(max_pause_duration=100)
+        items = project.tts_chapters[0].tts_items
+
+        self.assertEqual(items[0].text, '1 2')
+        self.assertEqual(items[1].length, 100)
+        self.assertEqual(items[2].text, ' 3')
+        self.assertEqual(items[3].length, 100)
