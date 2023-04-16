@@ -55,7 +55,7 @@ class TTS_Simple_Writer():
             if tts_item.text:
                 log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)}:{bcolors.ENDC}')
             else:
-                log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}.')
+                log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}')
 
             if time_needed:
                 log(LOG_TYPE.INFO, f'(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))}).')

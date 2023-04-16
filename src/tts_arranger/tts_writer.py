@@ -68,7 +68,7 @@ class TTS_Writer():
         result = ffmpeg.probe(file_name, cmd='ffprobe', show_entries='format=duration')
         return int(float(result['format']['duration']) * self.NANOSECONDS_IN_ONE_SECOND)
 
-    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Callable[[float, TTS_Item], None] | None = None) -> None:
+    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Callable[[float, TTS_Item], None] | None = None, max_pause_duration=0) -> None:
         """
         Private method for synthesizing chapters into audio.
 
@@ -92,6 +92,7 @@ class TTS_Writer():
 
         for chapter in chapters:
             chapter.tts_items = tts_processor.preprocess_items(chapter.tts_items)
+            chapter.optimize(max_pause_duration)
 
         tts_processor.initialize()
 
@@ -119,7 +120,7 @@ class TTS_Writer():
                     if tts_item.text:
                         log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)}:{bcolors.ENDC}')
                     else:
-                        log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}.')
+                        log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}')
 
                     # Synthesize audio from TTS item text
                     audio += tts_processor.synthesize_tts_item(tts_item)
@@ -275,8 +276,7 @@ class TTS_Writer():
 
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
 
-                self.project.optimize(max_pause_duration)
-                self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback)
+                self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback, max_pause_duration)
 
             except Exception as e:
                 log(LOG_TYPE.ERROR, f'Synthesizing project "{self.project.title}" failed: {e}.')
