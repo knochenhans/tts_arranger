@@ -172,8 +172,8 @@ class TTS_Project():
         :return: None
         """
         if image_url:
-            image = Image.open(requests.get(image_url, stream=True).raw)
-            self._add_image(image)
+            # self._add_image(image)
+            self.image_bytes = base64.b64encode(requests.get(image_url).content)
 
     def clean_empty_chapters(self):
         final_chapters: list[TTS_Chapter] = []

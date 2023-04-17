@@ -196,10 +196,18 @@ class TTS_Writer():
 
         with tempfile.TemporaryDirectory() as temp_dir:
             audio = ffmpeg.input(input_file)['a']
-            image_path = os.path.join(temp_dir, 'tts_image.jpeg')
+
+            # Save the project as a temporary image
+            image_format = 'jpeg'
+
+            image_path = os.path.join(temp_dir, f'tts_image.{image_format}')
+
+            # Convert to RGB if necessary
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
 
             # Fix for ffmpeg problem when image size is not divisible by 2
-            image.crop((0, 0, math.ceil(image_width/2)*2, math.ceil(image_height/2)*2)).save(image_path)
+            image.crop((0, 0, math.ceil(image_width/2)*2, math.ceil(image_height/2)*2)).save(image_path, format=image_format, quality=90)
 
             cover = ffmpeg.input(image_path)['v']
 
