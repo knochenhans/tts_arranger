@@ -202,6 +202,11 @@ class TTS_Writer():
 
             image_path = os.path.join(temp_dir, f'tts_image.{image_format}')
 
+            if image.format == 'PNG' and image.mode != 'RGBA':
+                image = image.convert('RGBA')
+                background = Image.new('RGBA', image.size, (255, 255, 255))
+                image = Image.alpha_composite(background, image)
+
             # Convert to RGB if necessary
             if image.mode != 'RGB':
                 image = image.convert('RGB')
