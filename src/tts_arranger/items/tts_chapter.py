@@ -72,4 +72,12 @@ class TTS_Chapter():
                 if final_item.length > max_pause_duration:
                     final_item.length = max_pause_duration
 
-        self.tts_items = final_items
+        non_empty_items: list[TTS_Item] = []
+
+        # Remove remaining empty items
+        for final_item in final_items:
+            if final_item.text.strip() or final_item.speaker_idx == -1:
+                final_item.text = final_item.text.strip()
+                non_empty_items.append(final_item)
+
+        self.tts_items = non_empty_items
