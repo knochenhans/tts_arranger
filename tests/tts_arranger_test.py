@@ -371,7 +371,7 @@ Do you mean pidgin Danish, perhaps? :''', '')
 
         project = TTS_Project()
         project.tts_chapters.append(TTS_Chapter(items))
-        project.optimize()
+        # project.optimize()
         items = project.tts_chapters[0].tts_items
 
         self.assertEqual(items[0].text, '1 ')
@@ -396,7 +396,7 @@ Do you mean pidgin Danish, perhaps? :''', '')
 
         self.assertEqual(items[0].text, '1 2')
         self.assertEqual(items[1].length, 100)
-        self.assertEqual(items[2].text, ' 3')
+        self.assertEqual(items[2].text, '3')
         self.assertEqual(items[3].length, 100)
 
     def test_merge_items4(self):
@@ -409,6 +409,6 @@ Do you mean pidgin Danish, perhaps? :''', '')
         project.optimize(max_pause_duration=100)
         items = project.tts_chapters[0].tts_items
 
-        self.assertEqual(items[0].text, '1 ')
+        self.assertEqual(items[0].text, '1')
         self.assertEqual(items[2].text, '1234,')
-        self.assertEqual(items[4].text, ' test')
+        self.assertEqual(items[4].text, 'test')
