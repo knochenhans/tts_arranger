@@ -91,8 +91,8 @@ class TTS_Writer():
         log(LOG_TYPE.INFO, f'Preprocessing items.')
 
         for chapter in chapters:
-            chapter.tts_items = tts_processor.preprocess_items(chapter.tts_items)
             chapter.optimize(max_pause_duration)
+            chapter.tts_items = tts_processor.preprocess_items(chapter.tts_items)
 
         tts_processor.initialize()
 
