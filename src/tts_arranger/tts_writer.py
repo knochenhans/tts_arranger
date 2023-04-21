@@ -140,6 +140,7 @@ class TTS_Writer():
 
                 # Add temp file for concatenating later
                 self.temp_files.append((chapter_title, filename_out))
+                log(LOG_TYPE.INFO, f'Temp file added: {filename_out}{bcolors.ENDC}')
 
             chapter.start_time = cumulative_time
             chapter.end_time = cumulative_time + self._get_nanoseconds_for_file(filename)
@@ -298,6 +299,7 @@ class TTS_Writer():
             finally:
                 # Prepare chapter metadata
                 metadata_lines = [';FFMETADATA1\n']
+                if len(self.temp_files) > 0:
 
                 for chapter in self.project.tts_chapters:
                     metadata_lines.append(f'[CHAPTER]\nSTART={chapter.start_time}\nEND={chapter.end_time}\ntitle={chapter.title}\n')
@@ -388,3 +390,5 @@ class TTS_Writer():
                                 log(LOG_TYPE.SUCCESS, 'Project image added to final output for all files.')
                     else:
                         log(LOG_TYPE.WARNING, f'Images are only possible for m4b/m4a and mp3 at the moment.')
+                else:
+                    log(LOG_TYPE.ERROR, f'No temp files after synthesizing, this is likely a bug.{bcolors.ENDC}')
