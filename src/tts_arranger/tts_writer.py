@@ -296,99 +296,99 @@ class TTS_Writer():
                 log(LOG_TYPE.ERROR, f'Synthesizing project "{self.project.title}" failed: {e}.')
                 sys.exit(1)
 
-            finally:
-                # Prepare chapter metadata
-                metadata_lines = [';FFMETADATA1\n']
+            else:
                 if len(self.temp_files) > 0:
+                    # Prepare chapter metadata
+                    metadata_lines = [';FFMETADATA1\n']
 
-                for chapter in self.project.tts_chapters:
-                    metadata_lines.append(f'[CHAPTER]\nSTART={chapter.start_time}\nEND={chapter.end_time}\ntitle={chapter.title}\n')
+                    for chapter in self.project.tts_chapters:
+                        metadata_lines.append(f'[CHAPTER]\nSTART={chapter.start_time}\nEND={chapter.end_time}\ntitle={chapter.title}\n')
 
-                metadata = ''.join(metadata_lines)
-                metadata_filename = os.path.join(temp_dir, 'metadata')
+                    metadata = ''.join(metadata_lines)
+                    metadata_filename = os.path.join(temp_dir, 'metadata')
 
-                # Write all the custom metadata to the new metadata file
-                with open(metadata_filename, 'w') as metadata_file:
-                    metadata_file.write(metadata)
+                    # Write all the custom metadata to the new metadata file
+                    with open(metadata_filename, 'w') as metadata_file:
+                        metadata_file.write(metadata)
 
-                output_filename = os.path.join(self.project_path, sanitize_filename(project_filename))
-                output_extension = f'.{self.output_format}'
+                    output_filename = os.path.join(self.project_path, sanitize_filename(project_filename))
+                    output_extension = f'.{self.output_format}'
 
-                # Shorten path if needed
-                output_filename = output_filename[:255 - len(output_extension)]
-                output_path = output_filename + output_extension
+                    # Shorten path if needed
+                    output_filename = output_filename[:255 - len(output_extension)]
+                    output_path = output_filename + output_extension
 
-                output_files: list[str] = []
+                    output_files: list[str] = []
 
-                # Create directory if needed
-                os.makedirs(self.project_path, exist_ok=True)
+                    # Create directory if needed
+                    os.makedirs(self.project_path, exist_ok=True)
 
-                # Concatenate all files, adding metadata and cover image (if set)
-                if concat:
-                    infiles = [ffmpeg.input(file) for _, file in self.temp_files]
+                    # Concatenate all files, adding metadata and cover image (if set)
+                    if concat:
+                        infiles = [ffmpeg.input(file) for _, file in self.temp_files]
 
-                    metadata_input = ffmpeg.input(metadata_filename)
+                        metadata_input = ffmpeg.input(metadata_filename)
 
-                    if self.output_format not in ['m4b', 'm4a']:
-                        log(LOG_TYPE.WARNING, f'Chapters are only possible for m4b/m4a at the moment.')
+                        if self.output_format not in ['m4b', 'm4a']:
+                            log(LOG_TYPE.WARNING, f'Chapters are only possible for m4b/m4a at the moment.')
 
-                    cmd = (
-                        ffmpeg
-                        .concat(*infiles, v=0, a=1)
-                        .output(metadata_input, output_path, map_metadata=1, **{'metadata': f'title={self.project.title}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
-                        .compile(overwrite_output=True)
-                    )
-
-                    # Remove last map parameter (workaround for ffmpeg-python bug)
-                    cmd = self._remove_last_arg(cmd, '-map')
-
-                    subprocess.call(cmd)
-
-                    output_files.append(output_path)
-                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as "{output_path}".')
-                else:
-                    # Don’t concatenate, convert the chapter temp files to the target format
-                    os.makedirs(output_filename, exist_ok=True)
-
-                    for name, file in self.temp_files:
-                        output_chapter_filename = os.path.join(output_filename, name + output_extension)
-
-                        output_args = {'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}
-
-                        if self.output_format == 'mp3':
-                            output_args['audio_bitrate'] = '320k'
-
-                        # Convert to target format, adding metadata
-                        (
+                        cmd = (
                             ffmpeg
-                            .input(file)
-                            .output(output_chapter_filename, **output_args, loglevel='error')
-                            .run(overwrite_output=True)
+                            .concat(*infiles, v=0, a=1)
+                            .output(metadata_input, output_path, map_metadata=1, **{'metadata': f'title={self.project.title}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
+                            .compile(overwrite_output=True)
                         )
 
-                        output_files.append(output_chapter_filename)
-                    log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under "{output_filename}/".')
+                        # Remove last map parameter (workaround for ffmpeg-python bug)
+                        cmd = self._remove_last_arg(cmd, '-map')
 
-                if self.project.image_bytes:
-                    if self.output_format in ['m4b', 'm4a', 'mp3']:
-                        image_bytes = base64.b64decode(self.project.image_bytes)
-                        image_file = io.BytesIO(image_bytes)
-                        image = Image.open(image_file)
+                        subprocess.call(cmd)
 
-                        if image.format:
-                            image_added = False
-                            for output_file in output_files:
-                                # Add image
-                                output_path_with_image = output_file + '_tmp' + output_extension
-
-                                self._add_image(image, output_file, output_path_with_image)
-                                os.remove(output_file)
-                                os.rename(output_path_with_image, output_file)
-                                image_added = True
-
-                            if image_added:
-                                log(LOG_TYPE.SUCCESS, 'Project image added to final output for all files.')
+                        output_files.append(output_path)
+                        log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as "{output_path}".')
                     else:
-                        log(LOG_TYPE.WARNING, f'Images are only possible for m4b/m4a and mp3 at the moment.')
+                        # Don’t concatenate, convert the chapter temp files to the target format
+                        os.makedirs(output_filename, exist_ok=True)
+
+                        for name, file in self.temp_files:
+                            output_chapter_filename = os.path.join(output_filename, name + output_extension)
+
+                            output_args = {'metadata': f'title={self.project.title} - {name}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}
+
+                            if self.output_format == 'mp3':
+                                output_args['audio_bitrate'] = '320k'
+
+                            # Convert to target format, adding metadata
+                            (
+                                ffmpeg
+                                .input(file)
+                                .output(output_chapter_filename, **output_args, loglevel='error')
+                                .run(overwrite_output=True)
+                            )
+
+                            output_files.append(output_chapter_filename)
+                        log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under "{output_filename}/".')
+
+                    if self.project.image_bytes:
+                        if self.output_format in ['m4b', 'm4a', 'mp3']:
+                            image_bytes = base64.b64decode(self.project.image_bytes)
+                            image_file = io.BytesIO(image_bytes)
+                            image = Image.open(image_file)
+
+                            if image.format:
+                                image_added = False
+                                for output_file in output_files:
+                                    # Add image
+                                    output_path_with_image = output_file + '_tmp' + output_extension
+
+                                    self._add_image(image, output_file, output_path_with_image)
+                                    os.remove(output_file)
+                                    os.rename(output_path_with_image, output_file)
+                                    image_added = True
+
+                                if image_added:
+                                    log(LOG_TYPE.SUCCESS, 'Project image added to final output for all files.')
+                        else:
+                            log(LOG_TYPE.WARNING, f'Images are only possible for m4b/m4a and mp3 at the moment.')
                 else:
                     log(LOG_TYPE.ERROR, f'No temp files after synthesizing, this is likely a bug.{bcolors.ENDC}')
