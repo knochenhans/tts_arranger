@@ -6,22 +6,24 @@ from tts_arranger import (TTS_Chapter, TTS_Item, TTS_Project,
 
 tts_items = []
 
-tts_items.append(TTS_Item('This is a test', 'p330'))
-tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 'p273', length=10000))
+preferred_speakers = ['p273', 'p330']
+
+tts_items.append(TTS_Item('This is a test', 1))
+tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 0, length=10000))
 tts_items.append(TTS_Item(length=2000))  # Insert pause
 
-simple_writer = TTS_Simple_Writer(tts_items)
+simple_writer = TTS_Simple_Writer(tts_items, preferred_speakers)
 simple_writer.synthesize_and_write('/tmp/tts_arranger_example_output/test.mp3')
 
 # English example using tts_models/en/vctk/vits (with multispeaker support)
 
 items1 = []
-items1.append(TTS_Item('This is a test:', speaker_idx=0))
-items1.append(TTS_Item('This is another test:',  speaker_idx=1))
+items1.append(TTS_Item('This is a test:', 0))
+items1.append(TTS_Item('This is another test:', 1))
 
 items2 = []
-items2.append(TTS_Item('Another test',  speaker_idx=0))
-items2.append(TTS_Item('This is getting boring!',  speaker_idx=1))
+items2.append(TTS_Item('Another test',  0))
+items2.append(TTS_Item('This is getting boring!', 1))
 
 chapter = []
 chapter.append(TTS_Chapter(items1, 'Chapter 1'))
@@ -32,7 +34,7 @@ project = TTS_Project(chapter, 'Project title', 'This is a subtitle', author='So
 # Add a cover image
 project.add_image_from_url('https://coqui.ai/static/38a06ec53309f617be3eb3b8b9367abf/598c3/logo-wordmark.png')
 
-writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/')
+writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/', preferred_speakers=preferred_speakers)
 writer.synthesize_and_write(project.author + ' - ' + project.title)
 
 # German example using Thorsten voice (no multispeaker support)

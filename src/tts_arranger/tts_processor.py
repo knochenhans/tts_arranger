@@ -336,7 +336,7 @@ class TTS_Processor:
                     if item_text:
 
                         # From last group to end of current group
-                        final_items.append(TTS_Item(item_text, tts_item.speaker, tts_item.speaker_idx, tts_item.length))
+                        final_items.append(TTS_Item(item_text, tts_item.speaker_idx, tts_item.length))
                         if pause_post_ms > 0:
                             final_items.append(TTS_Item(length=pause_post_ms))
                         last_start = m.end()
@@ -345,7 +345,7 @@ class TTS_Processor:
                 text = text[last_start:]
 
                 if text:
-                    final_items.append(TTS_Item(text, tts_item.speaker, tts_item.speaker_idx, tts_item.length))
+                    final_items.append(TTS_Item(text, tts_item.speaker_idx, tts_item.length))
 
         return final_items
 
@@ -407,8 +407,7 @@ class TTS_Processor:
                 for idx, c in enumerate(tts_item.text):
                     new_item = copy.copy(tts_item)
                     new_item.text = tts_item.text[pos:idx]
-                    new_item.speaker = tts_item.speaker
-                    current_speaker = tts_item.speaker
+                    new_item.speaker_idx = tts_item.speaker_idx
                     current_speaker_idx = tts_item.speaker_idx
 
                     add_item = False
@@ -479,7 +478,6 @@ class TTS_Processor:
                 # Add rest / regular item
                 new_item = copy.copy(tts_item)
                 new_item.text = tts_item.text[pos:]
-                new_item.speaker = current_speaker
                 new_item.speaker_idx = current_speaker_idx
                 new_item.length = tts_item.length
 
@@ -524,16 +522,10 @@ class TTS_Processor:
                 speaker = ''
 
                 if self.synthesizer.tts_model and self.synthesizer.tts_model.num_speakers > 1:
-                    speaker = tts_item.speaker or self.speakers[tts_item.speaker_idx % len(self.speakers)]
+                    speaker = self.speakers[tts_item.speaker_idx % len(self.speakers)]
                     speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] if self.preferred_speakers and speaker in self.speakers else speaker
 
-                # Add a symbol to mark if not speaker was specified and it was derived from the speaker index
-                speaker_mark = ''
-
-                if not tts_item.speaker:
-                    speaker_mark = '*'
-
-                log(LOG_TYPE.INFO, f'("{speaker}"{speaker_mark}, {tts_item.speaker_idx}, {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                log(LOG_TYPE.INFO, f'({tts_item.speaker_idx} => "{speaker}", {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
 
                 # Suppress tts output
                 with contextlib.redirect_stdout(None):

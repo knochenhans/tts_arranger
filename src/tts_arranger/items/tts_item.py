@@ -19,7 +19,6 @@ class TTS_Item():
     :type length: int
     """
     text: str = ''
-    speaker: str = ''
     speaker_idx: int = 0
     length: int = 0
 

@@ -41,7 +41,7 @@ class TTS_Simple_Writer():
         characters_sum = 0
         characters_total = 0
 
-        tts_processor = TTS_Processor()
+        tts_processor = TTS_Processor(preferred_speakers=self.preferred_speakers)
         tts_processor.initialize()
 
         tts_items = tts_processor.preprocess_items(self.tts_items)

@@ -50,11 +50,10 @@ class TTS_Chapter():
             if not merged_item:
                 # Scanning not started
                 merged_item = tts_item
-            elif merged_item.speaker == tts_item.speaker and merged_item.speaker_idx == tts_item.speaker_idx:
+            elif merged_item.speaker_idx == tts_item.speaker_idx:
                 # Starting item and current are similar, add to merge item text and length
                 merged_item = merged_item.__class__(
                     text=f'{merged_item.text}{tts_item.text}',
-                    speaker=merged_item.speaker,
                     speaker_idx=merged_item.speaker_idx,
                     length=merged_item.length + tts_item.length
                 )
