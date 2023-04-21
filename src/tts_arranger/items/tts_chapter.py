@@ -33,20 +33,11 @@ class TTS_Chapter():
     end_time = 0
     audio = AudioSegment.empty()
 
-    def optimize(self, max_pause_duration=0) -> None:
-        """
-        Merge similar items for smoother synthesizing and avoiding unwanted pauses
-
-        :param max_pause_duration: Maximum duration auf merged pauses
-        :type max_pause_duration: int
-
-        :return: None
-        """
-
+    def _merge_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
         final_items: list[TTS_Item] = []
         merged_item: Optional[TTS_Item] = None
 
-        for tts_item in self.tts_items:
+        for tts_item in tts_items:
             if not merged_item:
                 # Scanning not started
                 merged_item = tts_item
@@ -65,11 +56,19 @@ class TTS_Chapter():
         if merged_item is not None:
             final_items.append(merged_item)
 
-        # Limit pause duration for pause items, ignore if max_pause_duration == 0
-        for final_item in final_items:
-            if final_item.speaker_idx == -1 and max_pause_duration > 0:
-                if final_item.length > max_pause_duration:
-                    final_item.length = max_pause_duration
+        return final_items
+
+    def optimize(self, max_pause_duration=0) -> None:
+        """
+        Merge similar items for smoother synthesizing and avoiding unwanted pauses
+
+        :param max_pause_duration: Maximum duration auf merged pauses
+        :type max_pause_duration: int
+
+        :return: None
+        """
+
+        final_items: list[TTS_Item] = self._merge_items(self.tts_items)
 
         non_empty_items: list[TTS_Item] = []
 
@@ -78,5 +77,14 @@ class TTS_Chapter():
             if final_item.text.strip() or final_item.speaker_idx == -1:
                 final_item.text = final_item.text.strip()
                 non_empty_items.append(final_item)
+
+        # Merge one final time for remaining pauses
+        non_empty_items = self._merge_items(non_empty_items)
+
+        # Limit pause duration for pause items, ignore if max_pause_duration == 0
+        for non_empty_item in non_empty_items:
+            if non_empty_item.speaker_idx == -1 and max_pause_duration > 0:
+                if non_empty_item.length > max_pause_duration:
+                    non_empty_item.length = max_pause_duration
 
         self.tts_items = non_empty_items
