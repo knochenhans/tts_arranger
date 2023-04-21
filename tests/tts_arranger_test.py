@@ -10,7 +10,7 @@ class Test(unittest.TestCase):
     def test_break1(self):
         t = TTS_Processor()
 
-        tts_item = TTS_Item('This. Is: A t:est!', 'p330')
+        tts_item = TTS_Item('This. Is: A t:est!')
 
         tts_items = t._prepare_item(tts_item)
 
@@ -58,7 +58,7 @@ class Test(unittest.TestCase):
     def test_url(self):
         t = TTS_Processor()
 
-        tts_item = TTS_Item('https://stackoverflow.com/questions/17730788/search-and-replace-with-whole-word-only-option', '')
+        tts_item = TTS_Item('https://stackoverflow.com/questions/17730788/search-and-replace-with-whole-word-only-option')
 
         tts_items = t._prepare_item(tts_item)
         self.assertEqual(tts_items[0].text, 'stackoverflow.com')
@@ -67,7 +67,7 @@ class Test(unittest.TestCase):
         t = TTS_Processor()
 
         tts_item = TTS_Item('''Lovely story!
-Do you mean pidgin Danish, perhaps? :''', '')
+Do you mean pidgin Danish, perhaps? :''')
 
         tts_items = t._prepare_item(tts_item)
         self.assertEqual(tts_items[0].text, 'Lovely story!')
@@ -91,7 +91,7 @@ Do you mean pidgin Danish, perhaps? :''', '')
     def test_punctuation2(self):
         t = TTS_Processor()
 
-        tts_item = TTS_Item('Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II.', '')
+        tts_item = TTS_Item('Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II.')
 
         tts_items = t._prepare_item(tts_item)
         self.assertEqual(tts_items[0].text, 'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure ')
@@ -104,7 +104,7 @@ Do you mean pidgin Danish, perhaps? :''', '')
     def test_punctuation3(self):
         t = TTS_Processor()
 
-        tts_item = TTS_Item('a — b.', '')
+        tts_item = TTS_Item('a — b.')
 
         tts_items = t._prepare_item(tts_item)
         self.assertEqual(tts_items[0].text, 'a ')
