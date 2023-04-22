@@ -50,6 +50,8 @@ class TTS_Project():
     lang_code: str = 'en'
     image_bytes: bytes = bytes(0)
 
+    raw: bool = False
+
     @classmethod
     def from_json_file(cls, filename: str = ''):
         """
