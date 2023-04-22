@@ -160,3 +160,18 @@ class TTS_Project():
 
         for chapter in self.tts_chapters:
             chapter.optimize(max_pause_duration)
+
+    def get_titles(self, only_empty=True, max_length=100) -> None:
+        """
+        Set chapter titles to the text of the first chapter's item
+
+        :param only_empty: Only set empty titles
+        :type only_empty: bool
+
+        :param max_length: Maximus title length, a '…' will be added after this
+        :type max_length: int
+
+        :return: None
+        """
+        for chapter in self.tts_chapters:
+            chapter.get_title(only_empty, max_length)

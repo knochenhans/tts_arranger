@@ -88,3 +88,19 @@ class TTS_Chapter():
                     non_empty_item.length = max_pause_duration
 
         self.tts_items = non_empty_items
+
+    def get_title(self, only_empty=True, max_length=100) -> None:
+        """
+        Set title to the text of the first item
+
+        :param only_empty: Only set empty titles
+        :type only_empty: bool
+
+        :param max_length: Maximus title length, a '…' will be added after this
+        :type max_length: int
+
+        :return: None
+        """
+
+        if len(self.tts_items) > 0:
+            self.title = self.tts_items[0].text[:max_length] + '…' if len(self.tts_items[0].text) > max_length else self.tts_items[0].text
