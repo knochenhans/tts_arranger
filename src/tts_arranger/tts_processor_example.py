@@ -9,8 +9,8 @@ tts_items = []
 preferred_speakers = ['p273', 'p330']
 
 tts_items.append(TTS_Item('This is a test', 1))
-tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 0, length=10000))
 tts_items.append(TTS_Item(length=2000))  # Insert pause
+tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 0, length=10000))
 
 simple_writer = TTS_Simple_Writer(tts_items, preferred_speakers)
 simple_writer.synthesize_and_write('/tmp/tts_arranger_example_output/test.mp3')
