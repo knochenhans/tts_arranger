@@ -1,10 +1,7 @@
 import base64
 import datetime
-from io import BytesIO
 import pickle
 from dataclasses import dataclass, field
-from typing import Optional
-from PIL import Image
 
 
 import requests  # type: ignore

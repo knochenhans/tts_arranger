@@ -1,6 +1,5 @@
 import contextlib
 import copy
-import csv
 import json
 import os
 import re
@@ -388,7 +387,6 @@ class TTS_Processor:
             length = len(start_end[0])
 
             opened = False
-            current_speaker = ''
             current_speaker_idx = 0
 
             for tts_item in tts_items:

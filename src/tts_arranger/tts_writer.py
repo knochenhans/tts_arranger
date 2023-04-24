@@ -18,9 +18,9 @@ from .items.tts_item import TTS_Item  # type: ignore
 from .items.tts_project import TTS_Project  # type: ignore
 from .tts_processor import TTS_Processor
 from .utils.log import LOG_TYPE, bcolors, log  # type: ignore
+from .tts_abstract_writer import TTS_Abstract_Writer
 
-
-class TTS_Writer():
+class TTS_Writer(TTS_Abstract_Writer):
     """
     Class to process TTS projects (containing of chapters each containing a number of items) and to finally write an audio file including chapter metadata and chapter info
     """
@@ -45,6 +45,8 @@ class TTS_Writer():
         :type vocoder: str
         :return: None
         """
+        super().__init__(preferred_speakers)
+
         self.NANOSECONDS_IN_ONE_SECOND = 1e9
 
         self.project = project
@@ -53,12 +55,10 @@ class TTS_Writer():
         self.model = model
         self.vocoder = vocoder
 
-        self.sample_rate: int
-
         self.temp_files: list[tuple[str, str]] = []
-        self.preferred_speakers = preferred_speakers or []
+        
 
-    def _get_nanoseconds_for_file(self, file_name):
+    def _get_nanoseconds_for_file(self, filename: str):
         """
         Get the duration of an audio file in nanoseconds.
 
@@ -68,7 +68,7 @@ class TTS_Writer():
         :return: The duration of the audio file in nanoseconds.
         :rtype: int
         """
-        result = ffmpeg.probe(file_name, cmd='ffprobe', show_entries='format=duration')
+        result = ffmpeg.probe(filename, cmd='ffprobe', show_entries='format=duration')
         return int(float(result['format']['duration']) * self.NANOSECONDS_IN_ONE_SECOND)
 
     def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Callable[[float, TTS_Item], None] | None = None, optimize=True, max_pause_duration=0, preprocess=True) -> None:
@@ -134,8 +134,9 @@ class TTS_Writer():
                     if callback is not None:
                         callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
 
+
                 # Write synthesized audio as temp file
-                self._write_temp_audio(numpy_segments, filename)
+                scipy.io.wavfile.write(filename, self.sample_rate, numpy_segments)
 
                 current_total_items += len(chapter.tts_items)
 
@@ -228,22 +229,6 @@ class TTS_Writer():
                 .output(audio, cover, output_file, vcodec='copy', acodec='copy', map_metadata=0, **{'disposition:v:0': 'attached_pic'}, loglevel='error')
                 .run(overwrite_output=True)
             )
-
-    def _write_temp_audio(self, numpy_segment: np.ndarray, output_filename: str) -> None:
-        """
-        Convert and write chapter pynum array as temporary audio file for later concatenation
-
-        :param segment: pynum array to be written
-        :type segment: np.ndarray
-
-        :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
-        :type output_filename: str
-
-        :return: None
-        :rtype: None
-        """
-
-        scipy.io.wavfile.write(output_filename, self.sample_rate, numpy_segment)
 
     def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Callable[[float, TTS_Item], None] | None = None, max_pause_duration=0) -> None:
         """

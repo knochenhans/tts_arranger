@@ -11,21 +11,22 @@ import numpy as np
 import scipy.io.wavfile  # type: ignore
 
 from .items.tts_item import TTS_Item
+from .tts_abstract_writer import TTS_Abstract_Writer
 from .tts_processor import TTS_Processor
 from .utils.log import LOG_TYPE, bcolors, log
 
 
-class TTS_Simple_Writer():
+class TTS_Simple_Writer(TTS_Abstract_Writer):
     """
     Simple writer class that takes a list of TTS items (in contrast to a more complex TTS_Project object), synthesizes, and writes them as a final audio file
     """
 
     def __init__(self, tts_items: list[TTS_Item], preferred_speakers: Optional[list[str]] = None):
+        super().__init__(preferred_speakers)
+        
         self.tts_items = tts_items
 
         self.final_numpy: np.ndarray
-        self.preferred_speakers = preferred_speakers or []
-        self.sample_rate: int
 
     def synthesize_and_write(self, output_filename: str, lang_code='en', preprocess=True):
         """
@@ -132,13 +133,6 @@ class TTS_Simple_Writer():
         output_filename = os.path.splitext(output_filename)[0] + '.' + output_format
 
         log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}.')
-
-
-        # Apply dynamic compression
-        # segment.export(output_filename, format, parameters=['-filter', 'speechnorm=e=25:r=0.0001:l=1', '-filter', 'loudnorm=tp=-1.0:offset=7'])
-        # params = ['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1']
-
-        # filter = 'speechnorm=e={comp_expansion}:r={comp_raise}:l=1'
 
         output_args = {}
 
