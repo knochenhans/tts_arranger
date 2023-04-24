@@ -8,9 +8,10 @@ import tempfile
 from typing import Callable, Optional
 
 import ffmpeg  # type: ignore
+import numpy as np  # type: ignore
+import scipy.io.wavfile  # type: ignore
 from pathvalidate._filename import sanitize_filename
 from PIL import Image
-from pydub import AudioSegment  # type: ignore
 
 from .items.tts_chapter import TTS_Chapter  # type: ignore
 from .items.tts_item import TTS_Item  # type: ignore
@@ -51,6 +52,8 @@ class TTS_Writer():
         self.output_format = output_format
         self.model = model
         self.vocoder = vocoder
+
+        self.sample_rate: int
 
         self.temp_files: list[tuple[str, str]] = []
         self.preferred_speakers = preferred_speakers or []
@@ -97,6 +100,7 @@ class TTS_Writer():
                 chapter.tts_items = tts_processor.preprocess_items(chapter.tts_items)
 
         tts_processor.initialize()
+        self.sample_rate = tts_processor.get_sample_rate()
 
         total_items = 0
 
@@ -108,7 +112,7 @@ class TTS_Writer():
         cumulative_time = 0
 
         for i, chapter in enumerate(chapters):
-            audio = AudioSegment.empty()
+            numpy_segments = np.array([0], dtype=np.float32)
 
             temp_format = 'wav'
 
@@ -125,13 +129,13 @@ class TTS_Writer():
                         log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}')
 
                     # Synthesize audio from TTS item text
-                    audio += tts_processor.synthesize_tts_item(tts_item)
+                    numpy_segments = np.concatenate((numpy_segments, tts_processor.synthesize_tts_item(tts_item)))
 
                     if callback is not None:
                         callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
 
                 # Write synthesized audio as temp file
-                self._write_temp_audio(audio, filename)
+                self._write_temp_audio(numpy_segments, filename)
 
                 current_total_items += len(chapter.tts_items)
 
@@ -225,12 +229,12 @@ class TTS_Writer():
                 .run(overwrite_output=True)
             )
 
-    def _write_temp_audio(self, segment: AudioSegment, output_filename: str) -> None:
+    def _write_temp_audio(self, numpy_segment: np.ndarray, output_filename: str) -> None:
         """
-        Convert and write chapter AudioSegment as temporary audio file for later concatenation
+        Convert and write chapter pynum array as temporary audio file for later concatenation
 
-        :param segment: AudioSegment to be written
-        :type segment: AudioSegment
+        :param segment: pynum array to be written
+        :type segment: np.ndarray
 
         :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
         :type output_filename: str
@@ -239,14 +243,7 @@ class TTS_Writer():
         :rtype: None
         """
 
-        comp_expansion = 12.5
-        comp_raise = 0.0001
-
-        # Apply dynamic compression
-        params = ['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1']
-        bitrate = '320k'
-        format = 'wav'
-        segment.export(output_filename, format, parameters=params, bitrate=bitrate)
+        scipy.io.wavfile.write(output_filename, self.sample_rate, numpy_segment)
 
     def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Callable[[float, TTS_Item], None] | None = None, max_pause_duration=0) -> None:
         """
@@ -325,6 +322,9 @@ class TTS_Writer():
                     # Create directory if needed
                     os.makedirs(self.project_path, exist_ok=True)
 
+                    comp_expansion = 12.5
+                    comp_raise = 0.0001
+
                     # Concatenate all files, adding metadata and cover image (if set)
                     if concat:
                         infiles = [ffmpeg.input(file) for _, file in self.temp_files]
@@ -337,6 +337,7 @@ class TTS_Writer():
                         cmd = (
                             ffmpeg
                             .concat(*infiles, v=0, a=1)
+                            .filter('speechnorm', e=f'{comp_expansion}', r=f'{comp_raise}', l=1)
                             .output(metadata_input, output_path, map_metadata=1, **{'metadata': f'title={self.project.title}', 'metadata:': f'album={self.project.subtitle}', 'metadata:g': f'artist={self.project.author}'}, loglevel='error')
                             .compile(overwrite_output=True)
                         )
@@ -364,6 +365,7 @@ class TTS_Writer():
                             (
                                 ffmpeg
                                 .input(file)
+                                .filter('speechnorm', e=f'{comp_expansion}', r=f'{comp_raise}', l=1)
                                 .output(output_chapter_filename, **output_args, loglevel='error')
                                 .run(overwrite_output=True)
                             )

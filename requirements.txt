@@ -3,6 +3,5 @@ ffmpeg_python==0.2.0
 num2words==0.5.11
 pathvalidate==2.5.2
 Pillow==9.5.0
-pydub==0.25.1
 scipy==1.9.0
 TTS==0.13.0

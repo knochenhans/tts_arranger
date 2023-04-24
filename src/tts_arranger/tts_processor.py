@@ -11,13 +11,10 @@ from typing import Optional
 import numpy as np  # type: ignore
 import TTS  # type: ignore
 from num2words import num2words  # type: ignore
-from pydub import AudioSegment  # type: ignore
-from pydub.silence import detect_silence  # type: ignore
 from TTS.utils.manage import ModelManager  # type: ignore
 from TTS.utils.synthesizer import Synthesizer  # type: ignore
 
 from .items.tts_item import TTS_Item
-from .utils.audio import numpy_to_segment
 from .utils.log import LOG_TYPE, bcolors, log
 
 
@@ -514,19 +511,18 @@ class TTS_Processor:
             numpy_wav = np.pad(numpy_wav, (0, padding_samples), 'constant')
         return numpy_wav
 
-    def synthesize_tts_item(self, tts_item: TTS_Item) -> AudioSegment:
+    def synthesize_tts_item(self, tts_item: TTS_Item) -> np.ndarray:
         """
-        Synthesize a single item and return a PyDub AudioSegment object
+        Synthesize a single item and return a numpy array
 
         :param tts_item: TTS item to be synthesized
         :type tts_item: TTS_Item
 
-        :return: AudioSegment object of synthesized audio
-        :rtype: AudioSegment
+        :return: pynum array of synthesized audio
+        :rtype: np.ndarray
         """
-        segment = AudioSegment.empty()
+
         numpy_wav = np.array([0], dtype=np.float32)
-        sample_rate = int(self.synthesizer.output_sample_rate)
 
         if tts_item.text:
             try:
@@ -549,16 +545,14 @@ class TTS_Processor:
             else:
                 numpy_wav = np.asarray(wav, dtype=np.float32)
 
-                # If length is predefined, add padding if necessary
-                # if int(speech_segment.duration_seconds * 1000) < tts_item.length:
-                #     speech_segment += AudioSegment.silent(int(tts_item.length - speech_segment.duration_seconds * 1000), int(self.synthesizer.output_sample_rate))
-                # else:
+                #TODO: Reintroduce silence stripping?
                 #     # Strip some silence away to make pauses easier to control
                 #     silence = detect_silence(speech_segment, min_silence_len=self.silence_length, silence_thresh=self.silence_threshold)
                 #     speech_segment = speech_segment[:silence[-1][0]]
             
         numpy_wav = self.pad_length(numpy_wav, tts_item.length / 1000.0)
-        segment = numpy_to_segment(numpy_wav, sample_rate)
-        # segment = segment.apply_gain(-20 - segment.dBFS)
 
-        return segment
+        return numpy_wav
+    
+    def get_sample_rate(self) -> int:
+        return int(self.synthesizer.output_sample_rate)

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from pydub import AudioSegment  # type: ignore
+import numpy as np
 
 from .tts_item import TTS_Item  # type: ignore
 
@@ -23,15 +23,15 @@ class TTS_Chapter():
     :param end_time: A float representing the end time of the chapter in nanoseconds. Default value is 0.
     :type end_time: float
 
-    :param audio: An AudioSegment object representing the synthesized audio for the chapter. Default value is an empty AudioSegment object.
-    :type audio: AudioSegment
+    :param audio: An pynum array representing the synthesized audio for the chapter. Default value is an empty pynum array.
+    :type audio: np.ndarray
     """
     tts_items: list[TTS_Item] = field(default_factory=list)
 
     title: str = ''
     start_time = 0
     end_time = 0
-    audio = AudioSegment.empty()
+    audio = np.array([0], dtype=np.float32)
 
     def _merge_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
         final_items: list[TTS_Item] = []

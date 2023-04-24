@@ -1,10 +1,14 @@
 import datetime
+import io
 import os
 import sys
+import tempfile
 import time
 from typing import Optional
 
-from pydub import AudioSegment  # type: ignore
+import ffmpeg  # type: ignore
+import numpy as np
+import scipy.io.wavfile  # type: ignore
 
 from .items.tts_item import TTS_Item
 from .tts_processor import TTS_Processor
@@ -19,15 +23,13 @@ class TTS_Simple_Writer():
     def __init__(self, tts_items: list[TTS_Item], preferred_speakers: Optional[list[str]] = None):
         self.tts_items = tts_items
 
-        self.final_segment: AudioSegment
+        self.final_numpy: np.ndarray
         self.preferred_speakers = preferred_speakers or []
+        self.sample_rate: int
 
-    def synthesize_and_write(self, output_filename: str):
+    def synthesize_and_write(self, output_filename: str, lang_code='en', preprocess=True):
         """
         Synthesize and write list of items as an audio file
-
-        :param tts_items: List of TTS items to be synthesized
-        :type tts_items: list
 
         :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
         :type output_filename: str
@@ -41,15 +43,30 @@ class TTS_Simple_Writer():
         characters_sum = 0
         characters_total = 0
 
-        tts_processor = TTS_Processor(preferred_speakers=self.preferred_speakers)
+        match lang_code:
+            case 'en':
+                self.model = 'tts_models/en/vctk/vits'
+                self.vocoder = ''
+            case 'de':
+                self.model = 'tts_models/de/thorsten/tacotron2-DDC'
+                self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
+            case _:
+                raise ValueError(f'Language code "{lang_code}" not supported')
+
+        tts_processor = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
         tts_processor.initialize()
 
-        tts_items = tts_processor.preprocess_items(self.tts_items)
+        self.sample_rate = tts_processor.get_sample_rate()
+
+        if preprocess:
+            tts_items = tts_processor.preprocess_items(self.tts_items)
+        else:
+            tts_items = self.tts_items
 
         for tts_item in tts_items:
             characters_sum += len(tts_item.text)
 
-        segments = AudioSegment.empty()
+        numpy_segments = np.array([0], dtype=np.float32)
 
         for idx, tts_item in enumerate(tts_items):
             if tts_item.text:
@@ -63,7 +80,7 @@ class TTS_Simple_Writer():
             time_last = time.time()
 
             try:
-                segments += tts_processor.synthesize_tts_item(tts_item)
+                numpy_segments = np.concatenate((numpy_segments, tts_processor.synthesize_tts_item(tts_item)))
 
                 time_now = time.time()
                 time_total += time_now - time_last
@@ -84,15 +101,15 @@ class TTS_Simple_Writer():
                 log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}": {e}.')
                 sys.exit()
 
-        self._write(segments, output_filename)
+        self._write(numpy_segments, output_filename, )
         log(LOG_TYPE.SUCCESS, f'Synthesizing finished, file saved as "{output_filename}".')
 
-    def _write(self, segment: AudioSegment, output_filename: str) -> None:
+    def _write(self, numpy_segment: np.ndarray, output_filename: str) -> None:
         """
-        Compress, convert and write AudioSegment as a given output file path and name
+        Compress, convert and write pynum array as a given output file path and name
 
-        :param segment: AudioSegment to be written
-        :type segment: AudioSegment
+        :param segment: pynum array to be written
+        :type segment: np.ndarray
 
         :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
         :type output_filename: str
@@ -105,22 +122,41 @@ class TTS_Simple_Writer():
         # gc.collect()
 
         # Set default format to mp3
-        format = os.path.splitext(output_filename)[1][1:] or 'mp3'
+        output_format = os.path.splitext(output_filename)[1][1:] or 'mp3'
 
         folder = os.path.dirname(os.path.abspath(output_filename))
 
         os.makedirs(folder, exist_ok=True)
 
         # Ensure output file name has a file extension
-        output_filename = os.path.splitext(output_filename)[0] + '.' + format
+        output_filename = os.path.splitext(output_filename)[0] + '.' + output_format
 
         log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}.')
 
-        comp_expansion = 12.5
-        comp_raise = 0.0001
 
         # Apply dynamic compression
         # segment.export(output_filename, format, parameters=['-filter', 'speechnorm=e=25:r=0.0001:l=1', '-filter', 'loudnorm=tp=-1.0:offset=7'])
-        params = ['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1']
-        bitrate = '320k' if format == 'mp3' else None
-        segment.export(output_filename, format, parameters=params, bitrate=bitrate)
+        # params = ['-filter', f'speechnorm=e={comp_expansion}:r={comp_raise}:l=1']
+
+        # filter = 'speechnorm=e={comp_expansion}:r={comp_raise}:l=1'
+
+        output_args = {}
+
+        if output_format == 'mp3':
+            output_args['audio_bitrate'] = '320k'
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = os.path.join(temp_dir, 'temp')
+            scipy.io.wavfile.write(temp_path, self.sample_rate, numpy_segment)
+        
+            comp_expansion = 12.5
+            comp_raise = 0.0001
+
+            # Convert to target format
+            (
+                ffmpeg
+                .input(temp_path)
+                .filter('speechnorm', e=f'{comp_expansion}', r=f'{comp_raise}', l=1)
+                .output(output_filename, **output_args, loglevel='error')
+                .run(overwrite_output=True)
+            )
