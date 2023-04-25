@@ -128,12 +128,11 @@ class TTS_Writer(TTS_Abstract_Writer):
                     else:
                         log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}')
 
-                    # Synthesize audio from TTS item text
-                    numpy_segments = np.concatenate((numpy_segments, tts_processor.synthesize_tts_item(tts_item)))
-
                     if callback is not None:
                         callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
 
+                    # Synthesize audio from TTS item text
+                    numpy_segments = np.concatenate((numpy_segments, tts_processor.synthesize_tts_item(tts_item)))
 
                 # Write synthesized audio as temp file
                 scipy.io.wavfile.write(filename, self.sample_rate, numpy_segments)
