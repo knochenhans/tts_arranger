@@ -4,7 +4,7 @@ import os
 import sys
 import tempfile
 import time
-from typing import Optional
+from typing import Callable, Optional
 
 import ffmpeg  # type: ignore
 import numpy as np
@@ -23,12 +23,12 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
 
     def __init__(self, tts_items: list[TTS_Item], preferred_speakers: Optional[list[str]] = None):
         super().__init__(preferred_speakers)
-        
+
         self.tts_items = tts_items
 
         self.final_numpy: np.ndarray
 
-    def synthesize_and_write(self, output_filename: str, lang_code='en', preprocess=True):
+    def synthesize_and_write(self, output_filename: str, lang_code='en', callback: Optional[Callable[[float, TTS_Item], None]] = None, preprocess=True):
         """
         Synthesize and write list of items as an audio file
 
@@ -70,15 +70,15 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
         numpy_segments = np.array([0], dtype=np.float32)
 
         for idx, tts_item in enumerate(tts_items):
-            if tts_item.text:
-                log(LOG_TYPE.INFO, f'Synthesizing item {idx + 1} of {len(tts_items)}:{bcolors.ENDC}')
-            else:
-                log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}')
+            self.print_progress(idx, len(tts_items), tts_item)
 
             if time_needed:
                 log(LOG_TYPE.INFO, f'(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))}).')
 
             time_last = time.time()
+
+            if callback is not None:
+                callback(100/(len(tts_items) * idx), tts_item)
 
             try:
                 numpy_segments = np.concatenate((numpy_segments, tts_processor.synthesize_tts_item(tts_item)))
@@ -142,7 +142,7 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = os.path.join(temp_dir, 'temp')
             scipy.io.wavfile.write(temp_path, self.sample_rate, numpy_segment)
-        
+
             comp_expansion = 12.5
             comp_raise = 0.0001
 

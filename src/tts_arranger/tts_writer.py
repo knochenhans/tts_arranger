@@ -71,7 +71,7 @@ class TTS_Writer(TTS_Abstract_Writer):
         result = ffmpeg.probe(filename, cmd='ffprobe', show_entries='format=duration')
         return int(float(result['format']['duration']) * self.NANOSECONDS_IN_ONE_SECOND)
 
-    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Callable[[float, TTS_Item], None] | None = None, optimize=True, max_pause_duration=0, preprocess=True) -> None:
+    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Optional[Callable[[float, TTS_Item], None]] = None, optimize=True, max_pause_duration=0, preprocess=True) -> None:
         """
         Private method for synthesizing chapters into audio.
 
@@ -123,10 +123,7 @@ class TTS_Writer(TTS_Abstract_Writer):
 
             if len(chapter.tts_items) > 0:
                 for j, tts_item in enumerate(chapter.tts_items):
-                    if tts_item.text:
-                        log(LOG_TYPE.INFO, f'Synthesizing item {j + 1} of {len(chapter.tts_items)}:{bcolors.ENDC}')
-                    else:
-                        log(LOG_TYPE.INFO, f'Adding pause: {tts_item.length}ms:{bcolors.ENDC}')
+                    self.print_progress(j, len(chapter.tts_items), tts_item)
 
                     if callback is not None:
                         callback(100/(len(chapters) * len(chapter.tts_items)) * (i + j), tts_item)
