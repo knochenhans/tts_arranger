@@ -107,9 +107,9 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
 
     def _write(self, numpy_segment: np.ndarray, output_filename: str) -> None:
         """
-        Compress, convert and write pynum array as a given output file path and name
+        Compress, convert and write numpy array as a given output file path and name
 
-        :param segment: pynum array to be written
+        :param segment: numpy array to be written
         :type segment: np.ndarray
 
         :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)

@@ -15,7 +15,7 @@ class bcolors:
 
 
 class LOG_TYPE(Enum):
-    """Log types."""
+    """Log color types."""
     INFO = auto()
     WARNING = auto()
     ERROR = auto()

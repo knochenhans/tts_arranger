@@ -28,9 +28,9 @@ class TTS_Processor:
         :param vocoder: Name of the vocoder to use.
         :type vocoder: str
 
-        :param preferred_speakers: A list of preferred speaker names for multi-speaker models to be used instead of the available speakers of the selected model (not yet implemented).
+        :param preferred_speakers: A list of preferred speaker names for multi-speaker models to be used instead of the available speakers of the selected model.
                                 If set to None, the default speaker(s) will be used.
-        :type preferred_speakers: list[str] or None
+        :type preferred_speakers: Optional[list[str]]
 
         :return: None
         """
@@ -501,6 +501,18 @@ class TTS_Processor:
         return final_items
 
     def pad_length(self, numpy_wav: np.ndarray, duration: float) -> np.ndarray:
+        """
+        Pad a numpy array of audio samples with zeros to achieve a desired duration.
+
+        :param numpy_wav: A 1D numpy array of audio samples.
+        :type numpy_wav: np.ndarray
+
+        :param duration: The desired duration of the audio in seconds.
+        :type duration: float
+
+        :return: A 1D numpy array of padded audio samples with the desired duration.
+        :rtype: np.ndarray
+        """
         sample_rate = int(self.synthesizer.output_sample_rate)
         current_duration = len(numpy_wav) / sample_rate
         if current_duration < duration:
@@ -516,7 +528,7 @@ class TTS_Processor:
         :param tts_item: TTS item to be synthesized
         :type tts_item: TTS_Item
 
-        :return: pynum array of synthesized audio
+        :return: numpy array of synthesized audio
         :rtype: np.ndarray
         """
 
@@ -543,14 +555,20 @@ class TTS_Processor:
             else:
                 numpy_wav = np.asarray(wav, dtype=np.float32)
 
-                #TODO: Reintroduce silence stripping?
+                # TODO: Reintroduce silence stripping?
                 #     # Strip some silence away to make pauses easier to control
                 #     silence = detect_silence(speech_segment, min_silence_len=self.silence_length, silence_thresh=self.silence_threshold)
                 #     speech_segment = speech_segment[:silence[-1][0]]
-            
+
         numpy_wav = self.pad_length(numpy_wav, tts_item.length / 1000.0)
 
         return numpy_wav
-    
+
     def get_sample_rate(self) -> int:
+        """
+        Returns the sample rate
+
+        :return: sample rate
+        :rtype: int
+        """
         return int(self.synthesizer.output_sample_rate)

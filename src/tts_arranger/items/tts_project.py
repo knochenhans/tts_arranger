@@ -36,6 +36,9 @@ class TTS_Project():
 
     :param image_bytes: A bytes object representing the image of the project encoded as b64. Default value is an empty bytes object.
     :type image_bytes: bytes
+
+    :param raw: Defines if this should be synthesized without optimization and preprocessing.
+    :type raw: boolean
     """
 
     tts_chapters: list[TTS_Chapter] = field(default_factory=list)
@@ -83,7 +86,7 @@ class TTS_Project():
 
     def merge_from_project(self, project) -> None:
         """
-        Method to merge the contents of another TTS project into this one.
+        Merges the contents of another TTS project into this one.
 
         :param project: The TTS project to be merged.
         :type project: TTS_Project
@@ -96,7 +99,7 @@ class TTS_Project():
 
     def append(self, items: list[TTS_Item]) -> None:
         """
-        Method to add a list of TTS items to the last TTS chapter of this TTS project.
+        Adds a list of TTS items to the last TTS chapter of this TTS project.
 
         :param items: A list of TTS items to be added to the last chapter.
         :type items: list[TTS_Item]
@@ -112,7 +115,7 @@ class TTS_Project():
 
     def to_json_file(self, filename: str) -> None:
         """
-        Method to save the TTS project to a JSON file.
+        Saves the TTS project to a JSON file.
 
         :param filename: A string representing the name of the JSON file to be saved.
         :type filename: str
@@ -128,7 +131,7 @@ class TTS_Project():
 
     def add_image_from_url(self, image_url: str) -> None:
         """
-        Opens the image from the given URL and adds it via the private function.
+        Loads the image from the given URL and sets it as the project image.
 
         :param image_url: The URL of the image to be added.
         :type image_url: str
@@ -138,7 +141,10 @@ class TTS_Project():
         if image_url:
             self.image_bytes = base64.b64encode(requests.get(image_url).content)
 
-    def clean_empty_chapters(self):
+    def clean_empty_chapters(self):       
+        """
+        Remove empty chapters.
+        """         
         final_chapters: list[TTS_Chapter] = []
 
         for chapter in self.tts_chapters:

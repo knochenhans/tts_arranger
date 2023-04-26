@@ -23,7 +23,7 @@ class TTS_Chapter():
     :param end_time: A float representing the end time of the chapter in nanoseconds. Default value is 0.
     :type end_time: float
 
-    :param audio: An pynum array representing the synthesized audio for the chapter. Default value is an empty pynum array.
+    :param audio: An numpy array representing the synthesized audio for the chapter. Default value is an empty numpy array.
     :type audio: np.ndarray
     """
     tts_items: list[TTS_Item] = field(default_factory=list)

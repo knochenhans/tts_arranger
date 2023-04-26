@@ -16,9 +16,10 @@ from PIL import Image
 from .items.tts_chapter import TTS_Chapter  # type: ignore
 from .items.tts_item import TTS_Item  # type: ignore
 from .items.tts_project import TTS_Project  # type: ignore
+from .tts_abstract_writer import TTS_Abstract_Writer
 from .tts_processor import TTS_Processor
 from .utils.log import LOG_TYPE, bcolors, log  # type: ignore
-from .tts_abstract_writer import TTS_Abstract_Writer
+
 
 class TTS_Writer(TTS_Abstract_Writer):
     """
@@ -43,6 +44,11 @@ class TTS_Writer(TTS_Abstract_Writer):
 
         :param vocoder: The name of the vocoder to be used. Default is an empty string.
         :type vocoder: str
+
+        :param preferred_speakers: A list of preferred speaker names for multi-speaker models to be used instead of the available speakers of the selected model.
+                                If set to None, the default speaker(s) will be used.
+        :type preferred_speakers: Optional[list[str]]
+
         :return: None
         """
         super().__init__(preferred_speakers)
@@ -56,14 +62,13 @@ class TTS_Writer(TTS_Abstract_Writer):
         self.vocoder = vocoder
 
         self.temp_files: list[tuple[str, str]] = []
-        
 
     def _get_nanoseconds_for_file(self, filename: str):
         """
         Get the duration of an audio file in nanoseconds.
 
-        :param file_name: The file name (including the path) of the audio file to get the duration of.
-        :type file_name: str
+        :param filename: The file name (including path) of the audio file to get the duration of.
+        :type filename: str
 
         :return: The duration of the audio file in nanoseconds.
         :rtype: int
@@ -85,7 +90,16 @@ class TTS_Writer(TTS_Abstract_Writer):
         :type tts_arranger: TTS_Arranger
 
         :param callback: An optional function that can be used to monitor the progress of the synthesis process.
-        :type callback: Callable[[float, TTS_Item], None] | None
+        :type callback: Optional[Callable[[float, TTS_Item], None]]
+
+        :param optimize: Defines if the chapter should be optimized before synthesizing.
+        :type optimize: boolean
+
+        :param max_pause_duration: An optional maximum duration (in milliseconds) of silence to be inserted between adjacent TTS items in the output audio file. 
+        :type max_pause_duration: int
+
+        :param preprocess: Defines if the chapter should be preprocessed before synthesizing.
+        :type preprocess: boolean
 
         :return: None
         :rtype: None
@@ -226,11 +240,11 @@ class TTS_Writer(TTS_Abstract_Writer):
                 .run(overwrite_output=True)
             )
 
-    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Callable[[float, TTS_Item], None] | None = None, max_pause_duration=0) -> None:
+    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Optional[Callable[[float, TTS_Item], None]] = None, max_pause_duration=0) -> None:
         """
         Synthesize and write the output audio files for the given project.
 
-        :param project_filename: The project name.
+        :param project_filename: The name or path of the project file to be synthesized.
         :type project_filename: str
 
         :param temp_dir_prefix: An optional prefix for the temporary directory name used during synthesis.
@@ -240,7 +254,10 @@ class TTS_Writer(TTS_Abstract_Writer):
         :type concat: bool
 
         :param callback: An optional callback function that will be called periodically during synthesis with progress information.
-        :type callback: Callable[[float, TTS_Item], None] | None
+        :type callback: Optional[Callable[[float, TTS_Item], None]]
+
+        :param max_pause_duration: An optional maximum duration (in milliseconds) of silence to be inserted between adjacent TTS items in the output audio file. 
+        :type max_pause_duration: int
 
         :return: None
 

@@ -9,9 +9,6 @@ class TTS_Item():
     :param text: The text to be synthesized. Can be left empty in combination with length > 0 to create a pause.
     :type text: str
 
-    :param speaker: The name of the speaker to be used.
-    :type speaker: str
-
     :param speaker_idx: The index of the speaker to be used if no speaker name is given. Wraps around based on the actual available speaker indexes per model.
     :type speaker_idx: int
 
