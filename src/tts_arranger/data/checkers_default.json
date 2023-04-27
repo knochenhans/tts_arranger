@@ -1,0 +1,338 @@
+{
+    "check_entries": [
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "span"
+                },
+                {
+                    "name": "Class",
+                    "arg": "bold"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 0
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "ts"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "center"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "right"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "epi"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "caption"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "poem"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "fext"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "p"
+                },
+                {
+                    "name": "Class",
+                    "arg": "chapter"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            },
+            "signal": "NEW_CHAPTER"
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "quote"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 600
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "chapno"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 600
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "li"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 750
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "blockquote"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "figcaption"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "br"
+                }
+            ],
+            "properties": {
+                "pause_after": 500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "h"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 600
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h1"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h2"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h3"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h4"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h5"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h6"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "title"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "sup"
+                },
+                {
+                    "name": "Class",
+                    "arg": "endnote"
+                }
+            ],
+            "properties": {},
+            "signal": "IGNORE"
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "p"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 0,
+                "pause_after": 750
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "wp-caption-text"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 0,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "div"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 0,
+                "pause_after": 750
+            }
+        }
+    ]
+}
