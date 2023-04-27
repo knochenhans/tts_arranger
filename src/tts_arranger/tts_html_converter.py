@@ -280,7 +280,7 @@ class TTS_HTML_Converter(HTMLParser):
 
     def add_checkers_from_json(self, filename: str = '', default_filename: str = '', ignore_default=False) -> None:
         """
-        Load and add a list of checkers files.
+        Load and add checkers from a list of checkers files.
 
         :param filename: Filename of the checkers file to load (in JSON format), defaults to ''
         :type filename: str, optional
