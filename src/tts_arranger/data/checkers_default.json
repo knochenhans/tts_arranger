@@ -325,6 +325,18 @@
         {
             "conditions": [
                 {
+                    "name": "Class",
+                    "arg": "tr-caption"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
                     "name": "Name",
                     "arg": "div"
                 }
