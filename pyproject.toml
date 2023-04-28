@@ -27,3 +27,6 @@ exclude = [
   ".mypy_cache",
   ".vscode",
 ]
+
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt"]
