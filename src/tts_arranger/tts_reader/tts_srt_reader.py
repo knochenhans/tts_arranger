@@ -72,4 +72,4 @@ class TTS_SRT_Reader(TTS_Abstract_Reader):
         filename, extension = os.path.splitext(full_name)
 
         writer = TTS_Simple_Writer(self.project.tts_chapters[0].tts_items, self.preferred_speakers)
-        writer.synthesize_and_write(output_filename + '.wav', lang_code=self.project.lang_code, callback=callback, preprocess=False)
+        writer.synthesize_and_write(output_filename + '.wav', lang_code=self.project.lang_code, callback=callback)

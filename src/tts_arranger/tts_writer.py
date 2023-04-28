@@ -76,7 +76,7 @@ class TTS_Writer(TTS_Abstract_Writer):
         result = ffmpeg.probe(filename, cmd='ffprobe', show_entries='format=duration')
         return int(float(result['format']['duration']) * self.NANOSECONDS_IN_ONE_SECOND)
 
-    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Optional[Callable[[float, TTS_Item], None]] = None, optimize=True, max_pause_duration=0, preprocess=True) -> None:
+    def _synthesize_chapters(self, chapters: list[TTS_Chapter], temp_dir: str, tts_processor: TTS_Processor, callback: Optional[Callable[[float, TTS_Item], None]] = None, optimize=False, max_pause_duration=0, preprocess=True) -> None:
         """
         Private method for synthesizing chapters into audio.
 
@@ -92,7 +92,7 @@ class TTS_Writer(TTS_Abstract_Writer):
         :param callback: An optional function that can be used to monitor the progress of the synthesis process.
         :type callback: Optional[Callable[[float, TTS_Item], None]]
 
-        :param optimize: Defines if the chapter should be optimized before synthesizing.
+        :param optimize: Defines if the chapter should be optimized (merging pauses and similar items) before synthesizing.
         :type optimize: boolean
 
         :param max_pause_duration: An optional maximum duration (in milliseconds) of silence to be inserted between adjacent TTS items in the output audio file. 
@@ -240,7 +240,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                 .run(overwrite_output=True)
             )
 
-    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Optional[Callable[[float, TTS_Item], None]] = None, max_pause_duration=0) -> None:
+    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Optional[Callable[[float, TTS_Item], None]] = None, preprocess = True, optimize = False, max_pause_duration=0) -> None:
         """
         Synthesize and write the output audio files for the given project.
 
@@ -287,7 +287,7 @@ class TTS_Writer(TTS_Abstract_Writer):
 
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
 
-                self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback, not self.project.raw, max_pause_duration, not self.project.raw)
+                self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback, not self.project.raw and optimize, max_pause_duration, not self.project.raw and preprocess)
 
             except Exception as e:
                 log(LOG_TYPE.ERROR, f'Synthesizing project "{self.project.title}" failed: {e}.')

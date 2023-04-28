@@ -66,7 +66,7 @@ class TTS_Abstract_Reader(ABC):
         filename, extension = os.path.splitext(full_name)
 
         writer = TTS_Writer(self.project, path, self.output_format, preferred_speakers=self.preferred_speakers)
-        writer.synthesize_and_write(self.get_output_filename(), temp_dir_prefix, callback=callback, concat=False)
+        writer.synthesize_and_write(self.get_output_filename(), temp_dir_prefix, callback=callback, concat=False, optimize=True)
 
     def get_project(self) -> TTS_Project:
         return self.project
