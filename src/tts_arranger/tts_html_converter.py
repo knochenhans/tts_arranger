@@ -284,7 +284,7 @@ class TTS_HTML_Converter(HTMLParser):
                 name = json_condition['name']
                 arg = json_condition['arg']
 
-                condition: Condition | None = None
+                condition: Optional[Condition] = None
 
                 match name:
                     case 'Name':
@@ -294,7 +294,7 @@ class TTS_HTML_Converter(HTMLParser):
                     case 'ID':
                         condition = ConditionID(arg)
                     case _:
-                        pass
+                        print(f'Unknown checker condition found: {name}')
 
                 if condition:
                     if condition.arg:
@@ -327,7 +327,7 @@ class TTS_HTML_Converter(HTMLParser):
                     case 'IGNORE':
                         signal = CHECKER_SIGNAL.IGNORE
                     case _:
-                        pass
+                        print(f'Unknown checker signal found: {json_signal}')
 
             self.checkers.append(Checker(conditions, properties, signal))
         print(f'{len(json_check_entries)} checkers entries added.')
