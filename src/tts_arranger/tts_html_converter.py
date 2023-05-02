@@ -68,7 +68,7 @@ class TTS_HTML_Converter(HTMLParser):
         self.checker_results_stack.append((CHECK_SPEAKER_RESULT.NOT_MATCHED, CHECKER_SIGNAL.NO_SIGNAL, default_properties))
 
         self.project = TTS_Project()
-        self.current_item: TTS_Item | None = None
+        self.current_item: Optional[TTS_Item] = None
 
     def tag_to_element(self, name: str, attrs: list) -> Element:
         """
@@ -76,10 +76,10 @@ class TTS_HTML_Converter(HTMLParser):
 
         :param name: The name of the HTML tag.
         :type name: str
-        
+
         :param attrs: The attributes of the HTML tag.
         :type attrs: list
-        
+
         :return: An Element object representing the HTML tag.
         """
         elem = Element(name)
