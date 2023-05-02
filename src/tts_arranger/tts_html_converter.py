@@ -10,8 +10,8 @@ from tts_arranger.items.tts_item import TTS_Item  # type: ignore
 from tts_arranger.tts_writer import TTS_Chapter, TTS_Project  # type: ignore
 
 from tts_arranger.tts_reader.checker import (CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Checker,
-                     CheckerItemProperties, Condition, ConditionClass,
-                     ConditionID, ConditionName, Element)
+                                             CheckerItemProperties, Condition, ConditionClass,
+                                             ConditionID, ConditionName, Element)
 
 
 class CONVERSION_MODE(Enum):
@@ -25,7 +25,7 @@ class TTS_HTML_Converter(HTMLParser):
     """
     project: TTS_Project
 
-    def __init__(self, *, convert_charrefs: bool = True, checkers: Optional[list[Checker]] = None, default_properties=CheckerItemProperties(pause_after=250)) -> None:
+    def __init__(self, *, convert_charrefs: bool = True, default_properties=CheckerItemProperties(pause_after=250), custom_checkers: Optional[list[Checker]] = None, custom_checkers_files: Optional[list[str]] = None, ignore_default_checkers: bool = False) -> None:
         """
         Initializes a TTS_HTML_Converter object.
 
@@ -40,15 +40,31 @@ class TTS_HTML_Converter(HTMLParser):
         """
         super().__init__(convert_charrefs=convert_charrefs)
 
-        self.checkers: list[Checker] = checkers or []
-
         self.default_properties = default_properties
-
         self.last_signal = CHECKER_SIGNAL.NO_SIGNAL
+
+        # Initialize list with custom checkers so they have the highest priority
+        self.checkers: list[Checker] = custom_checkers or []
+
+        if custom_checkers:
+            print(f'{len(custom_checkers)} custom checker entries added.')
 
         self.checker_results_stack: list[tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]] = []
 
-        # Push default properties to stack to start with
+        # Add checkers from custom files
+        if custom_checkers_files:
+            for custom_checkers_file in custom_checkers_files:
+                self.add_checkers_from_json(custom_checkers_file)
+
+        # Finally add default checkers from data folder (lowest priority)
+        if not ignore_default_checkers:
+            source_dir = Path(__file__).resolve().parent.parent
+            base_path = os.path.dirname(__file__) if __file__ else str(source_dir)
+            default_file = os.path.join(base_path, 'data', 'checkers_default.json')
+
+            self.add_checkers_from_json(default_file)
+
+        # Push default starting properties to stack
         self.checker_results_stack.append((CHECK_SPEAKER_RESULT.NOT_MATCHED, CHECKER_SIGNAL.NO_SIGNAL, default_properties))
 
         self.project = TTS_Project()
@@ -238,130 +254,83 @@ class TTS_HTML_Converter(HTMLParser):
 
         return None
 
-    def get_checkers_files(self, filename: str = '', default_filename: str = '', ignore_default: bool = False) -> list[str]:
-        """
-        Compiles a list of checkers files, sorted by priority, starting with the first file (if available), adding the default file (if available), and finally adding the library default file
-
-        :param filename: Filename of the checkers file to load (in JSON format), defaults to ''
-        :type filename: str, optional
-
-        :param default_filename: Filename of a fallback checkers file to load, defaults to ''
-        :type default_filename: str, optional
-
-        :param ignore_default: Defines if the library's default checkers file should be ignored, defaults to False
-        :type ignore_default: bool, optional
-
-        :return: List of checkers
-        :rtype: list[str]
-        """
-        files: list[str] = []
-
-        if os.path.exists(filename):
-            files.append(filename)
-
-        # Check for default file in the same path
-        if default_filename:
-            if os.path.exists(default_filename):
-                files.append(default_filename)
-
-        # Check for default file
-        if ignore_default:
-            return files
-        
-        source_dir = Path(__file__).resolve().parent.parent
-
-        base_path = os.path.dirname(__file__) if __file__ else str(source_dir)
-        default_file = os.path.join(base_path, 'data', 'checkers_default.json')
-        if os.path.exists(default_file):
-            files.append(default_file)
-            return files
-
-        raise FileNotFoundError(f'No checkers file or default file found.')
-
-    def add_checkers_from_json(self, filename: str = '', default_filename: str = '', ignore_default=False) -> None:
+    def add_checkers_from_json(self, filename: str = '') -> None:
         """
         Load and add checkers from a checkers JSON file.
 
         :param filename: Filename of the checkers file to load (in JSON format), defaults to ''
         :type filename: str, optional
 
-        :param default_filename: Filename of a fallback checkers file to load, defaults to ''
-        :type default_filename: str, optional
-
-        :param ignore_default: Defines if the library's default checkers file should be ignored, defaults to False
-        :type ignore_default: bool, optional
-
         :return: None
         """
-        for checker_file in self.get_checkers_files(filename, default_filename, ignore_default):
-            print(f'Loading checkers file "{checker_file}"')
+        print(f'Loading checkers file "{filename}"')
 
-            json_check_entries = []
+        json_check_entries = []
 
-            with open(checker_file, 'r') as file:
-                data = json.load(file)
+        with open(filename, 'r') as file:
+            data = json.load(file)
 
-                json_check_entries = data['check_entries']
+            json_check_entries = data['check_entries']
 
-            print(f'{len(json_check_entries)} checker entries found.')
-            for json_entry in json_check_entries:
+        for json_entry in json_check_entries:
 
-                # Access the conditions list for the entry
-                json_conditions = json_entry['conditions']
+            # Access the conditions list for the entry
+            json_conditions = json_entry['conditions']
 
-                conditions: list[Condition] = []
+            conditions: list[Condition] = []
 
-                for json_condition in json_conditions:
-                    # Access the name and arg properties of the condition
-                    name = json_condition['name']
-                    arg = json_condition['arg']
+            for json_condition in json_conditions:
+                # Access the name and arg properties of the condition
+                name = json_condition['name']
+                arg = json_condition['arg']
 
-                    condition: Condition | None = None
+                condition: Condition | None = None
 
-                    match name:
-                        case 'Name':
-                            condition = ConditionName(arg)
-                        case 'Class':
-                            condition = ConditionClass(arg)
-                        case 'ID':
-                            condition = ConditionID(arg)
-                        case _:
-                            pass
+                match name:
+                    case 'Name':
+                        condition = ConditionName(arg)
+                    case 'Class':
+                        condition = ConditionClass(arg)
+                    case 'ID':
+                        condition = ConditionID(arg)
+                    case _:
+                        pass
 
-                    if condition:
-                        if condition.arg:
-                            conditions.append(condition)
+                if condition:
+                    if condition.arg:
+                        conditions.append(condition)
 
-                # Access the properties dictionary for the entry
-                json_properties = json_entry['properties']
+            # Access properties dictionary for entry
+            json_properties = json_entry['properties']
 
-                properties: Optional[CheckerItemProperties] = None
+            properties: Optional[CheckerItemProperties] = None
 
-                speaker_idx = 0
-                pause_after = 0
+            speaker_idx = 0
+            pause_after = 0
 
-                if 'speaker_idx' in json_properties:
-                    speaker_idx = int(json_properties['speaker_idx'])
-                if 'pause_after' in json_properties:
-                    pause_after = int(json_properties['pause_after'])
+            if 'speaker_idx' in json_properties:
+                speaker_idx = int(json_properties['speaker_idx'])
+            if 'pause_after' in json_properties:
+                pause_after = int(json_properties['pause_after'])
 
-                properties = CheckerItemProperties(speaker_idx, pause_after)
+            properties = CheckerItemProperties(speaker_idx, pause_after)
 
-                signal = CHECKER_SIGNAL.NO_SIGNAL
+            signal = CHECKER_SIGNAL.NO_SIGNAL
 
-                # Access the signals list for the entry
-                if 'signal' in json_entry:
-                    json_signal = json_entry['signal']
+            # Access signals list for entry
+            if 'signal' in json_entry:
+                json_signal = json_entry['signal']
 
-                    match json_signal:
-                        case 'NEW_CHAPTER':
-                            signal = CHECKER_SIGNAL.NEW_CHAPTER
-                        case 'IGNORE':
-                            signal = CHECKER_SIGNAL.IGNORE
-                        case _:
-                            pass
+                match json_signal:
+                    case 'NEW_CHAPTER':
+                        signal = CHECKER_SIGNAL.NEW_CHAPTER
+                    case 'IGNORE':
+                        signal = CHECKER_SIGNAL.IGNORE
+                    case _:
+                        pass
 
-                self.checkers.append(Checker(conditions, properties, signal))
+            self.checkers.append(Checker(conditions, properties, signal))
+        print(f'{len(json_check_entries)} checkers entries added.')
 
     def get_project(self) -> TTS_Project:
         """

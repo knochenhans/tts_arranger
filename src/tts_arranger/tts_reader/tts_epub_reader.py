@@ -9,6 +9,8 @@ from bs4 import BeautifulSoup, PageElement  # type: ignore
 from dateutil.parser import parse  # type: ignore
 from ebooklib import ITEM_DOCUMENT, epub  # type: ignore
 
+from tts_arranger.tts_reader.checker import Checker  # type: ignore
+
 from .tts_html_based_reader import TTS_HTML_Based_Reader  # type: ignore
 
 
@@ -17,17 +19,17 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
     Class for converting an EPUB file into a TTS project.
     """
 
-    def __init__(self, preferred_speakers: Optional[list[str]] = None, ignore_default_checkers=False):
+    def __init__(self, preferred_speakers: Optional[list[str]] = None, ignore_default_checkers=False, custom_checkers: Optional[list[Checker]] = None):
         """
         Initializes the reader
 
         :param preferred_speakers: Optional list of preferred speakers to use instead of the models predefined speaker list , defaults to None
         :type preferred_speakers: Optional[list[str]], optional
 
-        :param ignore_default_checkers: Defines if the default checkers should be ignored and only, defaults to False
+        :param ignore_default_checkers: Defines if the default checkers should be ignored, defaults to False
         :type ignore_default_checkers: bool, optional
         """
-        super().__init__(preferred_speakers, ignore_default_checkers)
+        super().__init__(preferred_speakers, custom_checkers, ignore_default_checkers=ignore_default_checkers)
 
     def get_chapter_title(self, toc: list, href: str) -> str:
         """

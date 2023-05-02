@@ -3,6 +3,8 @@ from typing import Callable, Optional
 
 from bs4 import BeautifulSoup, PageElement  # type: ignore
 
+from tts_arranger.tts_reader.checker import Checker  # type: ignore
+
 from .. import TTS_Project  # type: ignore
 from .tts_html_based_reader import TTS_HTML_Based_Reader  # type: ignore
 
@@ -12,8 +14,8 @@ class TTS_HTML_Reader(TTS_HTML_Based_Reader):
     Class for converting a HTML file into a TTS project.
     """
 
-    def __init__(self, preferred_speakers: Optional[list[str]] = None, ignore_default_checkers=False):
-        super().__init__(preferred_speakers, ignore_default_checkers=ignore_default_checkers)
+    def __init__(self, preferred_speakers: Optional[list[str]] = None, ignore_default_checkers=False, custom_checkers: Optional[list[Checker]] = None):
+        super().__init__(preferred_speakers, custom_checkers, ignore_default_checkers=ignore_default_checkers)
 
     def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
         """

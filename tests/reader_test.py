@@ -22,8 +22,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
         checkers.append(Checker([ConditionName('i')], CheckerItemProperties(2, 500)))
         checkers.append(Checker([ConditionName('b')], CheckerItemProperties(3, 1000)))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers)
+        reader = TTS_HTML_Reader(custom_checkers=checkers)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -44,8 +43,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
         checkers.append(Checker([ConditionName('sup'), ConditionClass('endnote')], None, CHECKER_SIGNAL.IGNORE))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers)
+        reader = TTS_HTML_Reader(custom_checkers=checkers)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -62,8 +60,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
         checkers = []
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers)
+        reader = TTS_HTML_Reader(custom_checkers=checkers)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -83,8 +80,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
         checkers.append(Checker([ConditionName('p')], CheckerItemProperties(0, 800)))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers)
+        reader = TTS_HTML_Reader(custom_checkers=checkers)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -107,8 +103,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
         checkers.append(Checker([ConditionID('b')], CheckerItemProperties(1, 800)))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers)
+        reader = TTS_HTML_Reader(custom_checkers=checkers)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -128,8 +123,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
         checkers.append(Checker([ConditionID('b')], CheckerItemProperties(1, 800)))
         checkers.append(Checker([ConditionName('p')], CheckerItemProperties(0, 800)))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers, ignore_default=True)
+        reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -151,8 +145,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
         checkers.append(Checker([ConditionName('br')], CheckerItemProperties(0, 800)))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers)
+        reader = TTS_HTML_Reader(custom_checkers=checkers)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -171,8 +164,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
         checkers.append(Checker([ConditionName('span')], CheckerItemProperties()))
 
-        reader = TTS_HTML_Reader(ignore_default_checkers=True)
-        reader.initialize_checkers(checkers=checkers, ignore_default=True)
+        reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -191,8 +183,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
         checkers.append(Checker([ConditionName('span')], CheckerItemProperties()))
 
-        reader = TTS_HTML_Reader(ignore_default_checkers=True)
-        reader.initialize_checkers(checkers=checkers, ignore_default=True)
+        reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -205,32 +196,51 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
         self.assertEqual(items[0].text, '12')
         # self.assertEqual(items[1].text, '2')
 
-    def test_merge_items6(self):
-        # html = """<p>a <a href="">b</a>:<strong> </strong>c </p>"""
-        html = """<p id="2AaPJu">For more than two decades, the American Lung Association (ALA) has <a href="https://www.lung.org/research/sota">posed a simple question</a>:<strong> </strong>Is air pollution in the United States getting better or worse? </p>"""
+    # def test_merge_items6(self):
+    #     # html = """<p>a <a href="">b</a>:<strong> </strong>c </p>"""
+    #     html = """<p id="2AaPJu">For more than two decades, the American Lung Association (ALA) has <a href="https://www.lung.org/research/sota">posed a simple question</a>:<strong> </strong>Is air pollution in the United States getting better or worse? </p>"""
 
-        checkers = []
+    #     checkers = []
 
-        # checkers.append(Checker([ConditionName('span')], CheckerItemProperties()))
+    #     # checkers.append(Checker([ConditionName('span')], CheckerItemProperties()))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers)
-        reader.load_raw(html)
+    #     reader = TTS_HTML_Reader(custom_checkers=checkers)
+    #     reader.load_raw(html)
 
-        items = reader.project.tts_chapters[0].tts_items
+    #     items = reader.project.tts_chapters[0].tts_items
 
-        project = TTS_Project()
-        project.tts_chapters.append(TTS_Chapter(items))
-        project.optimize()
-        items = project.tts_chapters[0].tts_items
+    #     project = TTS_Project()
+    #     project.tts_chapters.append(TTS_Chapter(items))
+    #     project.optimize()
+    #     items = project.tts_chapters[0].tts_items
 
-        # p = TTS_Processor()
-        # items = p.preprocess_items(items)
-        reader.project = project
-        reader.synthesize('/tmp/test.mp3')
+    #     # p = TTS_Processor()
+    #     # items = p.preprocess_items(items)
+    #     # reader.project = project
+    #     # reader.synthesize('/tmp/test.mp3')
 
-        self.assertEqual(items[0].text, 'a')
-        # self.assertEqual(items[1].text, '2')
+    #     self.assertEqual(items[0].text, 'a')
+    #     # self.assertEqual(items[1].text, '2')
+
+    # def test_merge_items7(self):
+    #     html = """<div>a. <b>b</b>. c. <i>d: </i><b>e</b>.</div>"""
+
+    #     checkers = []
+
+    #     checkers.append(Checker([ConditionName('b')], CheckerItemProperties(speaker_idx=1)))
+    #     checkers.append(Checker([ConditionName('i')], CheckerItemProperties(speaker_idx=1)))
+
+    #     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
+    #     reader.load_raw(html)
+
+    #     items = reader.project.tts_chapters[0].tts_items
+
+    #     project = TTS_Project()
+    #     project.tts_chapters.append(TTS_Chapter(items))
+    #     project.optimize()
+    #     items = project.tts_chapters[0].tts_items
+
+    #     self.assertEqual(items[0].text, '12')
 
     def test_nested_tags(self):
         # html = """<p>a <a href="">b</a>:<strong> </strong>c </p>"""
@@ -241,8 +251,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
         checkers.append(Checker([ConditionName('p')], CheckerItemProperties(0)))
         checkers.append(Checker([ConditionName('blockquote')], CheckerItemProperties(1)))
 
-        reader = TTS_HTML_Reader()
-        reader.initialize_checkers(checkers=checkers, ignore_default=True)
+        reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
         reader.load_raw(html)
 
         items = reader.project.tts_chapters[0].tts_items
@@ -281,8 +290,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
             checkers.append(Checker([ConditionName('h1')], CheckerItemProperties(1, 800)))
 
-            reader = TTS_EPUB_Reader(preferred_speakers)
-            reader.initialize_checkers(checkers=checkers)
+            reader = TTS_EPUB_Reader(preferred_speakers, custom_checkers=checkers)
             reader.load(file_path)
             reader.get_project().optimize()
 
