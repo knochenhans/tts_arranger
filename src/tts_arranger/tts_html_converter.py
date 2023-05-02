@@ -21,7 +21,7 @@ class CONVERSION_MODE(Enum):
 
 class TTS_HTML_Converter(HTMLParser):
     """
-    Class for converting HTML to a TTS_Project or list of TTS_Item objects.
+    Class for converting HTML to a TTS_Project or list of TTS_Item objects. Works on an internal project object that can be retrieved after loading all needed data is finished.
     """
     project: TTS_Project
 
@@ -280,7 +280,7 @@ class TTS_HTML_Converter(HTMLParser):
 
     def add_checkers_from_json(self, filename: str = '', default_filename: str = '', ignore_default=False) -> None:
         """
-        Load and add checkers from a list of checkers files.
+        Load and add checkers from a checkers JSON file.
 
         :param filename: Filename of the checkers file to load (in JSON format), defaults to ''
         :type filename: str, optional
