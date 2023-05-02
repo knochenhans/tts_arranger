@@ -24,21 +24,25 @@ Library that simplifies arranging text items fragments with multiple speakers an
 ## Examples
 
 ```python
-from tts_arranger import (TTS_Chapter, TTS_Item, TTS_Project,
-                          TTS_Simple_Writer, TTS_Writer)
+import os
 
-# Simple example using Simple Writer (using a simple list of TTS items)
+from tts_arranger import TTS_Item, TTS_Simple_Writer
+
+# Simple example using Simple Writer (using a simple list of TTS items), uses tts_models/en/vctk/vits by (default)
+
+user_dir = os.path.expanduser('~')
 
 tts_items = []
 
 preferred_speakers = ['p273', 'p330']
 
-tts_items.append(TTS_Item('This is a test', 1))
+tts_items.append(TTS_Item('This is a test', 0))  # Uses preferred speaker #0
 tts_items.append(TTS_Item(length=2000))  # Insert pause
-tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 0, length=10000))
+tts_items.append(TTS_Item('This is a test with another speaker and a fixed minimum length', 1, length=10000)) # Uses preferred speaker #1 and sets minimum length
 
+# Create writer using our item list and prefered speakers and synthesize and save as mp3 audio
 simple_writer = TTS_Simple_Writer(tts_items, preferred_speakers)
-simple_writer.synthesize_and_write('/tmp/tts_arranger_example_output/test.mp3')
+simple_writer.synthesize_and_write(os.path.join(user_dir, 'tts_arranger_example_output/test.mp3'))
 
 # English example using tts_models/en/vctk/vits (with multispeaker support)
 
@@ -59,7 +63,7 @@ project = TTS_Project(chapter, 'Project Title', 'Project Subtitle', author='Some
 # Add a cover image
 project.add_image_from_url('https://coqui.ai/static/38a06ec53309f617be3eb3b8b9367abf/598c3/logo-wordmark.png')
 
-writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/', preferred_speakers=preferred_speakers)
+writer = TTS_Writer(project, os.path.join(user_dir, 'tts_arranger_example_output/'), preferred_speakers=preferred_speakers)
 writer.synthesize_and_write(project.author + ' - ' + project.title)
 
 # German example using Thorsten voice (no multispeaker support)
@@ -78,6 +82,6 @@ chapter.append(TTS_Chapter(items2, 'Kapitel 2'))
 
 project = TTS_Project(chapter, 'Projektname', 'Projekt-Untertitel', author='Ein Autor', lang_code='de')
 
-writer = TTS_Writer(project, '/tmp/tts_arranger_example_output/', model='tts_models/de/thorsten/tacotron2-DDC', vocoder='vocoder_models/de/thorsten/hifigan_v1', output_format='mp3')
+writer = TTS_Writer(project, os.path.join(user_dir, 'tts_arranger_example_output/'), model='tts_models/de/thorsten/tacotron2-DDC', vocoder='vocoder_models/de/thorsten/hifigan_v1', output_format='mp3')
 writer.synthesize_and_write(project.author + ' - ' + project.title, concat=False)
 ```
