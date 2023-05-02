@@ -98,12 +98,12 @@ class TTS_HTML_Converter(HTMLParser):
 
         :param name: The name of the HTML tag.
         :type name: str
-        
+
         :param attrs: The attributes of the HTML tag.
         :type attrs: list
         """
-        # Ignore scripts
-        if name == 'script':
+        # Ignore script, style tags, etc.
+        if name in ['script', 'style', 'meta']:
             result = CHECK_SPEAKER_RESULT.MATCHED
             signal = CHECKER_SIGNAL.IGNORE
             properties = None
