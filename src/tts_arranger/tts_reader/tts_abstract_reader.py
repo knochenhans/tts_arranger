@@ -46,27 +46,5 @@ class TTS_Abstract_Reader(ABC):
         self.author = author or self.author
         self.title = title or self.title
 
-    def synthesize(self, output_filename: str, temp_dir_prefix='', callback: Optional[Callable[[float, TTS_Item], None]] = None) -> None:
-        """
-        Synthesize speech and write it to an audio file.
-
-        :param filename: The name of the output audio file.
-        :type filename: str
-
-        :param temp_dir_prefix: Prefix for the temporary directory used during synthesis.
-        :type temp_dir_prefix: str
-
-        :param callback: A function that will be called repeatedly during synthesis to provide progress information and TTS items.
-        :type callback: Optional[Callable[[float, TTS_Item], None]]
-
-        :return: None
-        """
-
-        path, full_name = os.path.split(output_filename)
-        filename, extension = os.path.splitext(full_name)
-
-        writer = TTS_Writer(self.project, path, self.output_format, preferred_speakers=self.preferred_speakers)
-        writer.synthesize_and_write(self.get_output_filename(), temp_dir_prefix, callback=callback, concat=False, optimize=True)
-
     def get_project(self) -> TTS_Project:
         return self.project
