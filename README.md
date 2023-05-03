@@ -21,6 +21,10 @@ Library that simplifies arranging text items fragments with multiple speakers an
 * TTS_Processor: Takes a TTS_Item, synthesizes and writes it to a file, also takes care of preprocessing the text input and post processing the audio output
 * TTS_HTML_Converter: Parses HTML content into a TTS_Project (mainly used by TTS_HTML_Reader and TTS_EPUB_Reader)
 
+## Requirements
+* ffmepg, espeak-ng
+* for required Python packages see requirements.txt
+
 ## Examples
 
 ```python
