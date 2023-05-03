@@ -2,6 +2,8 @@
 
 Library that simplifies arranging text items fragments with multiple speakers, and processing them using [Coqui.ai TTS](https://github.com/coqui-ai/TTS) to write audio files, including chapter markers and metadata. It also features helper classes for converting HTML (and thus EPUB files) into TTS projects, based of customizeable rules to read specific elements with different speakers, and define pauses after certain elements.
 
+Install via pip: ``python -m pip install tts_arranger``
+
 ## Overview
 
 ### TTS project elements
