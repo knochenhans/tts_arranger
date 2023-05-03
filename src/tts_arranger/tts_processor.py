@@ -87,13 +87,14 @@ class TTS_Processor:
         """
         log(LOG_TYPE.INFO, f'Initializing speech synthesizer.')
         models_dir = Path(TTS.__file__).resolve().parent / '.models.json'
+
         self.manager = ModelManager(str(models_dir))
 
-        with contextlib.redirect_stdout(None):
-            (model_path, config_path, _), (vocoder_path, vocoder_config_path, _) = [
-                self.manager.download_model(m) if m else ('', '', '') for m in (self.model, self.vocoder)
-            ]
+        (model_path, config_path, _), (vocoder_path, vocoder_config_path, _) = [
+            self.manager.download_model(m) if m else ('', '', '') for m in (self.model, self.vocoder)
+        ]
 
+        with contextlib.redirect_stdout(None):
             self.synthesizer = Synthesizer(
                 tts_checkpoint=model_path,
                 tts_config_path=config_path,
