@@ -1,15 +1,17 @@
 # TTS Arranger
 
-Library that simplifies arranging text items fragments with multiple speakers and processing them using coqui.ai TTS to write audio files. It also features helper classes for converting HTML (and thus EPUB files) into TTS projects, based of customizeable rules to read specific elements with different speakers, and define pauses after certain elements.
+Library that simplifies arranging text items fragments with multiple speakers, and processing them using [Coqui.ai TTS](https://github.com/coqui-ai/TTS) to write audio files, including chapter markers and metadata. It also features helper classes for converting HTML (and thus EPUB files) into TTS projects, based of customizeable rules to read specific elements with different speakers, and define pauses after certain elements.
 
 ## Overview
 
 ### TTS project elements
-* TTS_Item, TTS_Chapter, TTS_Project
+* TTS_Item: basic building block containing text to synthesize, speaker index and length; is also used for pauses
+* TTS_Chapter: contains a list if TTS_Item objects, represents a chapter in the output audio file
+* TTS_Project: contains a list of chapters as well as metadata for the output file (like author, title, cover image)
 
 ### Writer Classes
 * TTS_Simple_Writer: Simple single-file writer, works with lists of TTS_Items directly
-* TTS_Writer: Designed for writing audiobooks with meta data and chapters, works on with TTS_Project
+* TTS_Writer: Designed for writing audiobooks with meta data and chapters, works with a TTS_Project object
 
 ### Reader Classes
 * TTS_Text_Reader: Reads and converts plain text into a TTS_Project instance 
