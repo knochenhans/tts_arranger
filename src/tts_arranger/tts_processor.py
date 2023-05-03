@@ -524,7 +524,7 @@ class TTS_Processor:
 
     def synthesize_tts_item(self, tts_item: TTS_Item) -> np.ndarray:
         """
-        Synthesize a single item and return a numpy array
+        Synthesize a single item and return a numpy array containing the audio data
 
         :param tts_item: TTS item to be synthesized
         :type tts_item: TTS_Item
