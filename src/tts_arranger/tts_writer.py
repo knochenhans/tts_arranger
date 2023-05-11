@@ -269,9 +269,11 @@ class TTS_Writer(TTS_Abstract_Writer):
             return
 
         # Make sure the prefix exists
-        os.makedirs(temp_dir_prefix)
+        if temp_dir_prefix:
+            if not os.path.exists(temp_dir_prefix):
+                os.makedirs(temp_dir_prefix)
 
-        with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as temp_dir:
+        with tempfile.TemporaryDirectory(dir=temp_dir_prefix) as temp_dir:
             try:
                 log(LOG_TYPE.INFO, f'Synthesizing project "{self.project.title}".')
 
