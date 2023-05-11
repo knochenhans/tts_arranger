@@ -268,6 +268,9 @@ class TTS_Writer(TTS_Abstract_Writer):
             log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting.')
             return
 
+        # Make sure the prefix exists
+        os.makedirs(temp_dir_prefix)
+
         with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as temp_dir:
             try:
                 log(LOG_TYPE.INFO, f'Synthesizing project "{self.project.title}".')
