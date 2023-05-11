@@ -263,9 +263,14 @@ class TTS_HTML_Converter(HTMLParser):
 
         :return: None
         """
-        print(f'Loading checkers file "{filename}"')
 
         json_check_entries = []
+
+        if not os.path.exists(filename):
+            print(f'Checkers file "{filename}" does not exist, skipping.')
+            return
+
+        print(f'Loading checkers file "{filename}".')
 
         with open(filename, 'r') as file:
             data = json.load(file)
