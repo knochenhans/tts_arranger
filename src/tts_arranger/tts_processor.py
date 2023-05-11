@@ -68,7 +68,7 @@ class TTS_Processor:
 
         lang = self.model.split('/')[1]
 
-        for file_path in ['data/replace.json', f'data/replace_{lang}.json']:
+        for file_path in [os.path.join('data', 'replace.json'), os.path.join('data', f'replace_{lang}.json')]:
             with open(os.path.join(source_dir, file_path), 'r') as file:
                 data = file.read()
                 # Convert the data to a Python dictionary and update the replace dict
