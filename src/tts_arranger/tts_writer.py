@@ -240,7 +240,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                 .run(overwrite_output=True)
             )
 
-    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str = '', concat=True, callback: Optional[Callable[[float, TTS_Item], None]] = None, preprocess = True, optimize = False, max_pause_duration=0) -> None:
+    def synthesize_and_write(self, project_filename: str, temp_dir_prefix: str|None = '', concat=True, callback: Optional[Callable[[float, TTS_Item], None]] = None, preprocess = True, optimize = False, max_pause_duration=0) -> None:
         """
         Synthesize and write the output audio files for the given project.
 
@@ -272,6 +272,9 @@ class TTS_Writer(TTS_Abstract_Writer):
         if temp_dir_prefix:
             if not os.path.exists(temp_dir_prefix):
                 os.makedirs(temp_dir_prefix)
+        else:
+            # tempfile.TemporaryDirectory needs None, otherwise this will be set to the current working directory 
+            temp_dir_prefix = None
 
         with tempfile.TemporaryDirectory(dir=temp_dir_prefix) as temp_dir:
             try:
