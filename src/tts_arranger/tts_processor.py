@@ -536,30 +536,36 @@ class TTS_Processor:
         numpy_wav = np.array([0], dtype=np.float32)
 
         if tts_item.text:
-            try:
-                speaker = ''
+            # Run in a loop to bypass https://github.com/coqui-ai/TTS/discussions/2516
+            while True:
+                try:
+                    speaker = ''
 
-                if self.synthesizer.tts_model and self.synthesizer.tts_model.num_speakers > 1:
-                    speaker = self.speakers[tts_item.speaker_idx % len(self.speakers)]
-                    speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] if self.preferred_speakers and speaker in self.speakers else speaker
+                    if self.synthesizer.tts_model and self.synthesizer.tts_model.num_speakers > 1:
+                        speaker = self.speakers[tts_item.speaker_idx % len(self.speakers)]
+                        speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] if self.preferred_speakers and speaker in self.speakers else speaker
 
-                log(LOG_TYPE.INFO, f'({tts_item.speaker_idx} => "{speaker}", {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+                    log(LOG_TYPE.INFO, f'({tts_item.speaker_idx} => "{speaker}", {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
 
-                # Suppress tts output
-                with contextlib.redirect_stdout(None):
-                    wav = self.synthesizer.tts(
-                        text=tts_item.text,
-                        speaker_name=speaker,
-                    )
-            except Exception as e:
-                raise Exception(f'Error synthesizing "{tts_item.text}: {e}".')
-            else:
-                numpy_wav = np.asarray(wav, dtype=np.float32)
+                    # Suppress tts output
+                    with contextlib.redirect_stdout(None):
+                        wav = self.synthesizer.tts(
+                            text=tts_item.text,
+                            speaker_name=speaker,
+                        )
+                except IndexError as e:
+                    log(LOG_TYPE.WARNING, f'IndexError bug encountered, trying again.{bcolors.ENDC}')
+                    continue
+                except Exception as e:
+                    raise Exception(f'Error synthesizing "{tts_item.text}: {e}".')
+                else:
+                    numpy_wav = np.asarray(wav, dtype=np.float32)
 
-                # TODO: Reintroduce silence stripping?
-                #     # Strip some silence away to make pauses easier to control
-                #     silence = detect_silence(speech_segment, min_silence_len=self.silence_length, silence_thresh=self.silence_threshold)
-                #     speech_segment = speech_segment[:silence[-1][0]]
+                    # TODO: Reintroduce silence stripping?
+                    #     # Strip some silence away to make pauses easier to control
+                    #     silence = detect_silence(speech_segment, min_silence_len=self.silence_length, silence_thresh=self.silence_threshold)
+                    #     speech_segment = speech_segment[:silence[-1][0]]
+                break
 
         numpy_wav = self.pad_length(numpy_wav, tts_item.length / 1000.0)
 
