@@ -9,8 +9,8 @@ class TTS_Text_Reader(TTS_Abstract_Reader):
     Class for converting a simple text file into a TTS project.
     """
 
-    def __init__(self, preferred_speakers: Optional[list[str]] = None):
-        super().__init__(preferred_speakers)
+    def __init__(self):
+        super().__init__()
 
     def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
         super().load(filename, callback)

@@ -1,11 +1,8 @@
 
 from typing import Callable, Optional
 
-import mammoth
+import mammoth  # type: ignore
 
-from tts_arranger.tts_reader.checker import Checker  # type: ignore
-
-from .. import TTS_Project  # type: ignore
 from .tts_html_based_reader import TTS_HTML_Based_Reader  # type: ignore
 
 
@@ -13,9 +10,6 @@ class TTS_Docx_Reader(TTS_HTML_Based_Reader):
     """
     Class for converting a docx file into a TTS project.
     """
-
-    def __init__(self, ignore_default_checkers=False, custom_checkers: Optional[list[Checker]] = None):
-        super().__init__(custom_checkers, ignore_default_checkers=ignore_default_checkers)
 
     def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
         """"

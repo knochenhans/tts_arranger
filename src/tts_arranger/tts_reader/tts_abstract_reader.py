@@ -2,17 +2,19 @@ import os
 from abc import ABC
 from typing import Callable, Optional
 
-from .. import TTS_Item, TTS_Project, TTS_Writer  # type: ignore
+from .. import TTS_Project  # type: ignore
 
 
 class TTS_Abstract_Reader(ABC):
-    def __init__(self, preferred_speakers: Optional[list[str]] = None):
+    """
+    Abstract base class for converting files into a TTS project.
+    """
+
+    def __init__(self):
         """
-        :param preferred_speakers: Optional list of preferred speakers to use instead of the models predefined speaker list  
-        :type preferred_speakers: Optional[list[str]]
+        Initializes the reader with some default parameters
         """
 
-        self.preferred_speakers = preferred_speakers or []
         self.project = TTS_Project()
 
         self.title = ''

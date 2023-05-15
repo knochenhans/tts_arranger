@@ -10,8 +10,8 @@ from .tts_abstract_reader import TTS_Abstract_Reader  # type: ignore
 
 
 class TTS_SRT_Reader(TTS_Abstract_Reader):
-    def __init__(self, preferred_speakers: Optional[list[str]] = None):
-        super().__init__(preferred_speakers)
+    def __init__(self):
+        super().__init__()
 
         self.output_format = 'wav'
 
@@ -67,9 +67,9 @@ class TTS_SRT_Reader(TTS_Abstract_Reader):
         self.project.lang_code = 'de'
         self.project.raw = True
 
-    def synthesize(self, output_filename: str, temp_dir_prefix='', callback: Optional[Callable[[float, TTS_Item], None]] = None) -> None:
-        path, full_name = os.path.split(output_filename)
-        filename, extension = os.path.splitext(full_name)
+    # def synthesize(self, output_filename: str, temp_dir_prefix='', callback: Optional[Callable[[float, TTS_Item], None]] = None) -> None:
+    #     path, full_name = os.path.split(output_filename)
+    #     filename, extension = os.path.splitext(full_name)
 
-        writer = TTS_Simple_Writer(self.project.tts_chapters[0].tts_items, self.preferred_speakers)
-        writer.synthesize_and_write(output_filename + '.wav', lang_code=self.project.lang_code, callback=callback)
+    #     writer = TTS_Simple_Writer(self.project.tts_chapters[0].tts_items, self.preferred_speakers)
+    #     writer.synthesize_and_write(output_filename + '.wav', lang_code=self.project.lang_code, callback=callback)

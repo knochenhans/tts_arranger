@@ -9,8 +9,6 @@ from bs4 import BeautifulSoup, PageElement  # type: ignore
 from dateutil.parser import parse  # type: ignore
 from ebooklib import ITEM_DOCUMENT, epub  # type: ignore
 
-from tts_arranger.tts_reader.checker import Checker  # type: ignore
-
 from .tts_html_based_reader import TTS_HTML_Based_Reader  # type: ignore
 
 
@@ -18,18 +16,6 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
     """
     Class for converting an EPUB file into a TTS project.
     """
-
-    def __init__(self, preferred_speakers: Optional[list[str]] = None, ignore_default_checkers=False, custom_checkers: Optional[list[Checker]] = None):
-        """
-        Initializes the reader
-
-        :param preferred_speakers: Optional list of preferred speakers to use instead of the models predefined speaker list , defaults to None
-        :type preferred_speakers: Optional[list[str]], optional
-
-        :param ignore_default_checkers: Defines if the default checkers should be ignored, defaults to False
-        :type ignore_default_checkers: bool, optional
-        """
-        super().__init__(preferred_speakers, custom_checkers, ignore_default_checkers=ignore_default_checkers)
 
     def get_chapter_title(self, toc: list, href: str) -> str:
         """
@@ -85,7 +71,7 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
         with open(os.path.join(source_dir, 'data', 'exclude_ids.json'), 'r') as f:
             exclude_ids = json.load(f)
 
-        exclude_ids_str = ", ".join([f'EPUB item ID: "{exclude_id}"' for exclude_id in exclude_ids])
+        exclude_ids_str = ', '.join([f'EPUB item ID: "{exclude_id}"' for exclude_id in exclude_ids])
         print(f'Ignoring {exclude_ids_str}')
 
         for i, epub_item in enumerate(epub_items):
@@ -135,23 +121,3 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
         self.project.author = author
         self.project.title = title
         self.project.date = date
-
-    def load_raw(self, content: str, author: str = '', title: str = '', callback: Optional[Callable[[float], None]] = None) -> None:
-        """
-        Load HTML content into the TTS_Project.
-
-        :param content: The raw HTML content.
-        :type content: str
-
-        :param author: Author of the resulting project, defaults to ''
-        :type author: str, optional
-
-        :param title: Title of the resulting project, defaults to ''
-        :type title: str, optional
-
-        :param callback: The callback function for progress updates.
-        :type callback: Optional[Callable[[float], None]]
-
-        :return: None
-        """
-        return super().load_raw(content, author, title, callback)
