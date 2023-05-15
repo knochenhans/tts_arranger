@@ -290,7 +290,7 @@ class TTS_HTML_ReaderTest(unittest.TestCase):
 
             checkers.append(Checker([ConditionName('h1')], CheckerItemProperties(1, 800)))
 
-            reader = TTS_EPUB_Reader(preferred_speakers, custom_checkers=checkers)
+            reader = TTS_EPUB_Reader(custom_checkers=checkers)
             reader.load(file_path)
             reader.get_project().optimize()
 
