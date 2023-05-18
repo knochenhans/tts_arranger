@@ -266,6 +266,9 @@ class TTS_Processor:
                     # Strip starting punctuation and normalize ending punctuation
                     text = text.lstrip(string.punctuation)
 
+                    # Strip left-over surrounding quotation marks
+                    text = text.strip('"')
+
                     if self.model != 'tts_models/en/vctk/vits':
                         # Add a full stop if necessary to avoid synthesizing problems with some models
                         text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)

@@ -19,16 +19,14 @@ class Test(unittest.TestCase):
         self.assertEqual(tts_items[2].text, 'A t:est!')
         self.assertEqual(tts_items[3].length, 1000)
 
-    # def test_break2(self):
-    #     t = TTS_Arranger()
+    def test_quote(self):
+        t = TTS_Processor()
 
-    #     tts_item = TTS_Item('This “Is” a test, right?', 'test', 10, 10, True)
+        tts_item = TTS_Item('Test!"')
 
-    #     tts_items = t._prepare_item(tts_item)
+        tts_items = t._prepare_item(tts_item)
 
-    #     self.assertEqual(tts_items[0].text, 'This')
-    #     self.assertEqual(tts_items[1].text, 'Is')
-    #     self.assertEqual(tts_items[2].text, 'a test, right?')
+        self.assertEqual(tts_items[0].text, 'Test!')
 
     # def test_break3(self):
     #     t = TTS_Arranger()
