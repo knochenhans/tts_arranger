@@ -240,7 +240,7 @@ class TTS_Processor:
             final_items = []
 
             for tts_item in tts_items:
-                text = tts_item.text
+                text = tts_item.text.strip()
                 if tts_item.text:
 
                     if not text and tts_item.length > 0:
