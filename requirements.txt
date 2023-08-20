@@ -1,6 +1,5 @@
 beautifulsoup4>=4.12.2
 EbookLib>=0.18
-ffmpeg>=1.4
 ffmpeg-python>=0.2.0
 mammoth>=1.5.1
 num2words>=0.5.11
