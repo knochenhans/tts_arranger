@@ -313,7 +313,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                     metadata_filename = os.path.join(temp_dir, 'metadata')
 
                     # Write all the custom metadata to the new metadata file
-                    with open(metadata_filename, 'w') as metadata_file:
+                    with open(metadata_filename, 'w', encoding='utf-8') as metadata_file:
                         metadata_file.write(metadata)
 
                     output_filename = os.path.join(self.project_path, sanitize_filename(project_filename))
