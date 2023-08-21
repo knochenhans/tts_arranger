@@ -36,8 +36,8 @@ class TTS_Processor:
         """
         self.model = model or 'tts_models/en/vctk/vits'
         self.vocoder = vocoder
-        self.silence_length = 100
-        self.silence_threshold = -60
+        # self.silence_length = 100
+        # self.silence_threshold = -60
         # self.pause_post_regular =
 
         # self.quotes = quotes
@@ -46,14 +46,17 @@ class TTS_Processor:
         self.speakers: list[str] = []
 
         # Config
-        self.pause_sentence = 750
-        self.pause_question_exclamation = 1000
-        self.pause_parentheses = 300
-        self.pause_dash = 300
+        self.pause_sentence = 600
+        self.pause_question_exclamation = 800
+        self.pause_parentheses = 100
+        self.pause_dash = 100
         self.pause_newline = 250
         self.pause_colon = 100
 
         self.preferred_speakers = preferred_speakers or []
+
+        # List of models that need segments ending on a fullstop to avoid synthensizing errors
+        self.models_fullstop_needed = ['tts_models/de/thorsten/tacotron2-DDC']
 
         # if not self.default_speakers:
         #     with open(os.path.dirname(os.path.realpath(__file__)) + '/speakers', 'r') as speaker_file:
@@ -93,6 +96,9 @@ class TTS_Processor:
         (model_path, config_path, _), (vocoder_path, vocoder_config_path, _) = [
             self.manager.download_model(m) if m else ('', '', '') for m in (self.model, self.vocoder)
         ]
+        
+        config_path = config_path or ''
+        vocoder_config_path = vocoder_config_path or '' 
 
         with contextlib.redirect_stdout(None):
             self.synthesizer = Synthesizer(
@@ -100,6 +106,7 @@ class TTS_Processor:
                 tts_config_path=config_path,
                 vocoder_checkpoint=vocoder_path,
                 vocoder_config=vocoder_config_path if self.vocoder else '',
+                use_cuda=True
             )
 
             # Get speaker list from model
@@ -150,9 +157,17 @@ class TTS_Processor:
         def replace_number(match):
             num = match.group(0)
             if tts_item.text[match.end():].strip().startswith(str_months):
-                return num2words(num, lang='de', to='ordinal')
+                replaced_text = num2words(num, lang='de', to='ordinal')
+                preceding_text = tts_item.text[:match.start()].strip()
+                if not preceding_text or preceding_text.isspace() or preceding_text.endswith(". "):
+                    replaced_text += "r"
+                # Catch cases like "am 15."
+                if tts_item.text[:match.start()].endswith(("m ", "n ")):
+                    replaced_text += "n"
             else:
-                return num
+                replaced_text = num
+            
+            return replaced_text
 
         tts_item.text = re.sub(r'\b[0-9]+\.', replace_number, tts_item.text)
 
@@ -268,10 +283,6 @@ class TTS_Processor:
 
                     # Strip left-over surrounding quotation marks
                     text = text.strip('"')
-
-                    if self.model != 'tts_models/en/vctk/vits':
-                        # Add a full stop if necessary to avoid synthesizing problems with some models
-                        text = re.sub(r'([a-zA-Z0-9])$', r'\1.', text)
 
                 if len(text) > 0:
                     if re.search(r'[a-zA-Z0-9]', text):
@@ -549,6 +560,14 @@ class TTS_Processor:
                         speaker = self.preferred_speakers[tts_item.speaker_idx % len(self.preferred_speakers)] if self.preferred_speakers and speaker in self.speakers else speaker
 
                     log(LOG_TYPE.INFO, f'({tts_item.speaker_idx} => "{speaker}", {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}')
+
+                    if self.model in self.models_fullstop_needed:
+                        # Add a full stop if necessary to avoid synthesizing problems with some models
+                        punctuation_marks = [".", "?", "!"]
+                        ending_punctuation = tts_item.text[-1]
+
+                        if ending_punctuation not in punctuation_marks:
+                            tts_item.text += "."
 
                     # Suppress tts output
                     with contextlib.redirect_stdout(None):
