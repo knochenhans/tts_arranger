@@ -139,7 +139,9 @@ class TTS_Project():
         :return: None
         """
         if image_url:
-            self.image_bytes = base64.b64encode(requests.get(image_url).content)
+            # Identify as browser to avoid problems with servers like wikimedia
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'}
+            self.image_bytes = base64.b64encode(requests.get(image_url, headers=headers).content)
 
     def clean_empty_chapters(self):       
         """
