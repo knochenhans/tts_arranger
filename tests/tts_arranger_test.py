@@ -92,11 +92,11 @@ Do you mean pidgin Danish, perhaps? :''')
         tts_item = TTS_Item('Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II.')
 
         tts_items = t._prepare_item(tts_item)
-        self.assertEqual(tts_items[0].text, 'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure ')
+        self.assertEqual(tts_items[0].text, 'Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure')
         self.assertEqual(tts_items[1].length, 300)
         self.assertEqual(tts_items[2].text, 'not that Ken likely knew this or cared,')
         self.assertEqual(tts_items[3].length, 300)
-        self.assertEqual(tts_items[4].text, ' to the little Apple 2.')
+        self.assertEqual(tts_items[4].text, 'to the little Apple 2.')
         self.assertEqual(tts_items[5].length, 750)
 
     def test_punctuation3(self):
@@ -105,9 +105,9 @@ Do you mean pidgin Danish, perhaps? :''')
         tts_item = TTS_Item('a — b.')
 
         tts_items = t._prepare_item(tts_item)
-        self.assertEqual(tts_items[0].text, 'a ')
+        self.assertEqual(tts_items[0].text, 'a')
         self.assertEqual(tts_items[1].length, 300)
-        self.assertEqual(tts_items[2].text, ' b.')
+        self.assertEqual(tts_items[2].text, 'b.')
         self.assertEqual(tts_items[3].length, 750)
 
     # def test_punctuation3(self):
