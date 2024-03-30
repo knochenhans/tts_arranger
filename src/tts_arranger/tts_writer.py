@@ -17,7 +17,7 @@ from .items.tts_chapter import TTS_Chapter  # type: ignore
 from .items.tts_item import TTS_Item  # type: ignore
 from .items.tts_project import TTS_Project  # type: ignore
 from .tts_abstract_writer import TTS_Abstract_Writer
-from .tts_processor import TTS_Processor
+from .tts_processor import TTS_Processor, Backend
 from .utils.log import LOG_TYPE, bcolors, log  # type: ignore
 
 
@@ -26,7 +26,7 @@ class TTS_Writer(TTS_Abstract_Writer):
     Class to process TTS projects (containing of chapters each containing a number of items) and to finally write an audio file including chapter metadata and chapter info
     """
 
-    def __init__(self, project: TTS_Project = TTS_Project(),  base_path: str = '', output_format='m4b', model: str = '', vocoder: str = '', preferred_speakers: Optional[list[str]] = None) -> None:
+    def __init__(self, project: TTS_Project = TTS_Project(),  base_path: str = '', output_format='m4b', model: str = '', vocoder: str = '', preferred_speakers: Optional[list[str]] = None, backend: Backend = Backend.COQUI) -> None:
         """
         Constructor for the TTS_Writer class.
 
@@ -51,7 +51,7 @@ class TTS_Writer(TTS_Abstract_Writer):
 
         :return: None
         """
-        super().__init__(preferred_speakers)
+        super().__init__(preferred_speakers, model, backend, project.lang_code)
 
         self.NANOSECONDS_IN_ONE_SECOND = 1e9
 
@@ -283,15 +283,16 @@ class TTS_Writer(TTS_Abstract_Writer):
                 if self.model and self.vocoder:
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
                 else:
-                    match self.project.lang_code:
-                        case 'en':
-                            self.model = 'tts_models/en/vctk/vits'
-                            self.vocoder = ''
-                        case 'de':
-                            self.model = 'tts_models/de/thorsten/tacotron2-DDC'
-                            self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
-                        case _:
-                            raise ValueError(f'Language code "{self.project.lang_code}" not supported')
+                    if self.backend == Backend.COQUI:
+                        match self.project.lang_code:
+                            case 'en':
+                                self.model = 'tts_models/en/vctk/vits'
+                                self.vocoder = ''
+                            case 'de':
+                                self.model = 'tts_models/de/thorsten/tacotron2-DDC'
+                                self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
+                            case _:
+                                raise ValueError(f'Language code "{self.project.lang_code}" not supported')
 
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
 

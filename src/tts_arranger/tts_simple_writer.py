@@ -12,7 +12,7 @@ import scipy.io.wavfile  # type: ignore
 
 from .items.tts_item import TTS_Item
 from .tts_abstract_writer import TTS_Abstract_Writer
-from .tts_processor import TTS_Processor
+from .tts_processor import TTS_Processor, Backend
 from .utils.log import LOG_TYPE, bcolors, log
 
 
@@ -21,14 +21,14 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
     Simple writer class that takes a list of TTS items (in contrast to a more complex TTS_Project object), synthesizes, and writes them as a final audio file
     """
 
-    def __init__(self, tts_items: list[TTS_Item], preferred_speakers: Optional[list[str]] = None):
-        super().__init__(preferred_speakers)
+    def __init__(self, tts_items: list[TTS_Item], preferred_speakers: Optional[list[str]] = None, model: str = "", backend: Backend = Backend.COQUI, lang: str = 'en'):
+        super().__init__(preferred_speakers, model, backend, lang)
 
         self.tts_items = tts_items
 
         self.final_numpy: np.ndarray
 
-    def synthesize_and_write(self, output_filename: str, lang_code='en', callback: Optional[Callable[[float, TTS_Item], None]] = None, preprocess=True):
+    def synthesize_and_write(self, output_filename: str, callback: Optional[Callable[[float, TTS_Item], None]] = None, preprocess=True):
         """
         Synthesize and write list of items as an audio file
 
@@ -44,17 +44,19 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
         characters_sum = 0
         characters_total = 0
 
-        match lang_code:
-            case 'en':
-                self.model = 'tts_models/en/vctk/vits'
-                self.vocoder = ''
-            case 'de':
-                self.model = 'tts_models/de/thorsten/tacotron2-DDC'
-                self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
-            case _:
-                raise ValueError(f'Language code "{lang_code}" not supported')
+        self.vocoder = ''
+        if self.model == '':
+            if self.backend == Backend.COQUI:
+                match self.lang:
+                    case 'en':
+                        self.model = 'tts_models/en/vctk/vits'
+                    case 'de':
+                        self.model = 'tts_models/de/thorsten/tacotron2-DDC'
+                        self.vocoder = 'vocoder_models/de/thorsten/hifigan_v1'
+                    case _:
+                        raise ValueError(f'Language code "{self.lang}" not supported')
 
-        tts_processor = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
+        tts_processor = TTS_Processor(self.model, self.vocoder, self.preferred_speakers, self.backend, self.lang)
         tts_processor.initialize()
 
         self.sample_rate = tts_processor.get_sample_rate()
