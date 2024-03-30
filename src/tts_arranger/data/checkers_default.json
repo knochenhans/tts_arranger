@@ -4,6 +4,155 @@
             "conditions": [
                 {
                     "name": "Name",
+                    "arg": "div"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 0,
+                "pause_after": 750
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "p"
+                },
+                {
+                    "name": "Class",
+                    "arg": "chapter"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            },
+            "signal": "NEW_CHAPTER"
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "quote"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 600
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "blockquote"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Class",
+                    "arg": "h"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 600
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h1"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h2"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h3"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h4"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h5"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h6"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "li"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 750
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
                     "arg": "span"
                 },
                 {
@@ -103,35 +252,6 @@
         {
             "conditions": [
                 {
-                    "name": "Name",
-                    "arg": "p"
-                },
-                {
-                    "name": "Class",
-                    "arg": "chapter"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
-            },
-            "signal": "NEW_CHAPTER"
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Class",
-                    "arg": "quote"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 600
-            }
-        },
-        {
-            "conditions": [
-                {
                     "name": "Class",
                     "arg": "chapno"
                 }
@@ -139,30 +259,6 @@
             "properties": {
                 "speaker_idx": 1,
                 "pause_after": 600
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "li"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 750
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "blockquote"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
             }
         },
         {
@@ -186,90 +282,6 @@
             ],
             "properties": {
                 "pause_after": 500
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Class",
-                    "arg": "h"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 600
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "h1"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "h2"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "h3"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "h4"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "h5"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "h6"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 1,
-                "pause_after": 1000
             }
         },
         {
@@ -332,18 +344,6 @@
             "properties": {
                 "speaker_idx": 1,
                 "pause_after": 1000
-            }
-        },
-        {
-            "conditions": [
-                {
-                    "name": "Name",
-                    "arg": "div"
-                }
-            ],
-            "properties": {
-                "speaker_idx": 0,
-                "pause_after": 750
             }
         }
     ]
