@@ -338,7 +338,7 @@ class TTS_Writer(TTS_Abstract_Writer):
 
                         metadata_input = ffmpeg.input(metadata_filename)
 
-                        if self.output_format not in ['m4b', 'm4a']:
+                        if self.output_format not in ['m4b', 'm4a', 'opus']:
                             log(LOG_TYPE.WARNING, f'Chapters are only possible for m4b/m4a at the moment.')
 
                         cmd = (
@@ -381,7 +381,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                         log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under "{output_filename}/".')
 
                     if self.project.image_bytes:
-                        if self.output_format in ['m4b', 'm4a', 'mp3']:
+                        if self.output_format in ['m4b', 'm4a', 'mp3', 'opus']:
                             image_bytes = base64.b64decode(self.project.image_bytes)
                             image_file = io.BytesIO(image_bytes)
                             image = Image.open(image_file)

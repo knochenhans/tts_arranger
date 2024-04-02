@@ -20,6 +20,7 @@ Install via pip: ``python -m pip install tts_arranger``
 * TTS_HTML_Reader: Reads and converts HTML content into a TTS_Project instance
 * TTS_EPUB_Reader: Reads and converts an EPUB file into a TTS_Project instance
 * TTS_SRT_Reader: Reads and converts an SRT subtitle file into a TTS_Project instance *[not working due to timing bug at this point]*
+* TTS_Docx_Reader: Reads and converts Microsoft  Word documents *[very early stage]*
 
 ### Helper Classes
 * TTS_Processor: Takes a TTS_Item, synthesizes and writes it to a file, also takes care of preprocessing the text input and post processing the audio output
@@ -93,3 +94,108 @@ project = TTS_Project(chapter, 'Projektname', 'Projekt-Untertitel', author='Ein 
 writer = TTS_Writer(project, os.path.join(user_dir, 'tts_arranger_example_output/'), model='tts_models/de/thorsten/tacotron2-DDC', vocoder='vocoder_models/de/thorsten/hifigan_v1', output_format='mp3')
 writer.synthesize_and_write(project.author + ' - ' + project.title, concat=False)
 ```
+
+## Converting HTML-based content
+
+You can use TTS_HTML_Reader and TTS_EPUB_Reader to convert HTML and EPUB files and raw code into a TTS project based on a list of customizable rules called _Checkers_ in this project. A Checker consists of a condition (for example `p` tags or tags with the class `class1`) and TTS item properties (speaker index and pause after the current segment) the created TTS item containing the tag’s text should have. A typical use case would be to read out headings with a different voice and insert a pause afterwards.
+
+TTS_HTML_Reader internally uses the TTS_HTML_Converter class to parse the given HTML code, checks every tag it encounters against the list of checkers and creates TTS items accordingly.
+
+TTS Arranger comes with a more or less sane default list of Checkers that will be applied when using TTS_HTML_Converter.
+
+Checkers can also be loaded from JSON.
+
+### Example
+
+The following example converts HTML code into a TTS project and uses hard-coded checkers.
+
+```python
+import os
+
+from tts_arranger import TTS_Writer
+from tts_arranger.tts_html_converter import (Checker, CheckerItemProperties,
+                                             ConditionClass, ConditionID,
+                                             ConditionName)
+from tts_arranger.tts_reader.tts_html_reader import TTS_HTML_Reader
+
+user_dir = os.path.expanduser('~')
+
+preferred_speakers = ['p273', 'p330']
+
+html = '''<body><html>
+            <h1>HTML Converter Example</h1>
+            <p class="class1">This example shows how to read different parts of the text using different multispeaker voices.</p>
+            <p id="id1">For example, this part uses our second speaker and is followed by a long pause.</p>
+            <p>This part will fallback to using the default voice and pause properties.</p>
+        </html></body>'''
+
+checkers: list[Checker] = []
+
+checkers.append(Checker([ConditionName('h1')], CheckerItemProperties(1, 1000)))  # Read headers with speaker 1 and followed with a 1000ms pause
+checkers.append(Checker([ConditionName('p'), ConditionClass('class1')], CheckerItemProperties(0, 1500)))  # You can target paragraphs with specific classes
+checkers.append(Checker([ConditionID('id1')], CheckerItemProperties(1, 500)))  # You can also target specific ids
+
+reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)  # Initialize the HTML Reader with our custom checkers and ignore default checkers that shipped with the project
+reader.load_raw(html, 'Project title', 'Some author')  # Load and convert the HTML code
+
+project = reader.get_project()  # Get the finished project from the reader
+
+# Finally synthesize and write the project as a m4b audiobook using our preferred speakers
+writer = TTS_Writer(project, os.path.join(user_dir, 'tts_arranger_example_output/'), preferred_speakers=preferred_speakers)
+writer.synthesize_and_write(project.author + ' - ' + project.title)
+```
+
+It’s also possible to load checkers from a JSON file. The corresponding JSON for the example above would look like this:
+
+```JSON
+{
+    "check_entries": [
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "h1"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 1000
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "Name",
+                    "arg": "p"
+                },
+                {
+                    "name": "Class",
+                    "arg": "class1"
+                }
+            ],
+            "properties": {
+                "pause_after": 1500
+            }
+        },
+        {
+            "conditions": [
+                {
+                    "name": "ID",
+                    "arg": "id1"
+                }
+            ],
+            "properties": {
+                "speaker_idx": 1,
+                "pause_after": 500
+            }
+        }
+    ]
+}
+```
+
+This file can now be loaded using
+```python
+reader = TTS_HTML_Reader(custom_checkers_files=['path_to_your_json_file'], ignore_default_checkers=True)
+```
+
+It’s also possible to load multiple JSON files like this (the `custom_checkers_files` parameter takes a list of strings), and this can be combined with custom hard-coded checkers, and the defaults checkers. If checkers are loaded from all 3 sources, custom checkers have the highest priority, followed by the checker JSON files (in the order they were given), and finally the default checkers file. Thus, if a condition for the tag `p` is present in multiple checkers sources, the HTML converter will use the first one it finds.

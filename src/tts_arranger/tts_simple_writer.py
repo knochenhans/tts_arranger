@@ -104,7 +104,7 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
                 log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}": {e}.')
                 sys.exit()
 
-        self._write(numpy_segments, output_filename, )
+        self._write(numpy_segments, output_filename)
         log(LOG_TYPE.SUCCESS, f'Synthesizing finished, file saved as "{output_filename}".')
 
     def _write(self, numpy_segment: np.ndarray, output_filename: str) -> None:
