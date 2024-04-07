@@ -1,4 +1,5 @@
 import base64
+from cmath import sqrt
 import io
 import json
 import math
@@ -258,6 +259,11 @@ class JSON_Processor:
                 frames = wav_file.readframes(wav_file.getnframes())
             numpy_wav = np.frombuffer(frames, dtype=np.int16).astype(np.float32)
             numpy_wav /= np.iinfo(np.int16).max
+            
+            volume_factor = mapped_speaker_id.get("volume_factor", 1.0)
+            volume_factor_log = pow(2, (sqrt(sqrt(sqrt(volume_factor))) * 192 - 192)/6)
+
+            np.multiply(numpy_wav, volume_factor_log, out=numpy_wav, casting="unsafe")
 
         # Pad with zeros to reach the desired length
         numpy_wav = self.pad_length(numpy_wav, item.get("min_length", 0) / 1000)
