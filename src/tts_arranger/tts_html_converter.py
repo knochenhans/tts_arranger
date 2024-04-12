@@ -202,7 +202,8 @@ class TTS_HTML_Converter(HTMLParser):
                 return result, signal, properties
         return CHECK_SPEAKER_RESULT.NOT_MATCHED, CHECKER_SIGNAL.NO_SIGNAL, None
 
-    def add_from_html(self, html: str, new_chapter=True) -> None:
+
+    def add_from_html(self, html: str, new_chapter=True) -> int:
         """
         Converts from HTML and adds to the existing TTS_Project object in the buffer.
 
@@ -212,22 +213,18 @@ class TTS_HTML_Converter(HTMLParser):
         :param new_chapter: A boolean indicating whether to start a new chapter.
         :type new_chapter: bool
 
-        :return: None
+        :return: The number of chapters added.
         """
+
+        current_chapters_count = len(self.project.tts_chapters)
+
         if new_chapter:
             self.current_chapter = TTS_Chapter()
             self.project.tts_chapters.append(self.current_chapter)
 
         self.feed(html)
 
-        # Remove empty items
-        for chapter in self.project.tts_chapters:
-            final_items = []
-            for item in chapter.tts_items:
-                if item.text != '' or (item.speaker_idx == -1 and item.length > 0):
-                    final_items.append(item)
-
-            chapter.tts_items = final_items
+        return len(self.project.tts_chapters) - current_chapters_count
 
     def convert_from_html(self, html: str, conversion_mode: CONVERSION_MODE = CONVERSION_MODE.PROJECT) -> Optional[TTS_Project | list[TTS_Item]]:
         """
