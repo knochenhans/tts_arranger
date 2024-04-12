@@ -79,17 +79,34 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
                 soup = BeautifulSoup(epub_item.get_body_content(), 'lxml')
 
                 if isinstance(soup, PageElement):
-                    self.html_converter.add_from_html(str(soup))
+                    added_chapters_count = self.html_converter.add_from_html(str(soup))
 
                     # If no chapter titel is found, use the first item
-                    chapter_title = self.get_chapter_title(book.toc, epub_item.file_name)
+                    # chapter_title = self.get_chapter_title(book.toc, epub_item.file_name)
+
+                    # Get chapter title by looking for the first header tag
+                    chapter_title = ''
+                    for header in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                        if header.text.strip():
+                            chapter_title = header.text.strip()
+                            break
+
+                    # If no chapter title is found, use the title tag
+                    if not chapter_title:
+                        title_tag = soup.find('title')
+                        if title_tag:
+                            chapter_title = title_tag.text.strip()
 
                     # TODO: Do this later
                     # if not chapter_title:
                     #     if len(self.html_converter.get_project().tts_chapters[-1].tts_items) > 0:
                     #         chapter_title = self._smart_truncate(self.html_converter.get_project().tts_chapters[-1].tts_items[0].text).strip()
 
-                    self.html_converter.get_project().tts_chapters[-1].title = chapter_title
+                    # self.html_converter.get_project().tts_chapters[-1].title = chapter_title
+                    # Set title for added chapters
+                    for j in range(added_chapters_count):
+                        self.html_converter.get_project().tts_chapters[-1 - j].title = chapter_title
+                        
             if callback is not None:
                 callback(100/len(epub_items) * i)
 
@@ -104,13 +121,24 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
 
         if len(date_metadata) > 0:
             date_str = book.get_metadata('DC', 'date')[0][0]
+            try:
+                date = parse(date_str)
+            except ParserError:
+                date = datetime.datetime(1, 1, 1)
         else:
             date_metadata = book.get_metadata('OPF', None)
 
             if len(date_metadata) > 0:
-                date_str = date_metadata[0][0]
-
-        date = parse(date_str, default=datetime.datetime(1, 1, 1))
+                # date_str = date_metadata[0][0]
+                for item in date_metadata:
+                    if isinstance(item, tuple):
+                        if isinstance(item[0], str):
+                            try:
+                                date = parse(item[0])
+                            except:
+                                date = datetime.datetime(1, 1, 1)
+                            else:
+                                break
 
         for epub_item in book.get_items():
             if epub_item.media_type.startswith('image/'):
