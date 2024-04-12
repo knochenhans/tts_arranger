@@ -88,7 +88,7 @@ class JSON_Processor:
         for c, chapter in enumerate(chapters):
             log(
                 LOG_TYPE.INFO,
-                f"Processing chapter {c+1} of {len(chapters)}",
+                f"Processing chapter {c+1} of {len(chapters)}: {chapter.get('title', 'Chapter')}",
             )
             numpy_segments = np.array([0], dtype=np.float32)
             filename = os.path.join(temp_dir, f"tts_part_{c}.{temp_format}")
@@ -158,6 +158,9 @@ class JSON_Processor:
                 # Same with brackets
                 item["text"] = item["text"].replace("(", "\n\n")
                 item["text"] = item["text"].replace(")", "\n\n")
+
+                # Miscellanous replacements
+                item["text"] = item["text"].replace("…", "\n\n")
 
                 # Make sure each item ends with space
                 item["text"] = item["text"].strip() + " "
@@ -247,8 +250,17 @@ class JSON_Processor:
                 item["speaker_id"]
             )
 
-            synthesize_args["speaker_id"] = mapped_speaker_id.get("speaker_id", None)
-            model = mapped_speaker_id.get("model_id", "")
+            model = ""
+            volume_factor = 1.0
+
+            if mapped_speaker_id:
+                synthesize_args["speaker_id"] = mapped_speaker_id.get("speaker_id", None)
+                model = mapped_speaker_id.get("model_id", "")
+                volume_factor = mapped_speaker_id.get("volume_factor", 1.0)
+            else:
+                # Speaker ID not mapped, fall back to first model
+                model = list(voices.keys())[0]
+                log(LOG_TYPE.WARNING, f"Speaker ID {item['speaker_id']} not found, falling back to model {model}")
 
             # TODO: Find a better way to handle this
             wave_io = io.BytesIO()
@@ -260,7 +272,6 @@ class JSON_Processor:
             numpy_wav = np.frombuffer(frames, dtype=np.int16).astype(np.float32)
             numpy_wav /= np.iinfo(np.int16).max
             
-            volume_factor = mapped_speaker_id.get("volume_factor", 1.0)
             volume_factor_log = pow(2, (sqrt(sqrt(sqrt(volume_factor))) * 192 - 192)/6)
 
             np.multiply(numpy_wav, volume_factor_log, out=numpy_wav, casting="unsafe")
@@ -606,6 +617,7 @@ def tts_project_to_json(
         "title": tts_project.title,
         "subtitle": tts_project.subtitle,
         "author": tts_project.author,
+        "date": tts_project.date.isoformat(),
         "chapters": chapters_dict,
         "backend": {},
     }
