@@ -62,7 +62,7 @@ class TTS_Processor:
         # self.quotes = quotes
         self.current_speaker_idx = 0
 
-        self.speakers: list[str] = []
+        self.voice_speakers: list[str] = []
 
         # Config
         self.pause_sentence = 600
@@ -142,7 +142,7 @@ class TTS_Processor:
                     self.synthesizer.tts_model
                     and self.synthesizer.tts_model.num_speakers > 1
                 ):
-                    self.speakers = list(
+                    self.voice_speakers = list(
                         self.synthesizer.tts_model.speaker_manager.name_to_id.keys()
                     )
         elif self.backend == Backend.PIPER:
@@ -168,7 +168,7 @@ class TTS_Processor:
             with open(config, "r", encoding="utf-8") as config_file:
                 config_dict = json.load(config_file)
 
-            self.speakers = list(config_dict["speaker_id_map"])
+            self.voice_speakers = list(config_dict["speaker_id_map"])
 
     # def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
     #     final_items = []
@@ -696,14 +696,15 @@ class TTS_Processor:
                             self.synthesizer.tts_model
                             and self.synthesizer.tts_model.num_speakers > 1
                         ):
-                            speaker = self.speakers[
-                                tts_item.speaker_idx % len(self.speakers)
+                            speaker = self.voice_speakers[
+                                tts_item.speaker_idx % len(self.voice_speakers)
                             ]
                             speaker = (
                                 self.preferred_speakers[
                                     tts_item.speaker_idx % len(self.preferred_speakers)
                                 ]
-                                if self.preferred_speakers and speaker in self.speakers
+                                if self.preferred_speakers
+                                and speaker in self.voice_speakers
                                 else speaker
                             )
 
@@ -729,14 +730,20 @@ class TTS_Processor:
                     elif self.backend == Backend.PIPER:
                         speaker_id = None
 
-                        if len(self.speakers) > 0:
-                            speaker_id = self.speakers[
-                                tts_item.speaker_idx % len(self.speakers)
+                        length_scale = None
+
+                        if len(self.voice_speakers) == 0:
+                            pass
+                        #     if tts_item.speaker_idx > 0:
+                        #         length_scale = 1.1
+                        else:
+                            speaker_id = self.voice_speakers[
+                                tts_item.speaker_idx % len(self.voice_speakers)
                             ]
 
                         synthesize_args = {
                             "speaker_id": speaker_id,
-                            "length_scale": None,
+                            "length_scale": length_scale,
                             "noise_scale": None,
                             "noise_w": None,
                             "sentence_silence": 0.5,
