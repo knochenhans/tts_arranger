@@ -143,15 +143,41 @@ class TTS_Project():
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'}
             self.image_bytes = base64.b64encode(requests.get(image_url, headers=headers).content)
 
+    def _check_empty_chapter(self, chapter: TTS_Chapter) -> bool:
+        """
+        Checks if a chapter is empty.
+
+        :param chapter: The chapter to check.
+        :type chapter: TTS_Chapter
+
+        :return: A boolean indicating whether the chapter is empty.
+        """
+        for item in chapter.tts_items:
+            if item.text.strip() != '':
+                return False
+        return True
+
     def clean_empty_chapters(self):       
         """
         Remove empty chapters.
         """         
         final_chapters: list[TTS_Chapter] = []
 
+        # for chapter in self.tts_chapters:
+        #     if len(chapter.tts_items) > 0:
+        #         final_chapters.append(chapter)
+
+        # Remove empty chapters
         for chapter in self.tts_chapters:
-            if len(chapter.tts_items) > 0:
-                final_chapters.append(chapter)
+            final_items = []
+            for item in chapter.tts_items:
+                if item.text.strip() != '' or (item.speaker_idx == -1 and item.length > 0):
+                    final_items.append(item)
+            
+            # Check if remaining items are all pauses
+            if len(final_items) > 1:
+                if not self._check_empty_chapter(TTS_Chapter(final_items)):
+                    final_chapters.append(chapter)
 
         self.tts_chapters = final_chapters
 
