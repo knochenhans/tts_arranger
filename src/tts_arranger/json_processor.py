@@ -284,7 +284,7 @@ class JSON_Processor:
     def synthesize_project(
         self,
         json_path: str,
-        project_filename: str,
+        title: str = "",
         temp_dir_prefix: str | None = "",
         max_pause_duration=1500,
     ):
@@ -339,8 +339,12 @@ class JSON_Processor:
                     ) as metadata_file:
                         metadata_file.write(metadata)
 
+                    # Get project title
+                    if title == "":
+                        title = project.get("title", "Untitled Project")
+
                     output_filename = os.path.join(
-                        self.project_path, sanitize_filename(project_filename)
+                        self.project_path, sanitize_filename(title)
                     )
                     output_extension = f".{self.output_format}"
 
