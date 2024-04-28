@@ -224,7 +224,7 @@ class TTS_Project():
         for chapter in self.tts_chapters:
             chapter.optimize(max_pause_duration)
 
-    def get_titles(self, only_empty=True, max_length=100) -> None:
+    def set_titles(self, only_empty=True, max_length=100) -> None:
         """
         Set chapter titles to the text of the first chapter's item
 
@@ -237,7 +237,8 @@ class TTS_Project():
         :return: None
         """
         for chapter in self.tts_chapters:
-            chapter.get_title(only_empty, max_length)
+            chapter.set_title(only_empty, max_length)
+
     def get_output_filename(self) -> str:
         """
         Get the output filename.

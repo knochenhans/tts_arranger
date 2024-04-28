@@ -107,7 +107,7 @@ class TTS_Chapter():
 
         self.tts_items = non_empty_items
 
-    def get_title(self, only_empty=True, max_length=100) -> None:
+    def set_title(self, only_empty=True, max_length=100) -> None:
         """
         Set title to the text of the first item
 
