@@ -33,6 +33,24 @@ class TTS_Chapter():
     end_time = 0
     audio = np.array([0], dtype=np.float32)
 
+    @classmethod
+    def from_json(cls, json_data: dict) -> 'TTS_Chapter':
+        """
+        Class method to load a TTS chapter from a JSON object.
+
+        :param json_data: A dictionary representing the JSON object to be loaded.
+        :type json_data: dict
+
+        :return: A TTS chapter object loaded from the JSON object.
+        :rtype: TTS_Chapter
+        """
+        tts_items = [TTS_Item.from_json(item) for item in json_data.get('items', [])]
+
+        return cls(
+            tts_items=tts_items,
+            title=json_data.get('title', ''),
+        )
+
     def _merge_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
         final_items: list[TTS_Item] = []
         merged_item: Optional[TTS_Item] = None

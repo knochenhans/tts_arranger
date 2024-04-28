@@ -581,6 +581,17 @@ def new_pause_item(duration: float):
     }
 
 
+def save_tts_project_to_json(tts_project: TTS_Project, output_filename: str):
+    # Get path from filename
+    output_path = os.path.dirname(output_filename)
+
+    # Create directory if needed
+    os.makedirs(output_path, exist_ok=True)
+
+    with open(output_filename, "w") as file:
+        json.dump(tts_project_to_json(tts_project, output_path), file, indent=4)
+
+
 def tts_project_to_json(
     tts_project: TTS_Project,
     output_path: str,

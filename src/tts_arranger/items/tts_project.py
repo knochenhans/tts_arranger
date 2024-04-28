@@ -1,8 +1,9 @@
 import base64
 import datetime
-import pickle
+import json
 from dataclasses import dataclass, field
-
+from dateutil import parser
+from pytz import utc
 
 import requests  # type: ignore
 
@@ -53,7 +54,7 @@ class TTS_Project():
     raw: bool = False
 
     @classmethod
-    def from_json_file(cls, filename: str = ''):
+    def from_json_file(cls, filename: str = '') -> 'TTS_Project':
         """
         Class method to load a TTS project from a JSON file.
 
@@ -65,11 +66,40 @@ class TTS_Project():
         """
         if filename:
             try:
-                with open(filename, 'rb') as file:
-                    return pickle.load(file)
+                with open(filename, 'r') as file:
+                    json_data = file.read()
+                    return cls.from_json(json_data)
             except IOError:
                 log(LOG_TYPE.WARNING, f'TTS Project export file "{filename}" could not be opened for reading.')
         return TTS_Project()
+
+    @classmethod
+    def from_json(cls, json_data: str):
+        """
+        Class method to load a TTS project from a JSON string.
+
+        :param json_data: A string representing the JSON data to be loaded.
+        :type json_data: str
+
+        :return: A TTS project object loaded from the JSON data.
+        :rtype: TTS_Project
+        """
+        try:
+            project_dict = json.loads(json_data)
+            tts_chapters = [TTS_Chapter.from_json(chapter_dict) for chapter_dict in project_dict.get('chapters', [])]
+            title = project_dict.get('title', '')
+            subtitle = project_dict.get('subtitle', '')
+            date_str = project_dict.get('date', '')
+            date = parser.parse(date_str) if date_str else datetime.datetime.min
+            author = project_dict.get('author', '')
+            lang_code = project_dict.get('lang_code', 'en')
+            image_bytes_str = project_dict.get('image_bytes', '')
+            image_bytes = base64.b64decode(image_bytes_str) if image_bytes_str else bytes(0)
+            raw = project_dict.get('raw', False)
+            return cls(tts_chapters, title, subtitle, date, author, lang_code, image_bytes, raw)
+        except (ValueError, KeyError):
+            log(LOG_TYPE.WARNING, 'Invalid JSON data.')
+            return TTS_Project()
 
     @classmethod
     def from_items(cls, tts_items: list[TTS_Item]):
@@ -113,9 +143,9 @@ class TTS_Project():
 
         self.tts_chapters[-1].tts_items += items
 
-    def to_json_file(self, filename: str) -> None:
+    def dump_as_json_file(self, filename: str) -> None:
         """
-        Saves the TTS project to a JSON file.
+        Dumps the TTS project to a generic JSON file.
 
         :param filename: A string representing the name of the JSON file to be saved.
         :type filename: str
