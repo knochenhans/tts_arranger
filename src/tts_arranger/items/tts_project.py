@@ -238,3 +238,11 @@ class TTS_Project():
         """
         for chapter in self.tts_chapters:
             chapter.get_title(only_empty, max_length)
+    def get_output_filename(self) -> str:
+        """
+        Get the output filename.
+
+        :return: The output filename.
+        :rtype: str
+        """
+        return self.author + ' - ' + self.title

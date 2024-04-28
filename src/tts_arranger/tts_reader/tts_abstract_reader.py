@@ -22,15 +22,6 @@ class TTS_Abstract_Reader(ABC):
 
         self.output_format = 'm4b'
 
-    def get_output_filename(self) -> str:
-        """
-        Get the output filename.
-
-        :return: The output filename.
-        :rtype: str
-        """
-        return self.project.author + ' - ' + self.project.title
-
     def _smart_truncate(self, content: str, length=100, suffix='…') -> str:
         """
         Shorten the given string without breaking words
