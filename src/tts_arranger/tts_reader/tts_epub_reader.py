@@ -76,7 +76,7 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
 
         for i, epub_item in enumerate(epub_items):
             if epub_item.id not in exclude_ids:
-                soup = BeautifulSoup(epub_item.get_body_content(), 'lxml')
+                soup = BeautifulSoup(epub_item.content, 'xml')
 
                 if isinstance(soup, PageElement):
                     added_chapters_count = self.html_converter.add_from_html(str(soup))
@@ -91,11 +91,21 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
                             chapter_title = header.text.strip()
                             break
 
+                    # If no header is found, use the first paragraph tag with a class like 'h1', 'h2', etc.
+                    if not chapter_title:
+                        for header in soup.find_all(['p']):
+                            if header.text.strip():
+                                if header.has_attr('class'):
+                                    if header['class'][0].startswith('h'):
+                                        chapter_title = header.text.strip()
+                                        break
+                    
                     # If no chapter title is found, use the title tag
                     if not chapter_title:
                         title_tag = soup.find('title')
                         if title_tag:
                             chapter_title = title_tag.text.strip()
+
 
                     # TODO: Do this later
                     # if not chapter_title:
