@@ -2,6 +2,7 @@ import base64
 import datetime
 import json
 import os
+from parser import ParserError  # type: ignore
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -46,9 +47,11 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
                         return title
                     else:
                         pass
-        return ''
+        return ""
 
-    def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
+    def load(
+        self, filename: str, callback: Optional[Callable[[float], None]] = None
+    ) -> None:
         """
         Load an EPUB file into the TTS_Project.
 
@@ -68,15 +71,17 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
 
         source_dir = Path(__file__).resolve().parent.parent
 
-        with open(os.path.join(source_dir, 'data', 'exclude_ids.json'), 'r') as f:
+        with open(os.path.join(source_dir, "data", "exclude_ids.json"), "r") as f:
             exclude_ids = json.load(f)
 
-        exclude_ids_str = ', '.join([f'EPUB item ID: "{exclude_id}"' for exclude_id in exclude_ids])
-        print(f'Ignoring {exclude_ids_str}')
+        exclude_ids_str = ", ".join(
+            [f'EPUB item ID: "{exclude_id}"' for exclude_id in exclude_ids]
+        )
+        print(f"Ignoring {exclude_ids_str}")
 
         for i, epub_item in enumerate(epub_items):
             if epub_item.id not in exclude_ids:
-                soup = BeautifulSoup(epub_item.content, 'xml')
+                soup = BeautifulSoup(epub_item.content, "xml")
 
                 if isinstance(soup, PageElement):
                     added_chapters_count = self.html_converter.add_from_html(str(soup))
@@ -85,27 +90,26 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
                     # chapter_title = self.get_chapter_title(book.toc, epub_item.file_name)
 
                     # Get chapter title by looking for the first header tag
-                    chapter_title = ''
-                    for header in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+                    chapter_title = ""
+                    for header in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
                         if header.text.strip():
                             chapter_title = header.text.strip()
                             break
 
                     # If no header is found, use the first paragraph tag with a class like 'h1', 'h2', etc.
                     if not chapter_title:
-                        for header in soup.find_all(['p']):
+                        for header in soup.find_all(["p"]):
                             if header.text.strip():
-                                if header.has_attr('class'):
-                                    if header['class'][0].startswith('h'):
+                                if header.has_attr("class"):
+                                    if header["class"][0].startswith("h"):
                                         chapter_title = header.text.strip()
                                         break
-                    
+
                     # If no chapter title is found, use the title tag
                     if not chapter_title:
-                        title_tag = soup.find('title')
+                        title_tag = soup.find("title")
                         if title_tag:
                             chapter_title = title_tag.text.strip()
-
 
                     # TODO: Do this later
                     # if not chapter_title:
@@ -115,28 +119,30 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
                     # self.html_converter.get_project().tts_chapters[-1].title = chapter_title
                     # Set title for added chapters
                     for j in range(added_chapters_count):
-                        self.html_converter.get_project().tts_chapters[-1 - j].title = chapter_title
-                        
+                        self.html_converter.get_project().tts_chapters[
+                            -1 - j
+                        ].title = chapter_title
+
             if callback is not None:
-                callback(100/len(epub_items) * i)
+                callback(100 / len(epub_items) * i)
 
         self.project = self.html_converter.get_project()
         self.project.clean_empty_chapters()
 
-        title = book.get_metadata('DC', 'title')[0][0]
-        author = book.get_metadata('DC', 'creator')[0][0]
-        date_metadata = book.get_metadata('DC', 'date')
+        title = book.get_metadata("DC", "title")[0][0]
+        author = book.get_metadata("DC", "creator")[0][0]
+        date_metadata = book.get_metadata("DC", "date")
 
-        date_str = ''
+        date_str = ""
 
         if len(date_metadata) > 0:
-            date_str = book.get_metadata('DC', 'date')[0][0]
+            date_str = book.get_metadata("DC", "date")[0][0]
             try:
                 date = parse(date_str)
             except ParserError:
                 date = datetime.datetime(1, 1, 1)
         else:
-            date_metadata = book.get_metadata('OPF', None)
+            date_metadata = book.get_metadata("OPF", None)
 
             if len(date_metadata) > 0:
                 # date_str = date_metadata[0][0]
@@ -151,7 +157,7 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
                                 break
 
         for epub_item in book.get_items():
-            if epub_item.media_type.startswith('image/'):
+            if epub_item.media_type.startswith("image/"):
                 if epub_item.content:
                     self.project.image_bytes = base64.b64encode(epub_item.content)
                     break
