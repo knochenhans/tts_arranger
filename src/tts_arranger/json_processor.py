@@ -409,28 +409,34 @@ class JSON_Processor:
 
                     if "cover_image" in project:
                         # Load image from path
-                        image = Image.open(project["cover_image"])
 
-                        if image.format:
-                            image_added = False
-                            for output_file in output_files:
-                                # Add image
-                                output_path_with_image = (
-                                    output_file + "_tmp" + output_extension
-                                )
+                        try:
+                            with Image.open(project["cover_image"]) as image:
+                                if image.format:
+                                    image_added = False
+                                    for output_file in output_files:
+                                        # Add image
+                                        output_path_with_image = (
+                                            output_file + "_tmp" + output_extension
+                                        )
 
-                                self._add_image(
-                                    image, output_file, output_path_with_image
-                                )
-                                os.remove(output_file)
-                                os.rename(output_path_with_image, output_file)
-                                image_added = True
+                                        self._add_image(
+                                            image, output_file, output_path_with_image
+                                        )
+                                        os.remove(output_file)
+                                        os.rename(output_path_with_image, output_file)
+                                        image_added = True
 
-                            if image_added:
-                                log(
-                                    LOG_TYPE.SUCCESS,
-                                    "Project image added to final output for all files.",
-                                )
+                                    if image_added:
+                                        log(
+                                            LOG_TYPE.SUCCESS,
+                                            "Project image added to final output for all files.",
+                                        )
+                        except Image.UnidentifiedImageError:
+                            log(
+                                LOG_TYPE.ERROR,
+                                f"Could not add image to final output, image file is not a valid image file.",
+                            )
                 # if numpy_segments.size > 1:
                 #     log(LOG_TYPE.INFO, "Writing output to /tmp/output")
                 #     self._write(numpy_segments, "/tmp/output")
