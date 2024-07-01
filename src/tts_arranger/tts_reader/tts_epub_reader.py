@@ -2,7 +2,7 @@ import base64
 import datetime
 import json
 import os
-from parser import ParserError  # type: ignore
+from dateutil.parser import ParserError
 from pathlib import Path
 from typing import Callable, Optional
 
