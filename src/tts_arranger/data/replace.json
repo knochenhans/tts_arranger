@@ -20,6 +20,7 @@
   "\\s-\\s": "–",
   "\\bDOS\\b": "Dos",
   "\\bMr\\.": "Mister",
+  "\\bProf\\.": "Professor",
   "\\bMs\\.": "Miss",
   "\\bMrs\\.": "Misses",
   "-{2,}": "—"
