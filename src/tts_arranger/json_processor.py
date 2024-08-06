@@ -7,6 +7,7 @@ import os
 import subprocess
 import tempfile
 import wave
+import srt
 from pathlib import Path
 from typing import Optional
 
@@ -30,6 +31,7 @@ class JSON_Processor:
         self.sample_rate = 22050
         self.temp_files: list[tuple[str, str]] = []
         self.chapter_times: list[tuple[float, float]] = []
+        self.item_data: list[tuple[float, str]] = []
         self.project_path = base_path
         self.output_format = output_format
         self.backend_properties: dict = {}
@@ -83,7 +85,10 @@ class JSON_Processor:
 
         temp_format = "wav"
 
-        cumulative_time = 0
+        cumulative_time: float = 0
+
+        # Preset the first segment data
+        self.item_data.append((0, ""))
 
         for c, chapter in enumerate(chapters):
             log(
@@ -99,9 +104,13 @@ class JSON_Processor:
                     f"Processing item {i+1} of {len(items)} [Speaker: {item.get('speaker_id', '(Pause)')}]",
                 )
 
-                numpy_segments = np.concatenate(
-                    (numpy_segments, self.process_item(item, voices))
-                )
+                numpy_segment = self.process_item(item, voices)
+                numpy_segments = np.concatenate((numpy_segments, numpy_segment))
+
+                # Get length of numpy segment in nanoseconds
+                segment_length = len(numpy_segment) / self.sample_rate * 1e9
+
+                self.item_data.append((segment_length, item.get("text", "")))
 
             scipy.io.wavfile.write(filename, self.sample_rate, numpy_segments)
 
@@ -114,7 +123,9 @@ class JSON_Processor:
             self.temp_files.append((chapter_title, filename_out))
             log(LOG_TYPE.INFO, f"Temp file added: {filename_out}{bcolors.ENDC}")
 
-            end_time = cumulative_time + self._get_nanoseconds_for_file(filename)
+            segment_length = self._get_nanoseconds_for_file(filename)
+
+            end_time = cumulative_time + segment_length
             self.chapter_times.append((cumulative_time, end_time))
             cumulative_time = end_time
 
@@ -294,6 +305,7 @@ class JSON_Processor:
         title: str = "",
         temp_dir_prefix: str | None = "",
         max_pause_duration=1500,
+        subtitles: bool = False,
     ):
         log(LOG_TYPE.INFO, f'Loading project from "{json_path}"')
         project = self.load_json(json_path)
@@ -437,6 +449,34 @@ class JSON_Processor:
                                 LOG_TYPE.ERROR,
                                 f"Could not add image to final output, image file is not a valid image file.",
                             )
+
+                    if subtitles:
+                        # Write SRT from segments data
+                        srt_output_file = os.path.splitext(output_path)[0] + ".srt"
+
+                        srt_data = []
+                        start_time: float = 0
+
+                        for i, segment_data in enumerate(self.item_data):
+                            # Get segment length in microseconds (from nanoseconds)
+                            segment_length = segment_data[0] / 1000
+                            segment_data_str = segment_data[1].strip()
+
+                            if segment_data_str != "":
+                                subtile_data = srt.Subtitle(
+                                        index=i + 1,
+                                        start=srt.timedelta(microseconds=start_time),
+                                        end=srt.timedelta(microseconds=start_time + segment_length),
+                                        content=segment_data_str,
+                                    )
+                            
+                                srt_data.append(subtile_data)
+                            start_time += segment_length
+
+                        log(LOG_TYPE.INFO, f"Writing SRT to {srt_output_file}")
+
+                        with open(srt_output_file, "w", encoding="utf-8") as srt_file:
+                            srt_file.write(srt.compose(srt_data))
                 # if numpy_segments.size > 1:
                 #     log(LOG_TYPE.INFO, "Writing output to /tmp/output")
                 #     self._write(numpy_segments, "/tmp/output")
