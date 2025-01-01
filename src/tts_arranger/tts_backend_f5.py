@@ -66,9 +66,13 @@ class TTSBackendF5(TTSBackend):
     def synthesize_batch(self, text_items: list[dict]) -> list[np.ndarray]:
         numpy_waves = []
 
-        for text_item in tqdm(text_items, desc="Synthesizing"):
+        loop_obj = tqdm(text_items, desc="Synthesizing")
+
+        for text_item in loop_obj:
             text_data = text_item[0]
             voice_data = text_item[1]
+
+            loop_obj.set_postfix_str(f"Synthesizing: {text_data['text']}")
 
             with contextlib.redirect_stdout(None):
                 numpy_waves.append(
