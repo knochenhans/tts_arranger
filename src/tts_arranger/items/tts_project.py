@@ -7,8 +7,8 @@ from dateutil import parser
 from pytz import utc
 
 import requests  # type: ignore
+from loguru import logger
 
-from ..utils.log import LOG_TYPE, log
 from .tts_chapter import TTS_Chapter  # type: ignore
 from .tts_item import TTS_Item  # type: ignore
 
@@ -71,7 +71,7 @@ class TTS_Project():
                     json_data = file.read()
                     return cls.from_json(json_data)
             except IOError:
-                log(LOG_TYPE.WARNING, f'TTS Project export file "{filename}" could not be opened for reading.')
+                logger.warning(f'TTS Project export file "{filename}" could not be opened for reading.')
         return TTS_Project()
 
     @classmethod
@@ -99,7 +99,7 @@ class TTS_Project():
             raw = project_dict.get('raw', False)
             return cls(tts_chapters, title, subtitle, date, author, lang_code, image_bytes, raw)
         except (ValueError, KeyError):
-            log(LOG_TYPE.WARNING, 'Invalid JSON data.')
+            logger.warning('Invalid JSON data.')
             return TTS_Project()
 
     @classmethod
@@ -158,7 +158,7 @@ class TTS_Project():
             with open(filename, 'wb') as file:
                 pickle.dump(self, file)
         except IOError:
-            log(LOG_TYPE.WARNING, f'TTS Project export file "{filename}" could not be opened for writing.')
+            logger.warning(f'TTS Project export file "{filename}" could not be opened for writing.')
 
     def add_image_from_url(self, image_url: str) -> None:
         """
@@ -239,6 +239,9 @@ class TTS_Project():
         """
         for chapter in self.tts_chapters:
             chapter.set_title(only_empty, max_length)
+            
+    def get_titles(self) -> None:
+        pass
 
     def get_output_filename(self) -> str:
         """

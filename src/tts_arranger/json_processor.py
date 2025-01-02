@@ -19,7 +19,6 @@ from tts_arranger.tts_backend import TTSBackend
 from tts_arranger.tts_preprocessor import TTS_Preprocessor  # type: ignore
 
 from .items.tts_project import TTS_Project  # type: ignore
-from .utils.log import LOG_TYPE, bcolors  # type: ignore
 
 from .tts_backend_f5 import TTSBackendF5
 from .ffmpeg_processor import FFmpegProcessor
@@ -155,7 +154,7 @@ class JSON_Processor:
             filename_out = os.path.join(temp_dir, f"tts_part_{c}.{temp_format}")
 
             self.temp_files.append((chapter_title, filename_out))
-            logger.info(f"Temp file added: {filename_out}{bcolors.ENDC}")
+            logger.info(f"Temp file added: {filename_out}")
 
             segment_length = self._get_nanoseconds_for_file(filename)
             end_time = cumulative_time + segment_length

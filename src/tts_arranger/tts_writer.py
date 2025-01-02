@@ -11,14 +11,13 @@ import ffmpeg  # type: ignore
 import numpy as np  # type: ignore
 import scipy.io.wavfile  # type: ignore
 from pathvalidate._filename import sanitize_filename
-from PIL import Image
+from loguru import logger
 
-from .items.tts_chapter import TTS_Chapter  # type: ignore
-from .items.tts_item import TTS_Item  # type: ignore
-from .items.tts_project import TTS_Project  # type: ignore
 from .tts_abstract_writer import TTS_Abstract_Writer
 from .tts_processor import TTS_Processor, Backend
-from .utils.log import LOG_TYPE, bcolors, log  # type: ignore
+from .items.tts_chapter import TTS_Chapter
+from .items.tts_item import TTS_Item
+from .items.tts_project import TTS_Project
 
 
 class TTS_Writer(TTS_Abstract_Writer):
@@ -105,7 +104,7 @@ class TTS_Writer(TTS_Abstract_Writer):
         :rtype: None
         """
 
-        log(LOG_TYPE.INFO, f'Preprocessing items.')
+        logger.info('Preprocessing items.')
 
         for chapter in chapters:
             if optimize:
@@ -133,7 +132,7 @@ class TTS_Writer(TTS_Abstract_Writer):
             filename = os.path.join(temp_dir, f'tts_part_{i}.{temp_format}')
 
             if len(chapters) > 1:
-                log(LOG_TYPE.INFO, f'Synthesizing chapter {i + 1} of {len(chapters)}.')
+                logger.info(f'Synthesizing chapter {i + 1} of {len(chapters)}.')
 
             if len(chapter.tts_items) > 0:
                 for j, tts_item in enumerate(chapter.tts_items):
@@ -157,7 +156,7 @@ class TTS_Writer(TTS_Abstract_Writer):
 
                 # Add temp file for concatenating later
                 self.temp_files.append((chapter_title, filename_out))
-                log(LOG_TYPE.INFO, f'Temp file added: {filename_out}{bcolors.ENDC}')
+                logger.info(f'Temp file added: {filename_out}')
 
             chapter.start_time = cumulative_time
             chapter.end_time = cumulative_time + self._get_nanoseconds_for_file(filename)
@@ -265,7 +264,7 @@ class TTS_Writer(TTS_Abstract_Writer):
         """
 
         if not self.project.tts_chapters:
-            log(LOG_TYPE.ERROR, f'No chapters to synthesize, exiting.')
+            logger.error('No chapters to synthesize, exiting.')
             return
 
         # Make sure the prefix exists
@@ -278,7 +277,7 @@ class TTS_Writer(TTS_Abstract_Writer):
 
         with tempfile.TemporaryDirectory(dir=temp_dir_prefix) as temp_dir:
             try:
-                log(LOG_TYPE.INFO, f'Synthesizing project "{self.project.title}".')
+                logger.info(f'Synthesizing project "{self.project.title}".')
 
                 if self.model and self.vocoder:
                     t = TTS_Processor(self.model, self.vocoder, self.preferred_speakers)
@@ -299,7 +298,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                 self._synthesize_chapters(self.project.tts_chapters, temp_dir, t, callback, not self.project.raw and optimize, max_pause_duration, not self.project.raw and preprocess)
 
             except Exception as e:
-                log(LOG_TYPE.ERROR, f'Synthesizing project "{self.project.title}" failed: {e}.')
+                logger.error(f'Synthesizing project "{self.project.title}" failed: {e}.')
                 sys.exit(1)
 
             else:
@@ -339,7 +338,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                         metadata_input = ffmpeg.input(metadata_filename)
 
                         if self.output_format not in ['m4b', 'm4a', 'opus']:
-                            log(LOG_TYPE.WARNING, f'Chapters are only possible for m4b/m4a at the moment.')
+                            logger.warning('Chapters are only possible for m4b/m4a at the moment.')
 
                         cmd = (
                             ffmpeg
@@ -355,7 +354,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                         subprocess.call(cmd)
 
                         output_files.append(output_path)
-                        log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, file saved as "{output_path}".')
+                        logger.success(f'Synthesizing project {self.project.title} finished, file saved as "{output_path}".')
                     else:
                         # Don’t concatenate, convert the chapter temp files to the target format
                         os.makedirs(output_filename, exist_ok=True)
@@ -378,7 +377,7 @@ class TTS_Writer(TTS_Abstract_Writer):
                             )
 
                             output_files.append(output_chapter_filename)
-                        log(LOG_TYPE.SUCCESS, f'Synthesizing project {self.project.title} finished, chapter files saved under "{output_filename}/".')
+                        logger.success(f'Synthesizing project {self.project.title} finished, chapter files saved under "{output_filename}/".')
 
                     if self.project.image_bytes:
                         if self.output_format in ['m4b', 'm4a', 'mp3', 'opus']:
@@ -398,8 +397,8 @@ class TTS_Writer(TTS_Abstract_Writer):
                                     image_added = True
 
                                 if image_added:
-                                    log(LOG_TYPE.SUCCESS, 'Project image added to final output for all files.')
+                                    logger.success('Project image added to final output for all files.')
                         else:
-                            log(LOG_TYPE.WARNING, f'Images are only possible for m4b/m4a and mp3 at the moment.')
+                            logger.warning('Images are only possible for m4b/m4a and mp3 at the moment.')
                 else:
-                    log(LOG_TYPE.ERROR, f'No temp files after synthesizing, this is likely a bug.{bcolors.ENDC}')
+                    logger.error('No temp files after synthesizing, this is likely a bug.')

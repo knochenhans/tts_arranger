@@ -9,11 +9,11 @@ from typing import Callable, Optional
 import ffmpeg  # type: ignore
 import numpy as np
 import scipy.io.wavfile  # type: ignore
+from loguru import logger
 
 from .items.tts_item import TTS_Item
 from .tts_abstract_writer import TTS_Abstract_Writer
 from .tts_processor import TTS_Processor, Backend
-from .utils.log import LOG_TYPE, bcolors, log
 
 
 class TTS_Simple_Writer(TTS_Abstract_Writer):
@@ -75,7 +75,9 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
             self.print_progress(idx, len(tts_items), tts_item)
 
             if time_needed:
-                log(LOG_TYPE.INFO, f'(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))}).')
+                logger.info(
+                    f"(Remaining time: {str(datetime.timedelta(seconds=round(time_needed)))})."
+                )
 
             time_last = time.time()
 
@@ -96,16 +98,14 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
                 # if callback is not None:
                 #     callback(idx, len(tts_items))
             except KeyboardInterrupt:
-                log(LOG_TYPE.ERROR, 'Stopped by user.')
+                logger.error("Stopped by user.")
                 sys.exit()
             except Exception as e:
-                # with open(self.temp_dir.name + '/tts-error.log', 'a+') as f:
-                #     f.write(f'Error synthesizing "{output_filename}"\n')
-                log(LOG_TYPE.ERROR, f'Error synthesizing "{output_filename}": {e}.')
+                logger.error(f'Error synthesizing "{output_filename}": {e}.')
                 sys.exit()
 
         self._write(numpy_segments, output_filename)
-        log(LOG_TYPE.SUCCESS, f'Synthesizing finished, file saved as "{output_filename}".')
+        logger.success(f'Synthesizing finished, file saved as "{output_filename}".')
 
     def _write(self, numpy_segment: np.ndarray, output_filename: str) -> None:
         """
@@ -134,7 +134,7 @@ class TTS_Simple_Writer(TTS_Abstract_Writer):
         # Ensure output file name has a file extension
         output_filename = os.path.splitext(output_filename)[0] + '.' + output_format
 
-        log(LOG_TYPE.INFO, f'Compressing, converting and saving as {output_filename}.')
+        logger.info(f"Compressing, converting and saving as {output_filename}.")
 
         output_args = {}
 

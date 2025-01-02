@@ -19,8 +19,7 @@ from TTS.utils.manage import ModelManager  # type: ignore
 from TTS.utils.synthesizer import Synthesizer  # type: ignore
 
 from .items.tts_item import TTS_Item
-from .utils.log import LOG_TYPE, bcolors, log
-
+from loguru import logger
 
 class Backend(Enum):
     COQUI = auto()
@@ -112,7 +111,7 @@ class TTS_Processor:
 
         :return: None
         """
-        log(LOG_TYPE.INFO, f"Initializing speech synthesizer.")
+        logger.info("Initializing speech synthesizer.")
         if self.backend == Backend.COQUI:
             if self.model == "":
                 self.model = "tts_models/en/vctk/vits"
@@ -769,10 +768,7 @@ class TTS_Processor:
                         numpy_array /= np.iinfo(np.int16).max
 
                 except IndexError as e:
-                    log(
-                        LOG_TYPE.WARNING,
-                        f"IndexError bug encountered, trying again.{bcolors.ENDC}",
-                    )
+                    logger.warning("IndexError bug encountered, trying again.")
                     continue
                 except Exception as e:
                     raise Exception(f'Error synthesizing "{tts_item.text}: {e}".')

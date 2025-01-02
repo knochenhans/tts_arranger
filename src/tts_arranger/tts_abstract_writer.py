@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from .items.tts_item import TTS_Item  # type: ignore
-from .tts_processor import Backend  # type: ignore
-from .utils.log import LOG_TYPE, bcolors, log  # type: ignore
+from loguru import logger
 
 
 class TTS_Abstract_Writer(ABC):
@@ -49,9 +48,6 @@ class TTS_Abstract_Writer(ABC):
         :return: None
         """
         if current_item.text:
-            log(
-                LOG_TYPE.INFO,
-                f"Synthesizing item {current_nr + 1} of {max_nr}:{bcolors.ENDC}",
-            )
+            logger.info(f"Synthesizing item {current_nr + 1} of {max_nr}")
         else:
-            log(LOG_TYPE.INFO, f"Adding pause: {current_item.length}ms:{bcolors.ENDC}")
+            logger.info(f"Adding pause: {current_item.length}ms")
