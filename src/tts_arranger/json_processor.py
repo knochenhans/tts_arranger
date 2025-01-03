@@ -8,6 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Optional, List, Tuple, Dict, Any
+from appdirs import user_data_dir, user_config_dir  # type: ignore
+
 
 from loguru import logger
 
@@ -46,6 +48,16 @@ class JSON_Processor:
         self.output_format = output_format
         self.backend_properties: Dict[str, Any] = {}
         self.backend: Optional[TTSBackend] = None
+
+        voice_path = os.path.join(user_data_dir("tts_arranger"), "voices")
+
+        # load from json
+        self.voices: dict = self.load_json(os.path.join(voice_path, "voices.json"))
+
+        # update voice paths with absolute path
+        for voice in self.voices:
+            if isinstance(voice, dict):
+                voice["ref_audio_path"] = os.path.join(voice_path, voice["ref_audio_path"])
 
     def load_json(self, json_path: str) -> Dict[str, Any]:
         # Update source path with absolute json path without filename
