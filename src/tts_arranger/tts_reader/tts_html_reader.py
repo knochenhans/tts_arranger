@@ -9,18 +9,18 @@ class TTS_HTML_Reader(TTS_HTML_Based_Reader):
     Class for converting a HTML file into a TTS project.
     """
 
-    def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
+    def load(self, filename: str, author: str = '', title: str = '', callback: Optional[Callable[[float], None]] = None) -> None:
         """
         Load an HTML file into the TTS_Project.
 
-        :param content: The HTML string.
-        :type content: str
+        :param filename: The path to the HTML file.
+        :type filename: str
 
-        :param author: The author of the HTML file (will be used as the author of the audiobook).
-        :type author: str
+        :param author: The author of the HTML file (will be used as the author of the audiobook). Defaults to None if not provided.
+        :type author: Optional[str]
 
-        :param title: The title of the HTML file (will be used as the title of the audiobook).
-        :type title: str
+        :param title: The title of the HTML file (will be used as the title of the audiobook). Defaults to None if not provided.
+        :type title: Optional[str]
 
         :param callback: An optional function that takes a float between 0 and 1 representing the progress of the loading process as its argument. This can be used to periodically check on the loading progress. Defaults to None if not provided.
         :type callback: Optional[Callable[[float], None]]
@@ -29,4 +29,4 @@ class TTS_HTML_Reader(TTS_HTML_Based_Reader):
         """
         super().load(filename, callback)
         with open(filename, 'r') as file:
-            self.load_raw(file.read())
+            self.load_raw(file.read(), author, title)

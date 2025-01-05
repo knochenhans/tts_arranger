@@ -13,8 +13,8 @@ from typing import Optional
 import numpy as np  # type: ignore
 import TTS  # type: ignore
 from num2words import num2words  # type: ignore
-from piper import PiperVoice  # type: ignore
-from piper.download import find_voice, get_voices  # type: ignore
+# from piper import PiperVoice  # type: ignore
+# from piper.download import find_voice, get_voices  # type: ignore
 from TTS.utils.manage import ModelManager  # type: ignore
 from TTS.utils.synthesizer import Synthesizer  # type: ignore
 
@@ -113,37 +113,38 @@ class TTS_Processor:
         """
         logger.info("Initializing speech synthesizer.")
         if self.backend == Backend.COQUI:
-            if self.model == "":
-                self.model = "tts_models/en/vctk/vits"
-            models_dir = Path(TTS.__file__).resolve().parent / ".models.json"
+            # if self.model == "":
+            #     self.model = "tts_models/en/vctk/vits"
+            # models_dir = Path(TTS.__file__).resolve().parent / ".models.json"
 
-            self.manager = ModelManager(str(models_dir))
+            # self.manager = ModelManager(str(models_dir))
 
-            (model_path, config_path, _), (vocoder_path, vocoder_config_path, _) = [
-                self.manager.download_model(m) if m else ("", "", "")
-                for m in (self.model, self.vocoder)
-            ]
+            # (model_path, config_path, _), (vocoder_path, vocoder_config_path, _) = [
+            #     self.manager.download_model(m) if m else ("", "", "")
+            #     for m in (self.model, self.vocoder)
+            # ]
 
-            config_path = config_path or ""
-            vocoder_config_path = vocoder_config_path or ""
+            # config_path = config_path or ""
+            # vocoder_config_path = vocoder_config_path or ""
 
-            with contextlib.redirect_stdout(None):
-                self.synthesizer = Synthesizer(
-                    tts_checkpoint=model_path,
-                    tts_config_path=config_path,
-                    vocoder_checkpoint=vocoder_path,
-                    vocoder_config=vocoder_config_path if self.vocoder else "",
-                    use_cuda=False,
-                )
+            # with contextlib.redirect_stdout(None):
+            #     self.synthesizer = Synthesizer(
+            #         tts_checkpoint=model_path,
+            #         tts_config_path=config_path,
+            #         vocoder_checkpoint=vocoder_path,
+            #         vocoder_config=vocoder_config_path if self.vocoder else "",
+            #         use_cuda=False,
+            #     )
 
-                # Get speaker list from model
-                if (
-                    self.synthesizer.tts_model
-                    and self.synthesizer.tts_model.num_speakers > 1
-                ):
-                    self.voice_speakers = list(
-                        self.synthesizer.tts_model.speaker_manager.name_to_id.keys()
-                    )
+            #     # Get speaker list from model
+            #     if (
+            #         self.synthesizer.tts_model
+            #         and self.synthesizer.tts_model.num_speakers > 1
+            #     ):
+            #         self.voice_speakers = list(
+            #             self.synthesizer.tts_model.speaker_manager.name_to_id.keys()
+            #         )
+            pass
         elif self.backend == Backend.PIPER:
             download_dir = "/usr/share/piper-voices/"
             update_voices = False
@@ -691,41 +692,42 @@ class TTS_Processor:
                     speaker = ""
 
                     if self.backend == Backend.COQUI:
-                        if (
-                            self.synthesizer.tts_model
-                            and self.synthesizer.tts_model.num_speakers > 1
-                        ):
-                            speaker = self.voice_speakers[
-                                tts_item.speaker_idx % len(self.voice_speakers)
-                            ]
-                            speaker = (
-                                self.preferred_speakers[
-                                    tts_item.speaker_idx % len(self.preferred_speakers)
-                                ]
-                                if self.preferred_speakers
-                                and speaker in self.voice_speakers
-                                else speaker
-                            )
+                        # if (
+                        #     self.synthesizer.tts_model
+                        #     and self.synthesizer.tts_model.num_speakers > 1
+                        # ):
+                        #     speaker = self.voice_speakers[
+                        #         tts_item.speaker_idx % len(self.voice_speakers)
+                        #     ]
+                        #     speaker = (
+                        #         self.preferred_speakers[
+                        #             tts_item.speaker_idx % len(self.preferred_speakers)
+                        #         ]
+                        #         if self.preferred_speakers
+                        #         and speaker in self.voice_speakers
+                        #         else speaker
+                        #     )
 
-                        log(
-                            LOG_TYPE.INFO,
-                            f'({tts_item.speaker_idx} => "{speaker}", {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}',
-                        )
+                        # log(
+                        #     LOG_TYPE.INFO,
+                        #     f'({tts_item.speaker_idx} => "{speaker}", {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}',
+                        # )
 
-                        if self.model in self.models_fullstop_needed:
-                            # Add a full stop if necessary to avoid synthesizing problems with some models
-                            punctuation_marks = [".", "?", "!"]
-                            ending_punctuation = tts_item.text[-1]
+                        # if self.model in self.models_fullstop_needed:
+                        #     # Add a full stop if necessary to avoid synthesizing problems with some models
+                        #     punctuation_marks = [".", "?", "!"]
+                        #     ending_punctuation = tts_item.text[-1]
 
-                            if ending_punctuation not in punctuation_marks:
-                                tts_item.text += "."
+                        #     if ending_punctuation not in punctuation_marks:
+                        #         tts_item.text += "."
 
-                        # Suppress tts output
-                        with contextlib.redirect_stdout(None):
-                            wav = self.synthesizer.tts(
-                                text=tts_item.text,
-                                speaker_name=speaker,
-                            )
+                        # # Suppress tts output
+                        # with contextlib.redirect_stdout(None):
+                        #     wav = self.synthesizer.tts(
+                        #         text=tts_item.text,
+                        #         speaker_name=speaker,
+                        #     )
+                        pass
                     elif self.backend == Backend.PIPER:
                         speaker_id = None
 
@@ -794,6 +796,9 @@ class TTS_Processor:
         :rtype: int
         """
         if self.backend == Backend.COQUI:
-            return int(self.synthesizer.output_sample_rate)
+            # return int(self.synthesizer.output_sample_rate)
+            return 22050
         elif self.backend == Backend.PIPER:
+            return 22050
+        else:
             return 22050

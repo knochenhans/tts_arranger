@@ -57,6 +57,7 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
         super().load_raw(content, author, title, callback)
 
         soup = BeautifulSoup(content, 'html.parser')
+        chapter_title = None
 
         if isinstance(soup, PageElement):
             project = self.html_converter.convert_from_html(str(soup))
@@ -67,5 +68,13 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
 
             self.project.merge_from_project(project)
 
+            # Get chapter title from title tag
+            if soup.title:
+                chapter_title = soup.title.string
+
+            # Set title for added chapters
+            #TODO: Figure out how to handle multiple added chapters
+            self.project.tts_chapters[-1].title = chapter_title
+            
         self.project.author = self.author
         self.project.title = self.title

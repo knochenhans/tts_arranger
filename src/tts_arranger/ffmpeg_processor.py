@@ -7,11 +7,10 @@ from pathvalidate import sanitize_filename
 import ffmpeg  # type: ignore
 from PIL import Image  # type: ignore
 from loguru import logger
-import srt # type: ignore
+import srt  # type: ignore
 
 
 class FFmpegProcessor:
-
     def __init__(
         self, temp_files, chapter_times, item_data, project_path, output_format
     ):
@@ -178,3 +177,11 @@ class FFmpegProcessor:
 
                 with open(srt_output_file, "w", encoding="utf-8") as srt_file:
                     srt_file.write(srt.compose(srt_data))
+
+            probe = ffmpeg.probe(output_path)
+            duration = float(probe["format"]["duration"])
+            logger.info(f"Total duration: {duration} seconds")
+            logger.info(f"Output file: {output_path}")
+            logger.info(f"Chapter count: {len(project['chapters'])}")
+            if subtitles:
+                logger.info(f"SRT file: {srt_output_file}")

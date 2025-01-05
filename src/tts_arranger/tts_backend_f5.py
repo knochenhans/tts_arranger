@@ -72,7 +72,7 @@ class TTSBackendF5(TTSBackend):
             text_data = text_item[0]
             voice_data = text_item[1]
 
-            loop_obj.set_postfix_str(f"Synthesizing: {text_data['text']}")
+            # loop_obj.set_postfix_str(f"Synthesizing: {text_data['text']}")
 
             with contextlib.redirect_stdout(None):
                 numpy_waves.append(

@@ -25,7 +25,7 @@ class TTS_Writer(TTS_Abstract_Writer):
     Class to process TTS projects (containing of chapters each containing a number of items) and to finally write an audio file including chapter metadata and chapter info
     """
 
-    def __init__(self, project: TTS_Project = TTS_Project(),  base_path: str = '', output_format='m4b', model: str = '', vocoder: str = '', preferred_speakers: Optional[list[str]] = None, backend: Backend = Backend.COQUI) -> None:
+    def __init__(self, project: dict,  base_path: str = '', output_format='m4b', model: str = '', vocoder: str = '', preferred_speakers: Optional[list[str]] = None, backend: Backend = Backend.COQUI) -> None:
         """
         Constructor for the TTS_Writer class.
 
@@ -50,7 +50,7 @@ class TTS_Writer(TTS_Abstract_Writer):
 
         :return: None
         """
-        super().__init__(preferred_speakers, model, backend, project.lang_code)
+        super().__init__(project)
 
         self.NANOSECONDS_IN_ONE_SECOND = 1e9
 

@@ -12,10 +12,7 @@ class TTS_Abstract_Writer(ABC):
 
     def __init__(
         self,
-        preferred_speakers: Optional[list[str]] = None,
-        model: str = "",
-        backend: Backend = Backend.COQUI,
-        lang: str = 'en'
+        project: dict,
     ) -> None:
         """
         Initialize a new TTS_Abstract_Writer instance.
@@ -26,11 +23,7 @@ class TTS_Abstract_Writer(ABC):
 
         :return: None
         """
-        self.preferred_speakers = preferred_speakers or []
         self.sample_rate: int
-        self.model = model
-        self.backend = backend
-        self.lang = lang
 
     def print_progress(self, current_nr: int, max_nr: int, current_item: TTS_Item):
         """
