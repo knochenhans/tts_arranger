@@ -1,6 +1,7 @@
 from typing import Callable, Optional
 
-from .. import TTS_Item, TTS_Project  # type: ignore
+from tts_arranger.items.tts_project import TTS_Project
+from tts_arranger.items.tts_item import TTS_Item
 from .tts_abstract_reader import TTS_Abstract_Reader  # type: ignore
 
 

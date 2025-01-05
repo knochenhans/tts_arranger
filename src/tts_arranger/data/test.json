@@ -1,0 +1,18 @@
+{
+    "title": "test project",
+    "subtitle": "test subtitle",
+    "date": "2024-04-01T00:00:00+00:00",
+    "author": "test author",
+    "chapters": [
+        {
+            "title": "chapter 2",
+            "items": [
+                {
+                    "text": ">N",
+                    "min_length": 0,
+                    "speaker_id": "normal"
+                }
+            ]
+        }
+    ]
+}

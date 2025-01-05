@@ -2,8 +2,8 @@ from typing import Callable, Optional
 
 from bs4 import BeautifulSoup, PageElement  # type: ignore
 
-from .. import TTS_Chapter  # type: ignore
-from .. import TTS_Project  # type: ignore
+from tts_arranger.items.tts_chapter import TTS_Chapter
+from tts_arranger.items.tts_project import TTS_Project
 from ..tts_html_converter import (CHECKER_SIGNAL, Checker,  # type: ignore
                                   CheckerItemProperties, TTS_HTML_Converter)
 from .tts_abstract_reader import TTS_Abstract_Reader  # type: ignore

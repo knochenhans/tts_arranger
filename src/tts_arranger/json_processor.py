@@ -25,19 +25,17 @@ from .items.tts_project import TTS_Project  # type: ignore
 from .tts_backend_f5 import TTSBackendF5
 from .ffmpeg_processor import FFmpegProcessor
 
+TextItem = Dict[str, str | float]
+
 
 class JSON_Processor:
     def __init__(
         self,
         base_path: str,
         output_format: str = "m4b",
-        backend_config: Dict[str, Any] = {},
+        backend_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.NANOSECONDS_IN_ONE_SECOND = 1e9
-
-        self.backend_config = backend_config
-
-        self.sample_rate = self.backend_config.get("sample_rate", 22050)
 
         self.temp_files: List[Tuple[str, str]] = []
         self.temp_dir = "/tmp"
@@ -46,18 +44,20 @@ class JSON_Processor:
         self.project_path = base_path
         self.source_path = os.path.dirname(os.path.abspath(__file__))
         self.output_format = output_format
-        self.backend_properties: Dict[str, Any] = {}
         self.backend: Optional[TTSBackend] = None
 
-        voice_path = os.path.join(user_data_dir("tts_arranger"), "voices")
+        user_data_dir_ = user_data_dir("tts_arranger")
 
-        # load from json
-        self.voices: dict = self.load_json(os.path.join(voice_path, "voices.json"))
+        self.backend_data: dict = self.load_json(
+            os.path.join(user_data_dir_, "default_config.json")
+        )
 
-        # update voice paths with absolute path
-        for voice in self.voices:
-            if isinstance(voice, dict):
-                voice["ref_audio_path"] = os.path.join(voice_path, voice["ref_audio_path"])
+        self.backend_config = self.backend_data.get("backend-config", {})
+
+        if backend_config:
+            self.backend_data = backend_config
+
+        self.sample_rate = self.backend_config.get("sample_rate", 22050)
 
     def load_json(self, json_path: str) -> Dict[str, Any]:
         # Update source path with absolute json path without filename
@@ -66,7 +66,6 @@ class JSON_Processor:
         with open(json_path, "r") as file:
             json_data = json.load(file)
 
-        self.backend_properties = json_data.get("backend", {})
         return json_data
 
     def get_chapters(self, json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -88,64 +87,63 @@ class JSON_Processor:
                 f"Processing chapter {c+1} of {len(chapters)}: {chapter.get('title', 'Chapter')}"
             )
             filename = os.path.join(temp_dir, f"tts_part_{c}.{temp_format}")
-            items = chapter.get("items", [])
+            items: List[TextItem] = chapter.get("items", [])
 
-            self.backend = TTSBackendF5("f5-tts", self.temp_dir)
+            self.backend = TTSBackendF5(
+                "f5-tts", self.temp_dir, self.backend_data
+            )
 
-            items_to_process: List[Tuple[Dict[str, Any], Dict[str, Any]]] = []
+            items_to_process: List[TextItem] = []
             for i, item in enumerate(items):
-                if "speaker_id" in item:
-                    sentences = re.split(r"(?<=[.!?]) +|\n", item["text"].strip())
-                    synthesize_splitted = False
-                    sentence_data: Dict[int, Dict[str, Any]] = {}
-                    speaker_id_mapping = deepcopy(
-                        self.backend_properties["speaker_id_mapping"]
-                    )
-                    speaker_id = item.get("speaker_id", None)
+                text = ""
 
-                    if speaker_id not in speaker_id_mapping:
-                        speaker_id = list(speaker_id_mapping.keys())[0]
+                if "text" in item:
+                    text = item.get("text", "")
 
-                    for i, sentence in enumerate(sentences):
-                        letter_count = len(sentence)
-                        speed_slider = speaker_id_mapping[speaker_id].get(
-                            "speed_slider", 1.0
-                        )
-                        speed_slider_max = speed_slider
-
-                        if letter_count > 0 and letter_count < 100:
-                            speed_slider = 0.3 + (speed_slider - 0.3) * (
-                                letter_count / 100
-                            )
-                            speed_slider = min(speed_slider_max, speed_slider)
-                            speed_slider = max(0.5, speed_slider)
-
-                            if speed_slider < 1.0:
-                                synthesize_splitted = True
-
-                        sentence_data[i] = {
-                            "sentence": sentence,
-                            "speed_slider": speed_slider,
-                        }
-
-                    if synthesize_splitted:
-                        for i, sentence in sentence_data.items():
-                            item = {
-                                "text": sentence["sentence"],
-                                "min_length": 0,
-                                "speaker_id": speaker_id,
-                            }
-                            speaker_id_mapping_copy = deepcopy(speaker_id_mapping)
-                            speaker_id_mapping_copy.get(speaker_id, None)[
-                                "speed_slider"
-                            ] = sentence["speed_slider"]
-                            items_to_process.append(
-                                (item, speaker_id_mapping_copy.get(speaker_id, None))
-                            )
+                    if not isinstance(text, str):
+                        continue
+                else:
+                    if "min_length" in item:
+                        items_to_process.append(item)
                     else:
-                        items_to_process.append(
-                            (item, speaker_id_mapping.get(speaker_id, None))
-                        )
+                        continue
+
+                if not text.strip():
+                    continue
+
+                sentences = re.split(r"(?<=[.!?]) +|\n", text.strip())
+                # speaker_id_mapping = deepcopy(self.backend_data["speaker_id_mapping"])
+                # speaker_id = item.get("speaker_id", None)
+
+                # if speaker_id in speaker_id_mapping:
+                #     voice_id = speaker_id_mapping[speaker_id]
+                # else:
+                #     voice_id = list(speaker_id_mapping.values())[0]
+
+                sentence_data, synthesize_splitted = self._split_sentences_by_speed(
+                    sentences
+                )
+
+                if synthesize_splitted:
+                    for i, sentence in sentence_data.items():
+                        item = {
+                            "text": sentence["sentence"],
+                            "min_length": 0,
+                            "speaker_id": item["speaker_id"],
+                            "speed_slider": sentence["speed_slider"],
+                        }
+                        # speaker_id_mapping_copy = deepcopy(speaker_id_mapping)
+                        # voice_id = speaker_id_mapping_copy.get(speaker_id, None)
+
+                        items_to_process.append(item)
+                else:
+                    item = {
+                        "text": text,
+                        "min_length": item.get("min_length", 0),
+                        "speaker_id": item["speaker_id"],
+                    }
+
+                    items_to_process.append(item)
 
             temp_files, segment_lengths = self.process_items(items_to_process)
 
@@ -155,7 +153,10 @@ class JSON_Processor:
             ).run(overwrite_output=True)
 
             for item, segment_length in zip(items_to_process, segment_lengths):
-                self.item_data.append((segment_length * 1e9, item[0].get("text", "")))
+                text = item.get("text", "")
+
+                if isinstance(text, str):
+                    self.item_data.append((segment_length * 1e9, text))
 
             self.backend.cleanup()
             sys.stdout.write("\n")
@@ -172,6 +173,33 @@ class JSON_Processor:
             end_time = cumulative_time + segment_length
             self.chapter_times.append((cumulative_time, end_time))
             cumulative_time = end_time
+
+    def _split_sentences_by_speed(
+        self, sentences: List[str]
+    ) -> Tuple[Dict[int, Dict[str, Any]], bool]:
+        synthesize_splitted = False
+        sentence_data: Dict[int, Dict[str, Any]] = {}
+
+        for i, sentence in enumerate(sentences):
+            letter_count = len(sentence)
+            # speed_slider = self.voices[voice_id].get("speed_slider", 1.0)
+            speed_slider = 1.0
+            speed_slider_max = speed_slider
+
+            if letter_count > 0 and letter_count < 100:
+                speed_slider = 0.3 + (speed_slider - 0.3) * (letter_count / 100)
+                speed_slider = min(speed_slider_max, speed_slider)
+                speed_slider = max(0.5, speed_slider)
+
+                if speed_slider < 1.0:
+                    synthesize_splitted = True
+
+            sentence_data[i] = {
+                "sentence": sentence,
+                "speed_slider": speed_slider,
+            }
+
+        return sentence_data, synthesize_splitted
 
     def concatenate_bytes(self, byte_obj1: bytes, byte_obj2: bytes) -> bytes:
         concatenated_bytes = byte_obj1 + byte_obj2
@@ -231,18 +259,17 @@ class JSON_Processor:
 
         return numpy_wav
 
-    def process_items(
-        self, items: List[Tuple[Dict[str, Any], Dict[str, Any]]]
-    ) -> Tuple[List[str], List[float]]:
+    def process_items(self, items: List[TextItem]) -> Tuple[List[str], List[float]]:
         temp_files = []
         segment_lengths = []
         if isinstance(self.backend, TTSBackendF5):
             numpy_segments = self.backend.synthesize_batch(items)
 
             for i, numpy_segment in enumerate(numpy_segments):
-                numpy_segment = self.pad_length(
-                    numpy_segment, items[i][0].get("min_length", 0) / 1000
-                )
+                min_length = items[i].get("min_length", 0)
+
+                if isinstance(min_length, int):
+                    numpy_segment = self.pad_length(numpy_segment, min_length / 1000)
 
                 temp_file_path = f"{self.temp_dir}/{i}.wav"
                 scipy.io.wavfile.write(temp_file_path, self.sample_rate, numpy_segment)

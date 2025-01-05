@@ -2,7 +2,7 @@ import os
 from abc import ABC
 from typing import Callable, Optional
 
-from .. import TTS_Project  # type: ignore
+from tts_arranger.items.tts_project import TTS_Project
 
 
 class TTS_Abstract_Reader(ABC):

@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Optional
 
 from tts_arranger.items.tts_item import TTS_Item  # type: ignore
-from tts_arranger.tts_writer import TTS_Chapter, TTS_Project  # type: ignore
+from tts_arranger.items.tts_project import TTS_Project
+from tts_arranger.items.tts_chapter import TTS_Chapter
 
 from tts_arranger.tts_reader.checker import (CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Checker,
                                              CheckerItemProperties, Condition, ConditionClass,
@@ -49,7 +50,8 @@ class TTS_HTML_Converter(HTMLParser):
         if custom_checkers:
             print(f'{len(custom_checkers)} custom checker entries added.')
 
-        self.checker_results_stack: list[tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]] = []
+        self.checker_results_stack: list[tuple[CHECK_SPEAKER_RESULT,
+                                               CHECKER_SIGNAL, Optional[CheckerItemProperties]]] = []
 
         # Add checkers from custom files
         if custom_checkers_files:
@@ -59,13 +61,16 @@ class TTS_HTML_Converter(HTMLParser):
         # Finally add default checkers from data folder (lowest priority)
         if not ignore_default_checkers:
             source_dir = Path(__file__).resolve().parent.parent
-            base_path = os.path.dirname(__file__) if __file__ else str(source_dir)
-            default_file = os.path.join(base_path, 'data', 'checkers_default.json')
+            base_path = os.path.dirname(
+                __file__) if __file__ else str(source_dir)
+            default_file = os.path.join(
+                base_path, 'data', 'checkers_default.json')
 
             self.add_checkers_from_json(default_file)
 
         # Push default starting properties to stack
-        self.checker_results_stack.append((CHECK_SPEAKER_RESULT.NOT_MATCHED, CHECKER_SIGNAL.NO_SIGNAL, default_properties))
+        self.checker_results_stack.append(
+            (CHECK_SPEAKER_RESULT.NOT_MATCHED, CHECKER_SIGNAL.NO_SIGNAL, default_properties))
 
         self.project = TTS_Project()
         self.current_item: Optional[TTS_Item] = None
@@ -108,11 +113,13 @@ class TTS_HTML_Converter(HTMLParser):
             signal = CHECKER_SIGNAL.IGNORE
             properties = None
         else:
-            result, signal, properties = copy.deepcopy(self._check_elem(self.tag_to_element(name, attrs), self.checkers))
+            result, signal, properties = copy.deepcopy(
+                self._check_elem(self.tag_to_element(name, attrs), self.checkers))
 
             if result != CHECK_SPEAKER_RESULT.MATCHED:
                 # If there are no specific properties for this tag, continue to use parent tag's speaker properties (but no pause)
-                _, signal, properties = copy.deepcopy(self.checker_results_stack[-1])
+                _, signal, properties = copy.deepcopy(
+                    self.checker_results_stack[-1])
 
                 if properties:
                     properties.pause_after = self.default_properties.pause_after
@@ -120,7 +127,8 @@ class TTS_HTML_Converter(HTMLParser):
 
         if properties:
             # Only apply speaker index if its above the parent tag (for nested tags)
-            _, _, parent_properties = copy.deepcopy(self.checker_results_stack[-1])
+            _, _, parent_properties = copy.deepcopy(
+                self.checker_results_stack[-1])
 
             if parent_properties:
                 if properties.speaker_idx < parent_properties.speaker_idx:
@@ -180,7 +188,8 @@ class TTS_HTML_Converter(HTMLParser):
             if self.current_chapter:
                 if properties:
                     if properties.pause_after > 0:
-                        self.current_chapter.tts_items.append(TTS_Item(length=properties.pause_after))
+                        self.current_chapter.tts_items.append(
+                            TTS_Item(length=properties.pause_after))
         self.current_item = None
 
     def _check_elem(self, elem: Element, checkers: list[Checker]) -> tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]:
@@ -201,7 +210,6 @@ class TTS_HTML_Converter(HTMLParser):
             if result != CHECK_SPEAKER_RESULT.NOT_MATCHED:
                 return result, signal, properties
         return CHECK_SPEAKER_RESULT.NOT_MATCHED, CHECKER_SIGNAL.NO_SIGNAL, None
-
 
     def add_from_html(self, html: str, new_chapter=True) -> int:
         """

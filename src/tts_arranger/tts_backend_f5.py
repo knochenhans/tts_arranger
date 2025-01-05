@@ -1,7 +1,10 @@
+import json
 import os
 import re
+from typing import Any, Dict, Tuple, List
 from cached_path import cached_path  # type: ignore
 import numpy as np
+from platformdirs import user_data_dir
 import soundfile as sf  # type: ignore
 from .tts_backend import TTSBackend
 from f5_tts.infer.utils_infer import (  # type: ignore
@@ -20,26 +23,49 @@ from f5_tts.infer.utils_infer import (  # type: ignore
 from f5_tts.model import DiT  # type: ignore
 import contextlib
 from tqdm import tqdm  # type: ignore
+from loguru import logger  # type: ignore
+import random
 
-default_voice_config = {
-    "ref_audio_path": "/mnt/Daten/Datentausch/Redmi/Audiobooks/reference.mp3",
-    "ref_text_input": "This link is first revealed when Roland meets Jake, a boy from the New York of 1977, at a desert waystation.",
-    "speed_slider": 1.0,
-}
+TextItem = Dict[str, str | float]
 
 
 class TTSBackendF5(TTSBackend):
-    def __init__(self, env_name, temp_dir):
-        self.env_name = env_name
-        self.temp_dir = os.path.join(temp_dir, "f5")
+    def __init__(self, env_name: str, temp_dir: str, backend_config: Dict[str, Any]):
+        self.env_name: str = env_name
+        self.temp_dir: str = os.path.join(temp_dir, "f5")
+        self.backend_config: Dict[str, Any] = backend_config
+
         os.makedirs(self.temp_dir, exist_ok=True)
 
-        self.vocoder = self.load_vocoder()
-        self.ema_model = self.load_model()
+        self.vocoder: Any = self.load_vocoder()
+        self.ema_model: Any = self.load_model()
 
-    def load_vocoder(self):
-        vocoder_name = "vocos"
-        vocoder_local_path = "../checkpoints/vocos-mel-24khz"
+        user_data_dir_: str = user_data_dir("tts_arranger")
+
+        self.voices: Dict[str, Dict[str, Any]] = self.load_json(
+            os.path.join(user_data_dir_, "default_voices.json")
+        )
+
+        # Update voice paths with absolute path
+        for voice in self.voices.values():
+            voice["ref_audio_path"] = os.path.join(
+                user_data_dir_, "default_voices", voice["ref_audio_path"]
+            )
+
+        logger.info("F5 TTS backend initialized")
+
+    def load_json(self, json_path: str) -> Dict[str, Any]:
+        # Update source path with absolute json path without filename
+        self.source_path: str = os.path.dirname(os.path.abspath(json_path))
+
+        with open(json_path, "r") as file:
+            json_data: Dict[str, Any] = json.load(file)
+
+        return json_data
+
+    def load_vocoder(self) -> Any:
+        vocoder_name: str = "vocos"
+        vocoder_local_path: str = "../checkpoints/vocos-mel-24khz"
         with contextlib.redirect_stdout(None):
             return load_vocoder(
                 vocoder_name=vocoder_name,
@@ -47,12 +73,12 @@ class TTSBackendF5(TTSBackend):
                 local_path=vocoder_local_path,
             )
 
-    def load_model(self):
+    def load_model(self) -> Any:
         model_cls = DiT
-        model_cfg = dict(
+        model_cfg: Dict[str, Any] = dict(
             dim=1024, depth=22, heads=16, ff_mult=2, text_dim=512, conv_layers=4
         )
-        ckpt_file = str(
+        ckpt_file: str = str(
             cached_path("hf://SWivid/F5-TTS/F5TTS_Base/model_1200000.safetensors")
         )
         with contextlib.redirect_stdout(None):
@@ -60,30 +86,73 @@ class TTSBackendF5(TTSBackend):
                 model_cls, model_cfg, ckpt_file, mel_spec_type="vocos", vocab_file=""
             )
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         pass
 
-    def synthesize_batch(self, text_items: list[dict]) -> list[np.ndarray]:
-        numpy_waves = []
+    def synthesize_batch(self, text_items: List[TextItem]) -> List[np.ndarray]:
+        numpy_waves: List[np.ndarray] = []
 
         loop_obj = tqdm(text_items, desc="Synthesizing")
 
         for text_item in loop_obj:
-            text_data = text_item[0]
-            voice_data = text_item[1]
+            # If no text is found, but min_length is found, insert a pause
+            if (
+                not text_item.get("text", "")
+                and float(text_item.get("min_length", 0)) > 0
+            ):
+                numpy_waves.append(
+                    np.zeros(
+                        int(
+                            text_item["min_length"]
+                            * self.backend_config.get("sample_rate", 24000)
+                            / 1000
+                        )
+                    )
+                )
+                continue
+
+            text: str = str(text_item.get("text", ""))
+
+            speaker_id: str = str(text_item.get("speaker_id", ""))
+
+            if speaker_id is None:
+                raise ValueError(
+                    f"Speaker ID {speaker_id} not found for text item {text_item}"
+                )
+
+            speaker_id_mapping: Dict[str, str] = self.backend_config.get(
+                "speaker_id_mapping", {}
+            )
+
+            voice_ids = speaker_id_mapping.get(speaker_id, "")
+
+            # voice_ids is a list of voice id, pick a random one
+            # voice_id = random.choice(voice_ids)
+
+            # if voice_id == "":
+            #     raise ValueError(
+            #         f"Voice ID {voice_id} not found for mapped speaker {speaker_id}"
+            #     )
+
+            voice_id = voice_ids[0]
+
+            voice: Dict[str, Any] = self.voices.get(voice_id, {})
 
             # loop_obj.set_postfix_str(f"Synthesizing: {text_data['text']}")
+
+            if not voice:
+                raise ValueError(f"Voice {voice_id} not found for speaker {speaker_id}")
 
             with contextlib.redirect_stdout(None):
                 numpy_waves.append(
                     self.main_process(
-                        voice_data["ref_audio_path"],
-                        voice_data["ref_text_input"],
-                        text_data["text"],
+                        voice["ref_audio_path"],
+                        voice["ref_text_input"],
+                        text,
                         self.ema_model,
                         self.vocoder,
                         False,
-                        voice_data.get("speed_slider", 1.0),
+                        float(text_item.get("speed_slider", 1.0)),
                         self.temp_dir,
                     )
                 )
@@ -92,27 +161,27 @@ class TTSBackendF5(TTSBackend):
 
     def main_process(
         self,
-        ref_audio,
-        ref_text,
-        gen_text,
-        ema_model,
-        vocoder,
-        remove_silence,
-        speed,
-        output_dir,
+        ref_audio: str,
+        ref_text: str,
+        gen_text: str,
+        ema_model: Any,
+        vocoder: Any,
+        remove_silence: bool,
+        speed: float,
+        output_dir: str,
     ) -> np.ndarray:
         ref_audio, ref_text = preprocess_ref_audio_text(ref_audio, ref_text)
 
-        generated_audio_segments = []
-        reg1 = r"(?=\[\w+\])"
-        chunks = re.split(reg1, gen_text)
-        reg2 = r"\[(\w+)\]"
+        generated_audio_segments: List[np.ndarray] = []
+        reg1: str = r"(?=\[\w+\])"
+        chunks: List[str] = re.split(reg1, gen_text)
+        reg2: str = r"\[(\w+)\]"
         for i, text in enumerate(chunks):
             if not text.strip():
                 continue
 
             text = re.sub(reg2, "", text)
-            gen_text_ = text.strip()
+            gen_text_: str = text.strip()
 
             audio_segment, final_sample_rate, _ = infer_process(
                 ref_audio,
@@ -142,7 +211,7 @@ class TTSBackendF5(TTSBackend):
                 os.makedirs(output_dir)
 
             if remove_silence:
-                temp_wave_path = os.path.join(output_dir, "temp.wav")
+                temp_wave_path: str = os.path.join(output_dir, "temp.wav")
                 sf.write(temp_wave_path, final_wave, final_sample_rate)
                 remove_silence_for_generated_wav(temp_wave_path)
                 final_wave, _ = sf.read(temp_wave_path)

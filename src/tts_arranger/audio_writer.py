@@ -10,18 +10,6 @@ class AudioWriter:
     def write(
         self, numpy_segment: np.ndarray, output_filename: str, sample_rate: int
     ) -> None:
-        """
-        Compress, convert and write numpy array as a given output file path and name
-
-        :param segment: numpy array to be written
-        :type segment: np.ndarray
-
-        :param output_filename: Absolute path and filename of output audio file including file type extension (for example mp3, ogg)
-        :type output_filename: str
-
-        :return: None
-        :rtype: None
-        """
         # Set default format to mp3
         output_format = os.path.splitext(output_filename)[1][1:] or "mp3"
 
