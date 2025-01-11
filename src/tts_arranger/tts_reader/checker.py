@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional
+from typing import List, Optional
 
 
 @dataclass
-class Element():
-    name: str = ''
-    id = ''
+class Element:
+    name: str = ""
+    id = ""
     classes: list[str] = field(default_factory=list)
 
 
@@ -48,20 +48,26 @@ class CHECK_SPEAKER_RESULT(Enum):
 
 
 @dataclass
-class CheckerItemProperties():
+class CheckerItemProperties:
     """
     Defines the properties for a TTS item to be generated. If pause_after is set, a pause item will be generated as well after the current item
     """
+
     speaker_idx: int = 0
     pause_after: int = 0
 
 
-class Checker():
+class Checker:
     """
     Consists of a list of conditions that must be met to return a set of TTS item properties and an optional signal
     """
 
-    def __init__(self, conditions: list[Condition], properties: Optional[CheckerItemProperties], signal=CHECKER_SIGNAL.NO_SIGNAL):
+    def __init__(
+        self,
+        conditions: List[Condition],
+        properties: Optional[CheckerItemProperties],
+        signal=CHECKER_SIGNAL.NO_SIGNAL,
+    ):
         """
         :param conditions: a list of Condition objects
         :type conditions: list[Condition]
@@ -76,7 +82,9 @@ class Checker():
         self.properties = properties
         self.signal = signal
 
-    def determine(self, elem: Element) -> tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]:
+    def determine(
+        self, elem: Element
+    ) -> tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]:
         """
         Determines whether a given element meets a set of conditions and returns a set of TTS item properties and an optional signal.
 

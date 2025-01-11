@@ -14,8 +14,6 @@ class TTS_SRT_Reader(TTS_Abstract_Reader):
     def __init__(self):
         super().__init__()
 
-        self.output_format = 'wav'
-
     def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
         super().load(filename, callback)
         with open(filename, 'r') as file:

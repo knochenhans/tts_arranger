@@ -4,8 +4,13 @@ from num2words import num2words  # type: ignore
 
 
 class TTS_Preprocessor:
+    def __init__(self) -> None:
+        pass
+
     def preprocess(self, tts_items: list[dict], replace: dict) -> list[dict]:
         simple_replacements = [
+            ("\u2026", "..."),
+            ("\u2013", " - "),
             (" - ", " — "),
             ("–", " — "),
             (";", ". "),
@@ -51,12 +56,31 @@ class TTS_Preprocessor:
             ("\r", "\n"),
         ]
 
+        words_to_keep_upper = [
+            "NASA",
+            "FBI",
+            "CIA",
+            "IBM",
+            "BBC",
+            "CNN",
+            "USA",
+            "I",
+            "RPG",
+            "CRPG",
+            "JRPG",
+            "CPU",
+        ]
+
         for item in tts_items:
             if item.get("text"):
                 # Remove Japanese characters etc.
                 item["text"] = "".join(
                     filter(lambda character: ord(character) < 0x3000, item["text"])
                 )
+
+                # Remove commas in numbers, when used as thousands separator, make sure the all parts after the first are three digits long
+                while re.search(r"(\d),(\d{3})", item["text"]):
+                    item["text"] = re.sub(r"(\d),(\d{3})", r"\1\2", item["text"])
 
                 # Replace ordinal numbers with words
                 item["text"] = re.sub(
@@ -106,16 +130,6 @@ class TTS_Preprocessor:
                 )
 
                 # Find substrings that only contain uppercase letter words and replace them with lowercase, ignore whitespace
-                words_to_keep_upper = [
-                    "NASA",
-                    "FBI",
-                    "CIA",
-                    "IBM",
-                    "BBC",
-                    "CNN",
-                    "USA",
-                    "I",
-                ]
                 item["text"] = re.sub(
                     r"\b[A-Z]+\b(?:\s+\b[A-Z]+\b)*",
                     lambda x: " ".join(

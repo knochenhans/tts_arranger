@@ -9,7 +9,7 @@ class TTS_HTML_Reader(TTS_HTML_Based_Reader):
     Class for converting a HTML file into a TTS project.
     """
 
-    def load(self, filename: str, author: str = '', title: str = '', callback: Optional[Callable[[float], None]] = None) -> None:
+    def load(self, filename: str, callback: Optional[Callable[[float], None]] = None, author: str = '', title: str = '') -> None:
         """
         Load an HTML file into the TTS_Project.
 

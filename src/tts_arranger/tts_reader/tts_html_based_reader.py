@@ -4,17 +4,22 @@ from bs4 import BeautifulSoup, PageElement  # type: ignore
 
 from tts_arranger.items.tts_chapter import TTS_Chapter
 from tts_arranger.items.tts_project import TTS_Project
-from ..tts_html_converter import (CHECKER_SIGNAL, Checker,  # type: ignore
-                                  CheckerItemProperties, TTS_HTML_Converter)
-from .tts_abstract_reader import TTS_Abstract_Reader  # type: ignore
+from tts_arranger.tts_reader.tts_abstract_reader import TTS_Abstract_Reader  # type: ignore
 
 
 class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
+    from tts_arranger.tts_reader.checker import Checker
+
     """
     Base class for converting an EPUB file into a TTS project.
     """
 
-    def __init__(self, custom_checkers: Optional[list[Checker]] = None, custom_checkers_files: Optional[list[str]] = None, ignore_default_checkers=False):
+    def __init__(
+        self,
+        custom_checkers: Optional[list[Checker]] = None,
+        custom_checkers_files: Optional[list[str]] = None,
+        ignore_default_checkers=False,
+    ):
         """
         Initializes the reader and its HTML converter
 
@@ -29,14 +34,30 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
         """
         super().__init__()
 
+        from tts_arranger.tts_reader.checker import (
+            CHECKER_SIGNAL,
+            CheckerItemProperties,
+        )
+        from tts_arranger.tts_html_converter import TTS_HTML_Converter
+
         self.current_properties: list[CheckerItemProperties] = []
         self.default_properties = CheckerItemProperties(0, 250)
         self.last_signal = CHECKER_SIGNAL.NO_SIGNAL
         self.current_chapter: Optional[TTS_Chapter] = None
 
-        self.html_converter = TTS_HTML_Converter(custom_checkers=custom_checkers, custom_checkers_files=custom_checkers_files, ignore_default_checkers=ignore_default_checkers)
+        self.html_converter = TTS_HTML_Converter(
+            custom_checkers=custom_checkers,
+            custom_checkers_files=custom_checkers_files,
+            ignore_default_checkers=ignore_default_checkers,
+        )
 
-    def load_raw(self, content: str, author: str = '', title: str = '', callback: Optional[Callable[[float], None]] = None) -> None:
+    def load_raw(
+        self,
+        content: str,
+        author: str = "",
+        title: str = "",
+        callback: Optional[Callable[[float], None]] = None,
+    ) -> None:
         """
         Load HTML content and write converted content into the TTS_Project.
 
@@ -56,7 +77,7 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
         """
         super().load_raw(content, author, title, callback)
 
-        soup = BeautifulSoup(content, 'html.parser')
+        soup = BeautifulSoup(content, "html.parser")
         chapter_title = None
 
         if isinstance(soup, PageElement):
@@ -73,8 +94,8 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
                 chapter_title = soup.title.string
 
             # Set title for added chapters
-            #TODO: Figure out how to handle multiple added chapters
+            # TODO: Figure out how to handle multiple added chapters
             self.project.tts_chapters[-1].title = chapter_title
-            
+
         self.project.author = self.author
         self.project.title = self.title

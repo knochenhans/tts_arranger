@@ -2,7 +2,9 @@ import os
 from abc import ABC
 from typing import Callable, Optional
 
+from tts_arranger.functions import load_default_config
 from tts_arranger.items.tts_project import TTS_Project
+from tts_arranger.tts_reader.text_splitter import TextSplitter
 
 
 class TTS_Abstract_Reader(ABC):
@@ -17,25 +19,34 @@ class TTS_Abstract_Reader(ABC):
 
         self.project = TTS_Project()
 
-        self.title = ''
-        self.author = ''
+        self.title = ""
+        self.author = ""
 
-        self.output_format = 'm4b'
+        config = load_default_config()
+        self.text_splitter = TextSplitter(config.get("gemini_api", ""))
 
-    def _smart_truncate(self, content: str, length=100, suffix='…') -> str:
+    def _smart_truncate(self, content: str, length=100, suffix="…") -> str:
         """
         Shorten the given string without breaking words
         """
         if len(content) <= length:
             return content
         else:
-            return ' '.join(content[:length+1].split(' ')[0:-1]) + suffix
+            return " ".join(content[: length + 1].split(" ")[0:-1]) + suffix
 
-    def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
+    def load(
+        self, filename: str, callback: Optional[Callable[[float], None]] = None
+    ) -> None:
         # Set filename as title
         self.title = os.path.splitext(os.path.basename(filename))[0]
 
-    def load_raw(self, content: str, author: str = '', title: str = '', callback: Optional[Callable[[float], None]] = None) -> None:
+    def load_raw(
+        self,
+        content: str,
+        author: str = "",
+        title: str = "",
+        callback: Optional[Callable[[float], None]] = None,
+    ) -> None:
         self.author = author or self.author
         self.title = title or self.title
 
