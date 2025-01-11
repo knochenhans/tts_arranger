@@ -1,3 +1,4 @@
+import datetime
 import math
 import os
 import subprocess
@@ -180,7 +181,8 @@ class FFmpegProcessor:
 
             probe = ffmpeg.probe(output_path)
             duration = float(probe["format"]["duration"])
-            logger.info(f"Total duration: {duration} seconds")
+            total_duration = str(datetime.timedelta(seconds=int(duration)))
+            logger.info(f"Total duration: {total_duration}")
             logger.info(f"Output file: {output_path}")
             logger.info(f"Chapter count: {len(project['chapters'])}")
             if subtitles:
