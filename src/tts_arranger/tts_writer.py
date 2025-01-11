@@ -18,6 +18,7 @@ from .tts_processor import TTS_Processor, Backend
 from .items.tts_chapter import TTS_Chapter
 from .items.tts_item import TTS_Item
 from .items.tts_project import TTS_Project
+from PIL import Image # type: ignore
 
 
 class TTS_Writer(TTS_Abstract_Writer):
