@@ -8,9 +8,9 @@
             "title": "chapter 2",
             "items": [
                 {
-                    "text": ">N",
+                    "text": "1000$, 1000 $, 1,000 $, 1,000$, 1.45€, 1,000.56€",
                     "min_length": 0,
-                    "speaker_id": "normal"
+                    "speaker_id": "0"
                 }
             ]
         }

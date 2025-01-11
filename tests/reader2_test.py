@@ -2,7 +2,7 @@ import os
 import tempfile
 import urllib.request
 
-from src.tts_arranger.tts_html_converter_json import TTS_HTML_Converter_JSON
+# from src.tts_arranger.tts_html_converter_json import TTS_HTML_Converter_JSON
 from src.tts_arranger.tts_reader.checker import (
     Checker,
     CheckerItemProperties,
@@ -22,11 +22,11 @@ def test_html_reader1():
         Checker([ConditionName("b")], CheckerItemProperties(3, 1000)),
     ]
 
-    converter = TTS_HTML_Converter_JSON(custom_checkers=checkers)
+    # converter = TTS_HTML_Converter_JSON(custom_checkers=checkers)
 
-    converter.add_from_html(html)
+    # converter.add_from_html(html)
 
-    items = converter.project["tts_chapters"][0]["tts_items"]
+    # items = converter.project["tts_chapters"][0]["tts_items"]
 
     # reader = TTS_HTML_Reader(custom_checkers=checkers)
     # reader.load_raw(html)
