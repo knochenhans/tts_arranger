@@ -1,11 +1,12 @@
-import json
 import os
 import re
-from typing import Any, Dict, Tuple, List
+from typing import Any, Dict, List, Callable, Optional
 from cached_path import cached_path  # type: ignore
 import numpy as np
 from platformdirs import user_data_dir
 import soundfile as sf  # type: ignore
+
+from tts_arranger.functions import load_default_voices  # type: ignore
 from .tts_backend import TTSBackend
 from f5_tts.infer.utils_infer import (  # type: ignore
     target_rms,
@@ -30,38 +31,26 @@ TextItem = Dict[str, str | float]
 
 
 class TTSBackendF5(TTSBackend):
-    def __init__(self, env_name: str, temp_dir: str, backend_config: Dict[str, Any]):
+    def __init__(
+        self,
+        env_name: str,
+        temp_dir: str,
+        backend_config: Dict[str, Any],
+        progress_callback: Optional[Callable[[int], None]] = None,
+    ):
         self.env_name: str = env_name
         self.temp_dir: str = os.path.join(temp_dir, "f5")
         self.backend_config: Dict[str, Any] = backend_config
+        self.progress_callback: Optional[Callable[[int], None]] = progress_callback
 
         os.makedirs(self.temp_dir, exist_ok=True)
 
         self.vocoder: Any = self.load_vocoder()
         self.ema_model: Any = self.load_model()
 
-        user_data_dir_: str = user_data_dir("tts_arranger")
-
-        self.voices: Dict[str, Dict[str, Any]] = self.load_json(
-            os.path.join(user_data_dir_, "default_voices.json")
-        )
-
-        # Update voice paths with absolute path
-        for voice in self.voices.values():
-            voice["ref_audio_path"] = os.path.join(
-                user_data_dir_, "default_voices", voice["ref_audio_path"]
-            )
+        self.voices: Dict[str, Dict[str, Any]] = load_default_voices()
 
         logger.info("F5 TTS backend initialized")
-
-    def load_json(self, json_path: str) -> Dict[str, Any]:
-        # Update source path with absolute json path without filename
-        self.source_path: str = os.path.dirname(os.path.abspath(json_path))
-
-        with open(json_path, "r") as file:
-            json_data: Dict[str, Any] = json.load(file)
-
-        return json_data
 
     def load_vocoder(self) -> Any:
         vocoder_name: str = "vocos"
@@ -94,7 +83,7 @@ class TTSBackendF5(TTSBackend):
 
         loop_obj = tqdm(text_items, desc="Synthesizing")
 
-        for text_item in loop_obj:
+        for i, text_item in enumerate(loop_obj):
             # If no text is found, but min_length is found, insert a pause
             if (
                 not text_item.get("text", "")
@@ -126,22 +115,27 @@ class TTSBackendF5(TTSBackend):
 
             voice_ids = speaker_id_mapping.get(speaker_id, "")
 
+            if not voice_ids:
+                raise ValueError(f"No voice IDs found for speaker {speaker_id}")
+            
+            voice_id = voice_ids[0]
+
             # voice_ids is a list of voice id, pick a random one
-            # voice_id = random.choice(voice_ids)
+            voice_id = random.choice(voice_ids)
 
             # if voice_id == "":
             #     raise ValueError(
             #         f"Voice ID {voice_id} not found for mapped speaker {speaker_id}"
             #     )
 
-            voice_id = voice_ids[0]
-
             voice: Dict[str, Any] = self.voices.get(voice_id, {})
-
-            # loop_obj.set_postfix_str(f"Synthesizing: {text_data['text']}")
 
             if not voice:
                 raise ValueError(f"Voice {voice_id} not found for speaker {speaker_id}")
+            
+            # logger.debug(f"Using voice {voice_id} for speaker {speaker_id} - text: {text}")
+
+            max_speed: float = self.voices[voice_id].get("speed_slider", 1.0)
 
             with contextlib.redirect_stdout(None):
                 numpy_waves.append(
@@ -152,10 +146,13 @@ class TTSBackendF5(TTSBackend):
                         self.ema_model,
                         self.vocoder,
                         False,
-                        float(text_item.get("speed_slider", 1.0)),
+                        min(float(text_item.get("speed_slider", 1.0)), max_speed),
                         self.temp_dir,
                     )
                 )
+
+            if self.progress_callback:
+                self.progress_callback(i)
 
         return numpy_waves
 

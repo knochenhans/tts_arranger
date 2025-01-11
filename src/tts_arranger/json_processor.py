@@ -1,5 +1,4 @@
 import base64
-from copy import deepcopy
 from datetime import date
 import json
 import os
@@ -7,8 +6,7 @@ import re
 import sys
 import tempfile
 from pathlib import Path
-from typing import Optional, List, Tuple, Dict, Any
-from appdirs import user_data_dir, user_config_dir  # type: ignore
+from typing import Optional, List, Tuple, Dict, Any, Callable
 
 
 from loguru import logger
@@ -17,6 +15,7 @@ import ffmpeg  # type: ignore
 import numpy as np
 import scipy  # type: ignore
 
+from tts_arranger.functions import load_default_config
 from tts_arranger.tts_backend import TTSBackend
 from tts_arranger.tts_preprocessor import TTS_Preprocessor  # type: ignore
 
@@ -34,6 +33,8 @@ class JSON_Processor:
         base_path: str,
         output_format: str = "m4b",
         backend_config: Optional[Dict[str, Any]] = None,
+        speaker_id_mapping: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
     ) -> None:
         self.NANOSECONDS_IN_ONE_SECOND = 1e9
 
@@ -45,19 +46,23 @@ class JSON_Processor:
         self.source_path = os.path.dirname(os.path.abspath(__file__))
         self.output_format = output_format
         self.backend: Optional[TTSBackend] = None
-
-        user_data_dir_ = user_data_dir("tts_arranger")
-
-        self.backend_data: dict = self.load_json(
-            os.path.join(user_data_dir_, "default_config.json")
+        self.progress_callback: Optional[Callable[[int, int, int, int], None]] = (
+            progress_callback
         )
 
-        self.backend_config = self.backend_data.get("backend-config", {})
-
         if backend_config:
-            self.backend_data = backend_config
+            self.backend_config = backend_config
+        else:
+            self.backend_config = load_default_config()
+
+        if speaker_id_mapping:
+            self.backend_config["speaker_id_mapping"] = speaker_id_mapping
 
         self.sample_rate = self.backend_config.get("sample_rate", 22050)
+
+        self.current_item_count = 0
+        self.current_chapter_count = 0
+        self.current_chapter_idx = 0
 
     def load_json(self, json_path: str) -> Dict[str, Any]:
         # Update source path with absolute json path without filename
@@ -71,6 +76,15 @@ class JSON_Processor:
     def get_chapters(self, json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         return json_data.get("chapters", [])
 
+    def on_progress(self, current_item_idx: int) -> None:
+        if self.progress_callback:
+            self.progress_callback(
+                current_item_idx,
+                self.current_item_count,
+                self.current_chapter_idx,
+                self.current_chapter_count,
+            )
+
     def synthesize_chapters(
         self,
         chapters: List[Dict[str, Any]],
@@ -82,7 +96,10 @@ class JSON_Processor:
         cumulative_time: float = 0
         self.item_data.append((0, ""))
 
+        self.current_chapter_count = len(chapters)
         for c, chapter in enumerate(chapters):
+            self.current_chapter_idx = c
+
             logger.info(
                 f"Processing chapter {c+1} of {len(chapters)}: {chapter.get('title', 'Chapter')}"
             )
@@ -90,7 +107,7 @@ class JSON_Processor:
             items: List[TextItem] = chapter.get("items", [])
 
             self.backend = TTSBackendF5(
-                "f5-tts", self.temp_dir, self.backend_data
+                "f5-tts", self.temp_dir, self.backend_config, self.on_progress
             )
 
             items_to_process: List[TextItem] = []
@@ -98,7 +115,7 @@ class JSON_Processor:
                 text = ""
 
                 if "text" in item:
-                    text = item.get("text", "")
+                    text = str(item.get("text", ""))
 
                     if not isinstance(text, str):
                         continue
@@ -153,7 +170,7 @@ class JSON_Processor:
             ).run(overwrite_output=True)
 
             for item, segment_length in zip(items_to_process, segment_lengths):
-                text = item.get("text", "")
+                text = str(item.get("text", ""))
 
                 if isinstance(text, str):
                     self.item_data.append((segment_length * 1e9, text))
@@ -262,7 +279,9 @@ class JSON_Processor:
     def process_items(self, items: List[TextItem]) -> Tuple[List[str], List[float]]:
         temp_files = []
         segment_lengths = []
+
         if isinstance(self.backend, TTSBackendF5):
+            self.current_item_count = len(items)
             numpy_segments = self.backend.synthesize_batch(items)
 
             for i, numpy_segment in enumerate(numpy_segments):
