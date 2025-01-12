@@ -1,8 +1,9 @@
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from bs4 import BeautifulSoup, PageElement  # type: ignore
 
 from tts_arranger.items.tts_chapter import TTS_Chapter
+from tts_arranger.items.tts_item import TTS_Item
 from tts_arranger.items.tts_project import TTS_Project
 from tts_arranger.tts_reader.tts_abstract_reader import TTS_Abstract_Reader  # type: ignore
 
@@ -41,7 +42,7 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
         from tts_arranger.tts_html_converter import TTS_HTML_Converter
 
         self.current_properties: list[CheckerItemProperties] = []
-        self.default_properties = CheckerItemProperties(0, 250)
+        self.default_properties = CheckerItemProperties("0", 250)
         self.last_signal = CHECKER_SIGNAL.NO_SIGNAL
         self.current_chapter: Optional[TTS_Chapter] = None
 
@@ -81,21 +82,22 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
         chapter_title = None
 
         if isinstance(soup, PageElement):
-            project = self.html_converter.convert_from_html(str(soup))
+            self.project = self.html_converter.convert_from_html_to_project(str(soup))
 
             # Get titles from first chapter items
-            if isinstance(project, TTS_Project):
-                project.get_titles()
+            if isinstance(self.project, TTS_Project):
+                self.project.get_titles()
 
-            self.project.merge_from_project(project)
+                # self.project.merge_from_project(project)
 
-            # Get chapter title from title tag
-            if soup.title:
-                chapter_title = soup.title.string
+                # Get chapter title from title tag
+                if soup.title:
+                    chapter_title = soup.title.string
 
-            # Set title for added chapters
-            # TODO: Figure out how to handle multiple added chapters
-            self.project.tts_chapters[-1].title = chapter_title
+                # Set title for added chapters
+                # TODO: Figure out how to handle multiple added chapters
+                if chapter_title is not None:
+                    self.project.tts_chapters[-1].title = chapter_title
 
-        self.project.author = self.author
-        self.project.title = self.title
+                self.project.author = self.author
+                self.project.title = self.title

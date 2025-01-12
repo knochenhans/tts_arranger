@@ -2,6 +2,7 @@ from typing import Callable, Optional
 
 from tts_arranger.items.tts_project import TTS_Project
 from tts_arranger.items.tts_item import TTS_Item
+from tts_arranger.items.tts_element import TTS_Element
 from .tts_abstract_reader import TTS_Abstract_Reader  # type: ignore
 
 
@@ -13,12 +14,20 @@ class TTS_Text_Reader(TTS_Abstract_Reader):
     def __init__(self):
         super().__init__()
 
-    def load(self, filename: str, callback: Optional[Callable[[float], None]] = None) -> None:
+    def load(
+        self, filename: str, callback: Optional[Callable[[float], None]] = None
+    ) -> None:
         super().load(filename, callback)
-        with open(filename, 'rb') as file:
-            self.load_raw(file.read().decode('unicode_escape'))
+        with open(filename, "rb") as file:
+            self.load_raw(file.read().decode("unicode_escape"))
 
-    def load_raw(self, content: str, author: str = '', title: str = '', callback: Optional[Callable[[float], None]] = None) -> None:
+    def load_raw(
+        self,
+        content: str,
+        author: str = "",
+        title: str = "",
+        callback: Optional[Callable[[float], None]] = None,
+    ) -> None:
         """
         Load an text file and convert.
 
@@ -38,18 +47,21 @@ class TTS_Text_Reader(TTS_Abstract_Reader):
         items: list[TTS_Item] = []
 
         # Interpret double line breaks as paragraphs
-        paragraphs = content.split('\n\n')
+        paragraphs = content.split("\n\n")
 
         for paragraph in paragraphs:
-            items.append(TTS_Item(paragraph))
+            item = TTS_Item([TTS_Element(paragraph)])
+            self.project.add_item(item)
 
-        if len(items) > 0:
-            self.project = TTS_Project.from_items(items)
+        # if len(items) > 0:
+        #     self.project = TTS_Project.from_items(items)
 
-            # Use beginning of first item of first chapter as chapter title
-            if len(self.project.tts_chapters) > 0:
-                if len(self.project.tts_chapters[0].tts_items) > 0:
-                    self.project.tts_chapters[0].title = self._smart_truncate(self.project.tts_chapters[0].tts_items[0].text)
+        #     # Use beginning of first item of first chapter as chapter title
+        #     if len(self.project.tts_chapters) > 0:
+        #         if len(self.project.tts_chapters[0].items) > 0:
+        #             self.project.tts_chapters[0].title = self._smart_truncate(
+        #                 self.project.tts_chapters[0].items[0].elements[0].text
+        #             )
 
         self.project.author = self.author
         self.project.title = self.title

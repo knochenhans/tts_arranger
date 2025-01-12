@@ -4,15 +4,26 @@ import os
 from enum import Enum, auto
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
+from loguru import logger
+
+from tts_arranger.items.tts_element import TTS_Element
 from tts_arranger.items.tts_item import TTS_Item  # type: ignore
 from tts_arranger.items.tts_project import TTS_Project
 from tts_arranger.items.tts_chapter import TTS_Chapter
 
-from tts_arranger.tts_reader.checker import (CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Checker,
-                                             CheckerItemProperties, Condition, ConditionClass,
-                                             ConditionID, ConditionName, Element)
+from tts_arranger.tts_reader.checker import (
+    CHECK_SPEAKER_RESULT,
+    CHECKER_SIGNAL,
+    Checker,
+    CheckerItemProperties,
+    Condition,
+    ConditionClass,
+    ConditionID,
+    ConditionName,
+    Element,
+)
 
 
 class CONVERSION_MODE(Enum):
@@ -24,9 +35,18 @@ class TTS_HTML_Converter(HTMLParser):
     """
     Class for converting HTML to a TTS_Project or list of TTS_Item objects. Works on an internal project object that can be retrieved after loading all needed data is finished.
     """
+
     project: TTS_Project
 
-    def __init__(self, *, convert_charrefs: bool = True, default_properties=CheckerItemProperties(pause_after=250), custom_checkers: Optional[list[Checker]] = None, custom_checkers_files: Optional[list[str]] = None, ignore_default_checkers: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        convert_charrefs: bool = True,
+        default_properties=CheckerItemProperties(pause_after=250),
+        custom_checkers: Optional[list[Checker]] = None,
+        custom_checkers_files: Optional[list[str]] = None,
+        ignore_default_checkers: bool = False,
+    ) -> None:
         """
         Initializes a TTS_HTML_Converter object.
 
@@ -48,10 +68,11 @@ class TTS_HTML_Converter(HTMLParser):
         self.checkers: list[Checker] = custom_checkers or []
 
         if custom_checkers:
-            print(f'{len(custom_checkers)} custom checker entries added.')
+            logger.info(f"{len(custom_checkers)} custom checker entries added.")
 
-        self.checker_results_stack: list[tuple[CHECK_SPEAKER_RESULT,
-                                               CHECKER_SIGNAL, Optional[CheckerItemProperties]]] = []
+        self.checker_results_stack: list[
+            tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]
+        ] = []
 
         # Add checkers from custom files
         if custom_checkers_files:
@@ -61,19 +82,22 @@ class TTS_HTML_Converter(HTMLParser):
         # Finally add default checkers from data folder (lowest priority)
         if not ignore_default_checkers:
             source_dir = Path(__file__).resolve().parent.parent
-            base_path = os.path.dirname(
-                __file__) if __file__ else str(source_dir)
-            default_file = os.path.join(
-                base_path, 'data', 'checkers_default.json')
+            base_path = os.path.dirname(__file__) if __file__ else str(source_dir)
+            default_file = os.path.join(base_path, "data", "checkers_default.json")
 
             self.add_checkers_from_json(default_file)
 
         # Push default starting properties to stack
         self.checker_results_stack.append(
-            (CHECK_SPEAKER_RESULT.NOT_MATCHED, CHECKER_SIGNAL.NO_SIGNAL, default_properties))
+            (
+                CHECK_SPEAKER_RESULT.NOT_MATCHED,
+                CHECKER_SIGNAL.NO_SIGNAL,
+                default_properties,
+            )
+        )
 
         self.project = TTS_Project()
-        self.current_item: Optional[TTS_Item] = None
+        # self.current_item: Optional[TTS_Item] = None
 
     def tag_to_element(self, name: str, attrs: list) -> Element:
         """
@@ -91,9 +115,9 @@ class TTS_HTML_Converter(HTMLParser):
 
         for attr in attrs:
             match attr[0]:
-                case 'id':
+                case "id":
                     elem.id = attr[1]
-                case 'class':
+                case "class":
                     elem.classes = attr[1].split()
         return elem
 
@@ -108,18 +132,18 @@ class TTS_HTML_Converter(HTMLParser):
         :type attrs: list
         """
         # Ignore script, style tags, etc.
-        if name in ['script', 'style', 'meta']:
+        if name in ["script", "style", "meta"]:
             result = CHECK_SPEAKER_RESULT.MATCHED
             signal = CHECKER_SIGNAL.IGNORE
             properties = None
         else:
             result, signal, properties = copy.deepcopy(
-                self._check_elem(self.tag_to_element(name, attrs), self.checkers))
+                self._check_elem(self.tag_to_element(name, attrs), self.checkers)
+            )
 
             if result != CHECK_SPEAKER_RESULT.MATCHED:
                 # If there are no specific properties for this tag, continue to use parent tag's speaker properties (but no pause)
-                _, signal, properties = copy.deepcopy(
-                    self.checker_results_stack[-1])
+                _, _, properties = copy.deepcopy(self.checker_results_stack[-1])
 
                 if properties:
                     properties.pause_after = self.default_properties.pause_after
@@ -127,12 +151,11 @@ class TTS_HTML_Converter(HTMLParser):
 
         if properties:
             # Only apply speaker index if its above the parent tag (for nested tags)
-            _, _, parent_properties = copy.deepcopy(
-                self.checker_results_stack[-1])
+            _, _, parent_properties = copy.deepcopy(self.checker_results_stack[-1])
 
             if parent_properties:
-                if properties.speaker_idx < parent_properties.speaker_idx:
-                    properties.speaker_idx = parent_properties.speaker_idx
+                if properties.speaker_id < parent_properties.speaker_id:
+                    properties.speaker_id = parent_properties.speaker_id
 
         self.checker_results_stack.append((result, signal, properties))
 
@@ -145,17 +168,20 @@ class TTS_HTML_Converter(HTMLParser):
         """
         (_, signal, properties) = self.checker_results_stack[-1]
 
-        match signal:
-            case CHECKER_SIGNAL.IGNORE:
-                return
-            case CHECKER_SIGNAL.NEW_CHAPTER:
-                # Prepare a new chapter
-                self.current_chapter = TTS_Chapter()
-                self.project.tts_chapters.append(self.current_chapter)
+        # match signal:
+        #     case CHECKER_SIGNAL.IGNORE:
+        #         return
+        #     case CHECKER_SIGNAL.NEW_CHAPTER:
+        #         # Prepare a new chapter
+        #         self.current_chapter = TTS_Chapter()
+        #         self.project.append(self.current_chapter)
+        #     case CHECKER_SIGNAL.NEW_ITEM:
+        #         # Prepare a new item
+        #         self.current_item = TTS_Item()
+        #         self.project.add_item(self.current_item)
 
         if properties:
-            self.current_item = TTS_Item(data, properties.speaker_idx)
-            self.current_chapter.tts_items.append(self.current_item)
+            self.project.add_element(TTS_Element(data, properties.speaker_id))
 
     def handle_endtag(self, name: str) -> None:
         """
@@ -168,16 +194,25 @@ class TTS_HTML_Converter(HTMLParser):
 
         add_pause = False
 
-        # Don't create pauses for ignored segments
-        if signal == CHECKER_SIGNAL.IGNORE:
-            return
+        match signal:
+            case CHECKER_SIGNAL.IGNORE:
+                # Don't create pauses for ignored segments
+                return
+            case CHECKER_SIGNAL.NEW_CHAPTER:
+                # Prepare a new chapter
+                self.current_chapter = TTS_Chapter()
+                self.project.append(self.current_chapter)
+            case CHECKER_SIGNAL.NEW_ITEM:
+                # Prepare a new item
+                self.current_item = TTS_Item()
+                self.project.add_item(self.current_item)
 
         # Create pause if this tag has a special settings, otherwise use
         if result == CHECK_SPEAKER_RESULT.MATCHED:
             add_pause = True
         else:
             # Don't create pauses after inline segments
-            if name in ['span', 'i', 'b', 'u', 'a', 'em']:
+            if name in ["span", "i", "b", "u", "a", "em"]:
                 return
 
         # Only create pauses after valid segments
@@ -185,14 +220,16 @@ class TTS_HTML_Converter(HTMLParser):
         #     return
 
         if add_pause:
-            if self.current_chapter:
-                if properties:
-                    if properties.pause_after > 0:
-                        self.current_chapter.tts_items.append(
-                            TTS_Item(length=properties.pause_after))
-        self.current_item = None
+            if properties:
+                if properties.pause_after > 0:
+                    self.project.add_element(
+                        TTS_Element(min_length=properties.pause_after)
+                    )
+        # self.current_item = None
 
-    def _check_elem(self, elem: Element, checkers: list[Checker]) -> tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]:
+    def _check_elem(
+        self, elem: Element, checkers: list[Checker]
+    ) -> tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]:
         """
         Checks an HTML element against a list of Checkers.
 
@@ -234,32 +271,35 @@ class TTS_HTML_Converter(HTMLParser):
 
         return len(self.project.tts_chapters) - current_chapters_count
 
-    def convert_from_html(self, html: str, conversion_mode: CONVERSION_MODE = CONVERSION_MODE.PROJECT) -> Optional[TTS_Project | list[TTS_Item]]:
+    def convert_from_html_to_project(self, html: str) -> TTS_Project:
         """
-        Converts from HTML and returns a TTS_Project object or a list of TTS_Item objects.
+        Converts from HTML and returns a TTS_Project object.
 
         :param html: The HTML string to convert.
         :type html: str
 
-        :param conversion_mode: The mode of conversion.
-        :type conversion_mode: CONVERSION_MODE
-
-        :return: A TTS_Project object or a list of TTS_Item objects.
+        :return: A TTS_Project object.
         """
         self.project = TTS_Project()
-
         self.add_from_html(html)
+        return self.project
 
-        match conversion_mode:
-            case CONVERSION_MODE.PROJECT:
-                return self.project
-            case CONVERSION_MODE.ITEMS:
-                if self.project.tts_chapters:
-                    return self.project.tts_chapters[-1].tts_items
+    def convert_from_html_to_items(self, html: str) -> List[TTS_Item]:
+        """
+        Converts from HTML and returns a list of TTS_Item objects.
 
-        return None
+        :param html: The HTML string to convert.
+        :type html: str
 
-    def add_checkers_from_json(self, filename: str = '') -> None:
+        :return: A list of TTS_Item objects.
+        """
+        self.project = TTS_Project()
+        self.add_from_html(html)
+        if self.project.tts_chapters:
+            return self.project.tts_chapters[-1].items
+        return []
+
+    def add_checkers_from_json(self, filename: str = "") -> None:
         """
         Load and add checkers from a checkers JSON file.
 
@@ -272,75 +312,77 @@ class TTS_HTML_Converter(HTMLParser):
         json_check_entries = []
 
         if not os.path.exists(filename):
-            print(f'Checkers file "{filename}" does not exist, skipping.')
+            logger.warning(f'Checkers file "{filename}" does not exist, skipping.')
             return
 
-        print(f'Loading checkers file "{filename}".')
+        logger.info(f'Loading checkers file "{filename}".')
 
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             data = json.load(file)
 
-            json_check_entries = data['check_entries']
+            json_check_entries = data["check_entries"]
 
         for json_entry in json_check_entries:
 
             # Access the conditions list for the entry
-            json_conditions = json_entry['conditions']
+            json_conditions = json_entry["conditions"]
 
             conditions: list[Condition] = []
 
             for json_condition in json_conditions:
                 # Access the name and arg properties of the condition
-                name = json_condition['name']
-                arg = json_condition['arg']
+                name = json_condition["name"]
+                arg = json_condition["arg"]
 
                 condition: Optional[Condition] = None
 
                 match name:
-                    case 'Name':
+                    case "Name":
                         condition = ConditionName(arg)
-                    case 'Class':
+                    case "Class":
                         condition = ConditionClass(arg)
-                    case 'ID':
+                    case "ID":
                         condition = ConditionID(arg)
                     case _:
-                        print(f'Unknown checker condition found: {name}')
+                        logger.warning(f"Unknown checker condition found: {name}")
 
                 if condition:
                     if condition.arg:
                         conditions.append(condition)
 
             # Access properties dictionary for entry
-            json_properties = json_entry['properties']
+            json_properties = json_entry["properties"]
 
             properties: Optional[CheckerItemProperties] = None
 
-            speaker_idx = 0
+            speaker_idx = ""
             pause_after = 0
 
-            if 'speaker_idx' in json_properties:
-                speaker_idx = int(json_properties['speaker_idx'])
-            if 'pause_after' in json_properties:
-                pause_after = int(json_properties['pause_after'])
+            if "speaker_idx" in json_properties:
+                speaker_idx = str(json_properties["speaker_idx"])
+            if "pause_after" in json_properties:
+                pause_after = int(json_properties["pause_after"])
 
             properties = CheckerItemProperties(speaker_idx, pause_after)
 
             signal = CHECKER_SIGNAL.NO_SIGNAL
 
             # Access signals list for entry
-            if 'signal' in json_entry:
-                json_signal = json_entry['signal']
+            if "signal" in json_entry:
+                json_signal = json_entry["signal"]
 
                 match json_signal:
-                    case 'NEW_CHAPTER':
+                    case "NEW_CHAPTER":
                         signal = CHECKER_SIGNAL.NEW_CHAPTER
-                    case 'IGNORE':
+                    case "NEW_ITEM":
+                        signal = CHECKER_SIGNAL.NEW_ITEM
+                    case "IGNORE":
                         signal = CHECKER_SIGNAL.IGNORE
                     case _:
-                        print(f'Unknown checker signal found: {json_signal}')
+                        logger.warning(f"Unknown checker signal found: {json_signal}")
 
             self.checkers.append(Checker(conditions, properties, signal))
-        print(f'{len(json_check_entries)} checkers entries added.')
+        logger.info(f"{len(json_check_entries)} checkers entries added.")
 
     def get_project(self) -> TTS_Project:
         """

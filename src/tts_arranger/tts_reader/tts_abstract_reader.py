@@ -1,5 +1,5 @@
 import os
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
 from tts_arranger.functions import load_default_config
@@ -12,20 +12,23 @@ class TTS_Abstract_Reader(ABC):
     Abstract base class for converting files into a TTS project.
     """
 
-    def __init__(self):
+    def __init__(self, text_splitter: Optional[TextSplitter] = None) -> None:
         """
         Initializes the reader with some default parameters
         """
 
-        self.project = TTS_Project()
-
-        self.title = ""
-        self.author = ""
+        self.project: TTS_Project = TTS_Project()
+        self.title: str = ""
+        self.author: str = ""
 
         config = load_default_config()
-        self.text_splitter = TextSplitter(config.get("gemini_api", ""))
+        self.text_splitter: TextSplitter = text_splitter or TextSplitter(
+            config.get("gemini_api", "")
+        )
 
-    def _smart_truncate(self, content: str, length=100, suffix="…") -> str:
+    def _smart_truncate(
+        self, content: str, length: int = 100, suffix: str = "…"
+    ) -> str:
         """
         Shorten the given string without breaking words
         """
@@ -34,6 +37,7 @@ class TTS_Abstract_Reader(ABC):
         else:
             return " ".join(content[: length + 1].split(" ")[0:-1]) + suffix
 
+    @abstractmethod
     def load(
         self, filename: str, callback: Optional[Callable[[float], None]] = None
     ) -> None:
