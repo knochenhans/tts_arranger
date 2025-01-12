@@ -23,7 +23,7 @@ class TextSplitter:
         self.model = genai.GenerativeModel("gemini-1.5-pro-latest")
 
     def split_text(self, text: str) -> Dict:
-        prompt = "Split the following text when encountering a year number."
+        prompt = "Split the following text when encountering year numbers and acronyms (like US, NBC, etc.). Preserve punctuation and whitespace"
         contents = prompt + "\n\n" + text
 
         result = self.model.generate_content(
@@ -33,5 +33,5 @@ class TextSplitter:
                 response_schema=TextSplitterResponse,
             ),
         )
-        
+
         return ast.literal_eval(result.text).get("splitted_text")
