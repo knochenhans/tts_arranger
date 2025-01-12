@@ -1,654 +1,262 @@
-import contextlib
-import copy
-import io
+import base64
+from datetime import date
 import json
 import os
 import re
-import string
-import wave
-from enum import Enum, auto
+import sys
+import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Tuple, Dict, Any, Callable
 
-import numpy as np  # type: ignore
-import TTS  # type: ignore
-from num2words import num2words  # type: ignore
-# from piper import PiperVoice  # type: ignore
-# from piper.download import find_voice, get_voices  # type: ignore
-from TTS.utils.manage import ModelManager  # type: ignore
-from TTS.utils.synthesizer import Synthesizer  # type: ignore
 
-from .items.tts_item import TTS_Item
 from loguru import logger
 
-class Backend(Enum):
-    COQUI = auto()
-    PIPER = auto()
+import ffmpeg  # type: ignore
+import numpy as np
+import scipy  # type: ignore
+
+from tts_arranger.functions import load_default_config
+from tts_arranger.tts_backend import TTSBackend
+from tts_arranger.tts_preprocessor import TTS_Preprocessor  # type: ignore
+from tts_arranger.items.tts_project import TTS_Project
+from tts_arranger.items.tts_item import TTS_Item
+from tts_arranger.items.tts_chapter import TTS_Chapter
+from tts_arranger.items.tts_element import TTS_Element
+
+from .items.tts_project import TTS_Project  # type: ignore
+
+from .tts_backend_f5 import TTSBackendF5
+from .ffmpeg_processor import FFmpegProcessor
+
+TextItem = Dict[str, str | float]
 
 
 class TTS_Processor:
     def __init__(
         self,
-        model="",
-        vocoder: str = "",
-        preferred_speakers: Optional[list[str]] = None,
-        backend: Backend = Backend.COQUI,
-        lang: str = "en",
+        base_path: str,
+        output_format: str = "m4b",
+        backend_config: Optional[Dict[str, Any]] = None,
+        speaker_id_mapping: Optional[Dict[str, Any]] = None,
+        progress_callback: Optional[Callable[[
+            int, int, int, int], None]] = None,
     ) -> None:
-        """
-        Initializes a new instance of the TTS class.
+        self.NANOSECONDS_IN_ONE_SECOND = 1e9
 
-        :param model: Name of the text-to-speech model to use.
-        :type model: str
-
-        :param vocoder: Name of the vocoder to use.
-        :type vocoder: str
-
-        :param preferred_speakers: A list of preferred speaker names for multi-speaker models to be used instead of the available speakers of the selected model.
-                                If set to None, the default speaker(s) will be used.
-        :type preferred_speakers: Optional[list[str]]
-
-        :return: None
-        """
-        # self.backend = backend
-        self.backend = Backend.PIPER
-        self.model = model
-        self.vocoder = vocoder
-        # self.silence_length = 100
-        # self.silence_threshold = -60
-        # self.pause_post_regular =
-
-        # self.quotes = quotes
-        self.current_speaker_idx = 0
-
-        self.voice_speakers: list[str] = []
-
-        # Config
-        self.pause_sentence = 600
-        self.pause_question_exclamation = 800
-        self.pause_parentheses = 100
-        self.pause_dash = 100
-        self.pause_newline = 250
-        self.pause_colon = 100
-
-        self.preferred_speakers = preferred_speakers or []
-
-        # List of models that need segments ending on a fullstop to avoid synthensizing errors
-        self.models_fullstop_needed = ["tts_models/de/thorsten/tacotron2-DDC"]
-
-        # if not self.default_speakers:
-        #     with open(os.path.dirname(os.path.realpath(__file__)) + '/speakers', 'r') as speaker_file:
-        #         self.default_speakers = speaker_file.read().split()
-
-        # if speakers:
-        #     self.default_speakers = speakers
-
-        self.replace = {}
-
-        source_dir = Path(__file__).resolve().parent
-
-        # lang = self.model.split("/")[1]
-
-        for file_path in [
-            os.path.join("data", "replace.json"),
-            os.path.join("data", f"replace_{lang}.json"),
-        ]:
-            with open(
-                os.path.join(source_dir, file_path), "r", encoding="utf-8"
-            ) as file:
-                data = file.read()
-                # Convert the data to a Python dictionary and update the replace dict
-                self.replace.update(json.loads(data))
-
-    # def __del__(self):
-    #     self.temp_dir.cleanup()
-    #     self.synthesizer = None
-    #     gc.collect()
-
-    def initialize(self) -> None:
-        """
-        Initializes the text-to-speech (TTS) system, downloads the specified models, and populates the speaker list.
-
-        :return: None
-        """
-        logger.info("Initializing speech synthesizer.")
-        if self.backend == Backend.COQUI:
-            # if self.model == "":
-            #     self.model = "tts_models/en/vctk/vits"
-            # models_dir = Path(TTS.__file__).resolve().parent / ".models.json"
-
-            # self.manager = ModelManager(str(models_dir))
-
-            # (model_path, config_path, _), (vocoder_path, vocoder_config_path, _) = [
-            #     self.manager.download_model(m) if m else ("", "", "")
-            #     for m in (self.model, self.vocoder)
-            # ]
-
-            # config_path = config_path or ""
-            # vocoder_config_path = vocoder_config_path or ""
-
-            # with contextlib.redirect_stdout(None):
-            #     self.synthesizer = Synthesizer(
-            #         tts_checkpoint=model_path,
-            #         tts_config_path=config_path,
-            #         vocoder_checkpoint=vocoder_path,
-            #         vocoder_config=vocoder_config_path if self.vocoder else "",
-            #         use_cuda=False,
-            #     )
-
-            #     # Get speaker list from model
-            #     if (
-            #         self.synthesizer.tts_model
-            #         and self.synthesizer.tts_model.num_speakers > 1
-            #     ):
-            #         self.voice_speakers = list(
-            #             self.synthesizer.tts_model.speaker_manager.name_to_id.keys()
-            #         )
-            pass
-        elif self.backend == Backend.PIPER:
-            download_dir = "/usr/share/piper-voices/"
-            update_voices = False
-            # model_path = Path(model)
-
-            file = self.model
-
-            if self.model == "":
-                self.model = "en_US-hfc_male-medium"
-                # if not model_path.exists():
-                # Load voice info
-                voices_info = get_voices(download_dir, update_voices=update_voices)
-                # ensure_voice_exists(model, [download_dir], download_dir, voices_info)
-                file = download_dir + list(voices_info[self.model]["files"].keys())[0]
-            dir = Path(file).parent
-            model, config = find_voice(self.model, [dir])
-
-            self.voice = PiperVoice.load(model, config_path=config, use_cuda=False)
-
-            # Load config JSON
-            with open(config, "r", encoding="utf-8") as config_file:
-                config_dict = json.load(config_file)
-
-            self.voice_speakers = list(config_dict["speaker_id_map"])
-
-    # def _find_and_break(self, tts_items: list[TTS_Item], break_at: list[str], break_after: int) -> list[TTS_Item]:
-    #     final_items = []
-
-    #     for tts_item in tts_items:
-    #         line = tts_item.text
-    #         found = False
-
-    #         if len(line) > break_after:
-    #             for b in break_at:
-    #                 find = line.rfind(b, 0, break_after)
-
-    #                 if find >= 0:
-    #                     final_items.append(TTS_Item(line[:find].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
-    #                     final_items += self._find_and_break([TTS_Item(line[find + 1:].strip(), tts_item.speaker, tts_item.pause_pre,
-    #                                                         tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
-    #                     found = True
-    #                     break
-
-    #             if not found:
-    #                 # No save spot for breaking found, do a hard break
-    #                 final_items.append(TTS_Item(line[:break_after].strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
-    #                 final_items += self._find_and_break([TTS_Item(line[break_after:].strip(), tts_item.speaker, tts_item.pause_pre,
-    #                                                     tts_item.pause_post, tts_item.strip_silence)], break_at, break_after)
-    #         else:
-    #             final_items.append(TTS_Item(line.strip(), tts_item.speaker, tts_item.pause_pre, tts_item.pause_post, tts_item.strip_silence))
-
-    #     return final_items
-
-    def _de_thorsten_tacotron2_DDC_tweaks(self, tts_item: TTS_Item) -> TTS_Item:
-        """
-        Apply tweaks for tts_models/de/thorsten/tacotron2-DDC.
-
-        :param tts_item: The input TTS item to be processed.
-        :type tts_item: TTS_Item
-
-        :return: The processed TTS item with applied tweaks.
-        :rtype: TTS_Item
-        """
-        str_months = (
-            "Januar",
-            "Februar",
-            "März",
-            "April",
-            "Mai",
-            "Juni",
-            "Juli",
-            "August",
-            "September",
-            "Oktober",
-            "November",
-            "Dezember",
+        self.temp_files: List[Tuple[str, str]] = []
+        self.temp_dir = "/tmp"
+        self.chapter_times: List[Tuple[int, int]] = []
+        self.item_data: List[Tuple[int, str]] = []
+        self.project_path = base_path
+        self.source_path = os.path.dirname(os.path.abspath(__file__))
+        self.output_format = output_format
+        self.backend: Optional[TTSBackend] = None
+        self.progress_callback: Optional[Callable[[int, int, int, int], None]] = (
+            progress_callback
         )
 
-        # Ordinal numbers
-        def replace_number(match):
-            num = match.group(0)
-            if tts_item.text[match.end() :].strip().startswith(str_months):
-                replaced_text = num2words(num, lang="de", to="ordinal")
-                preceding_text = tts_item.text[: match.start()].strip()
-                if (
-                    not preceding_text
-                    or preceding_text.isspace()
-                    or preceding_text.endswith(". ")
-                ):
-                    replaced_text += "r"
-                # Catch cases like "am 15."
-                if tts_item.text[: match.start()].endswith(("m ", "n ")):
-                    replaced_text += "n"
-            else:
-                replaced_text = num
-
-            return replaced_text
-
-        tts_item.text = re.sub(r"\b[0-9]+\.", replace_number, tts_item.text)
-
-        # Year numbers
-        start = 0
-        while result := re.search(r"\b[0-9]{4,4}\b", tts_item.text[start:]):
-            len_original = 0
-            numword = ""
-            # When followed by month names
-            if (
-                tts_item.text[: start + result.span()[0]]
-                .strip()
-                .endswith(("Jahr", "in", "vor", "nach") + str_months)
-            ):
-                match = tts_item.text[
-                    start + result.span()[0] : start + result.span()[1]
-                ]
-
-                if int(match) < 2000:
-                    len_original = len(match)
-                    numword = num2words(match, lang="de", to="year")
-                    tts_item.text = (
-                        tts_item.text[: start + result.span()[0]]
-                        + numword
-                        + tts_item.text[start + result.span()[1] :]
-                    )
-            start += result.span()[1] - len_original + len(numword)
-        return tts_item
-
-    def _prepare_item(self, tts_item: TTS_Item) -> list[TTS_Item]:
-        """
-        Preprocess the given input TTS item by performing character replacement, splitting, and other operations as needed.
-
-        :param tts_item: The input TTS item to preprocess.
-        :type tts_item: TTS_Item
-
-        :return: A list of TTS items resulting from the preprocessing.
-        :rtype: list[TTS_Item]
-        """
-
-        if tts_item.speaker_idx != -1:
-            # try:
-            #     speaker_idx = TTS_Arranger.default_speakers.index(tts_item.speaker)
-            # except ValueError:
-            #     log(LOG_TYPE.ERROR, f'Speaker index "{tts_item.speaker}" is unknown, falling back to default speaker.')
-            #     speaker_idx = 0
-
-            if self.model == "tts_models/de/thorsten/tacotron2-DDC":
-                tts_item = self._de_thorsten_tacotron2_DDC_tweaks(tts_item)
-
-            # General preprocessing
-            text = tts_item.text
-
-            # Remove Japanese characters etc.
-            text = "".join(filter(lambda character: ord(character) < 0x3000, text))
-
-            # Replace problematic characters, abbreviations etc
-            for k, v in self.replace.items():
-                text = re.sub(k, v, text)
-
-            tts_item.text = text
-
-            tts_items = [tts_item]
-
-            tts_items = self._break_single(
-                tts_items, r"\n", pause_post_ms=self.pause_newline
-            )
-            tts_items = self._break_single(
-                tts_items, r"[;:]\s", pause_post_ms=self.pause_colon
-            )
-            tts_items = self._break_single(
-                tts_items, r"[—–]", pause_post_ms=self.pause_dash
-            )
-            # tts_items = self._break_single(tts_items, r'[\.!\?]\s', keep=True)
-            # tts_items = self.break_single(tts_items, '…')
-
-            # Break items if too long (memory consumption)
-            # TODO: disabled for now as recent versions of TTS don’t seem to leak memory that much
-            # tts_items = self.find_and_break(tts_items, [
-            #                                 '. ', '! ', '? ', ': ', ';', ') ', '] ', '} ', ', ', ' '], self.max_chars)
-
-            # For quotes, use a secondary speaker by shifting the current index up by 1
-            # TODO: disabled for now because it breaks the flow too much
-            # if self.quotes:
-            #     tts_items = self.break_speakers(tts_items, ('“', '”'), True, pause_pre=100, pause_post=100)
-            #     tts_items = self.break_speakers(tts_items, ('‘', '’'), True, pause_pre=100, pause_post=100)
-            #     tts_items = self.break_speakers(tts_items, ('„', '“'), True, pause_pre=100, pause_post=100)
-            #     tts_items = self.break_speakers(tts_items, ('‚', '‘'), True, pause_pre=100, pause_post=100)
-            #     tts_items = self.break_speakers(tts_items, ('»', '«'), True, pause_pre=100, pause_post=100)
-            #     tts_items = self.break_speakers(tts_items, ('«', '»'), True, pause_pre=100, pause_post=100)
-            #     tts_items = self.break_speakers(tts_items, ('"', '"'), True, pause_pre=100, pause_post=100)
-
-            tts_items = self._break_items(
-                tts_items,
-                ("(", ")"),
-                pause_pre_ms=self.pause_parentheses,
-                pause_post_ms=self.pause_parentheses,
-            )
-            tts_items = self._break_items(
-                tts_items,
-                ("—", "—"),
-                pause_pre_ms=self.pause_parentheses,
-                pause_post_ms=self.pause_parentheses,
-            )
-            tts_items = self._break_items(
-                tts_items,
-                ("– ", " –"),
-                pause_pre_ms=self.pause_parentheses,
-                pause_post_ms=self.pause_parentheses,
-            )
-            # tts_items = self.break_start_end(tts_items, ('- ', ' -'), pause_pre=300, pause_post=300)
-            # tts_items = self.break_start_end(tts_items, (r'\s[-–—]-?\s', r'\s[-–—]-?\s'), pause_post=150)
-            # tts_items = self.break_start_end(tts_items, (r'\(', r'\)'), pause_post=150)
-            tts_items = self._break_items(tts_items, ("*", "*"))
-
-            final_items = []
-
-            for tts_item in tts_items:
-                text = tts_item.text.strip()
-                if tts_item.text:
-
-                    if not text and tts_item.length > 0:
-                        final_items.append(tts_item)
-
-                    # text = re.sub(r'([\.\?\!;:]) ', r'\1\n', text)
-                    text = re.sub(r"[–—]", r"-", text)
-                    text = re.sub(r"[„“”]", r'"', text)
-                    text = re.sub(r"[‘’]", r"'", text)
-
-                    # Remove all remaining punctuation after first occurrence
-                    punctuation_regex = "[" + re.escape(string.punctuation) + "]"
-                    regex = r"(" + punctuation_regex + r"(?:\s+)?)+$"
-
-                    match = re.search(regex, text)
-
-                    if match:
-                        matched_text = match.group(0)
-                        if len(matched_text) > 2:
-                            first_char = matched_text[0]
-                            text = re.sub(regex, first_char, text)
-
-                    # Strip starting punctuation and normalize ending punctuation
-                    text = text.lstrip(string.punctuation)
-
-                    # Strip left-over surrounding quotation marks
-                    text = text.strip('"')
-
-                if len(text) > 0:
-                    if re.search(r"[a-zA-Z0-9]", text):
-                        tts_item.text = text
-                        final_items.append(tts_item)
-
-                        if text[-1] in [".", ":"]:
-                            final_items.append(TTS_Item(length=self.pause_sentence))
-                        elif text[-1] in ["!", "?"]:
-                            final_items.append(
-                                TTS_Item(length=self.pause_question_exclamation)
-                            )
-                else:
-                    if tts_item.length > 0:
-                        final_items.append(tts_item)
-
-            # if len(final_items) > 0:
-            #     tts_items[-1].properties.pause_pre += pause_pre
-            #     tts_items[-1].properties.pause_post += pause_post
+        if backend_config:
+            self.backend_config = backend_config
         else:
-            final_items = [tts_item]
+            self.backend_config = load_default_config()
 
-        return final_items
+        if speaker_id_mapping:
+            self.backend_config["speaker_id_mapping"] = speaker_id_mapping
 
-    def _break_single(
+        self.sample_rate = self.backend_config.get("sample_rate", 22050)
+
+        self.current_item_count = 0
+        self.current_chapter_count = 0
+        self.current_chapter_idx = 0
+
+    def get_chapters(self, json_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        return json_data.get("chapters", [])
+
+    def on_progress(self, current_item_idx: int) -> None:
+        if self.progress_callback:
+            self.progress_callback(
+                current_item_idx,
+                self.current_item_count,
+                self.current_chapter_idx,
+                self.current_chapter_count,
+            )
+
+    def prepare_text_items(self, items: List[TTS_Item]) -> List[TextItem]:
+        text_items: List[TextItem] = []
+
+        for item in items:
+            text_item: Dict[str, str | float] = {}
+
+            for element in item.elements:
+                if element.text:
+                    text_item["text"] = element.text
+                if element.min_length:
+                    text_item["min_length"] = element.min_length
+                if element.speaker_id:
+                    text_item["speaker_id"] = element.speaker_id
+
+            text_items.append(text_item)
+
+        return text_items
+
+    def split_sentences(self, text: str) -> List[str]:
+        sentences = re.split(r"(?<=[.!?]) +|\n", text.strip())
+
+        merged_sentences = []
+
+        i = 0
+        while i < len(sentences):
+            # If the sentence only contains a single uppercase letter and a dot, merge it with the previous and next sentence
+            if re.match(r"^[A-Z]\.$", sentences[i].strip()):
+                if i > 0 and i < len(sentences) - 1:
+                    if not merged_sentences:
+                        merged_sentences.append(sentences[i - 1])
+                    merged_sentences[-1] = f"{merged_sentences[-1]} {sentences[i]} {sentences[i+1]}"
+                    i += 1  # Skip the next sentence as it has been merged
+            else:
+                merged_sentences.append(sentences[i])
+            i += 1
+
+        return merged_sentences
+
+    def synthesize_chapters(
         self,
-        tts_items: list[TTS_Item],
-        break_at: str,
-        keep: bool = False,
-        pause_post_ms: int = 0,
-    ) -> list[TTS_Item]:
-        """
-        Break the given list of input TTS items at the specified single character and return a list of resulting input TTS items.
+        chapters: List[TTS_Chapter],
+        temp_dir: str = "/tmp",
+        detailed: bool = False,
+    ) -> None:
+        self.temp_dir = temp_dir
+        temp_format = "wav"
+        cumulative_time: float = 0
+        self.item_data.append((0, ""))
 
-        :param tts_items: The list of input TTS items to break.
-        :type tts_items: list[TTS_Item]
+        self.current_chapter_count = len(chapters)
+        for c, chapter in enumerate(chapters):
+            self.current_chapter_idx = c
 
-        :param break_at: The single character at which to break the input TTS items.
-        :type break_at: str
+            logger.info(
+                f"Processing chapter {c+1} of {len(chapters)}: {chapter.title}")
+            filename = os.path.join(temp_dir, f"tts_part_{c}.{temp_format}")
+            items: List[TextItem] = self.prepare_text_items(chapter.items)
 
-        :param keep: Whether to keep the breaking character in the resulting TTS items. Default is False.
-        :type keep: bool
+            self.backend = TTSBackendF5(
+                "f5-tts", self.temp_dir, self.backend_config, self.on_progress
+            )
 
-        :param pause_post: The duration of a pause (in ms) to insert after each broken TTS item. Default is 0.
-        :type pause_post: int
+            items_to_process: List[TextItem] = []
+            for i, item in enumerate(items):
+                text = ""
 
-        :return: A list of TTS items resulting from the breaking.
-        :rtype: list[TTS_Item]
-        """
-        final_items = []
+                if "text" in item:
+                    text = str(item.get("text", ""))
 
-        for tts_item in tts_items:
-            text = tts_item.text
-
-            if not text and tts_item.length > 0:
-                final_items.append(tts_item)
-
-            last_start = 0
-
-            if break_at:
-                matches = re.finditer("(.*?)" + break_at, text)
-
-                for m in matches:
-                    length = 0
-                    if keep == False:
-                        length = m.regs[0][1] - m.regs[1][1]
-
-                    item_text = text[m.start() : m.end() - length]
-
-                    if item_text:
-
-                        # From last group to end of current group
-                        final_items.append(
-                            TTS_Item(item_text, tts_item.speaker_idx, tts_item.length)
-                        )
-                        if pause_post_ms > 0:
-                            final_items.append(TTS_Item(length=pause_post_ms))
-                        last_start = m.end()
-
-                # From end of last group to end of text
-                text = text[last_start:]
-
-                if text:
-                    final_items.append(
-                        TTS_Item(text, tts_item.speaker_idx, tts_item.length)
-                    )
-
-        return final_items
-
-    def _get_character(self, text: str, pos: int) -> str:
-        """
-        Get the character at the specified position in the given string and return it as a string.
-
-        :param text: The string to get the character from.
-        :type text: str
-
-        :param pos: The position of the character to get.
-        :type pos: int
-
-        :return: The character at the specified position, or an empty string if the position is out of bounds.
-        :rtype: str
-        """
-        if 0 <= pos < len(text):
-            return text[pos]
-        return ""
-
-    def _break_items(
-        self,
-        tts_items: list[TTS_Item],
-        start_end: tuple = (),
-        pause_pre_ms: int = 0,
-        pause_post_ms: int = 0,
-    ) -> list[TTS_Item]:
-        """
-        Break items in a list of TTS items based on opening and closing characters (like parenthesis) and return a new list.
-
-        :param tts_items: A list of TTS items to be broken down.
-        :type tts_items: list[TTS_Item]
-
-        :param start_end: A tuple of the opening and closing characters used to break down the items, defaults to ().
-        :type start_end: tuple[int, int]
-
-        :param pause_pre_ms: The duration of a pause (in ms) to be inserted before the opening character, defaults to 0.
-        :type pause_pre_ms: int
-
-        :param pause_post_ms: The duration of a pause (in ms) to be inserted after the closing character, defaults to 0.
-        :type pause_post_ms: int
-
-        :return: A new list of TTS items that have been broken down based on the specified opening and closing characters.
-        :rtype: list[TTS_Item]
-        """
-        final_items = []
-
-        if tts_items:
-            length = len(start_end[0])
-
-            opened = False
-            current_speaker_idx = 0
-
-            for tts_item in tts_items:
-                pos = 0
-
-                found = False
-
-                if not tts_item.text and tts_item.length > 0:
-                    final_items.append(tts_item)
-
-                # print(f'New item: {tts_item.text} / {tts_item.speaker}')
-
-                for idx, c in enumerate(tts_item.text):
-                    new_item = copy.copy(tts_item)
-                    new_item.text = tts_item.text[pos:idx]
-                    new_item.speaker_idx = tts_item.speaker_idx
-                    current_speaker_idx = tts_item.speaker_idx
-
-                    add_item = False
-
-                    # print(f'idx: {idx}')
-                    # print(f'c: {c}')
-                    # print(f'tts_item: {tts_item.text}')
-
-                    if start_end[0] == start_end[1]:
-                        # If open and closing pattern are the same
-                        if c in start_end:
-                            if not opened:
-                                if (
-                                    self._get_character(tts_item.text, idx - 1)
-                                    in string.punctuation + " "
-                                ):
-                                    opened = True
-                                    add_item = True
-                                    # print(f'Open')
-                            else:
-                                if (
-                                    self._get_character(tts_item.text, idx + 1)
-                                    in string.punctuation + " "
-                                ):
-                                    opened = False
-                                    add_item = True
-                                    # print(f'Close')
-                        elif c in [".", ",", ";", ":"]:
-                            # Attach closing punctuation to last text segment
-                            if pos == idx:
-                                if len(final_items) > 0:
-                                    final_items[-1].text += c
-                                    pos += length
+                    if not isinstance(text, str):
+                        continue
+                else:
+                    if "min_length" in item:
+                        items_to_process.append(item)
                     else:
-                        # If open and closing pattern are not the same
-                        if c == start_end[0]:
-                            if (
-                                self._get_character(tts_item.text, idx - 1)
-                                in string.punctuation + " "
-                            ):
-                                add_item = True
-                                # print(f'Open')
-                        elif c == start_end[1]:
-                            if (
-                                self._get_character(tts_item.text, idx + 1)
-                                in string.punctuation + " "
-                            ):
-                                add_item = True
+                        continue
 
-                                if pause_pre_ms > 0:
-                                    final_items.append(TTS_Item(length=pause_pre_ms))
+                if not text.strip():
+                    continue
 
-                                # print(f'Close')
-                        elif c in [".", ",", ";", ":"]:
-                            if pos == idx:
-                                if len(final_items) > 0:
-                                    final_items[-1].text += c
-                                    pos += length
+                # sentences = re.split(r"(?<=[.!?]) +|\n", text.strip())
+                sentences = self.split_sentences(text)
+                # speaker_id_mapping = deepcopy(self.backend_data["speaker_id_mapping"])
+                # speaker_id = item.get("speaker_id", None)
 
-                    if add_item:
-                        # Add item resulting from breaking
-                        if new_item.text:
-                            # if len(final_items) > 0:
-                            #     if pause_pre > 0:
-                            #         final_items.append(TTS_Item(length=pause_pre))
+                # if speaker_id in speaker_id_mapping:
+                #     voice_id = speaker_id_mapping[speaker_id]
+                # else:
+                #     voice_id = list(speaker_id_mapping.values())[0]
 
-                            final_items.append(new_item)
+                sentence_data, synthesize_splitted = self._split_sentences_by_speed(
+                    sentences
+                )
 
-                            # if len(final_items) > 2:
-                            #     if pause_post > 0:
-                            #         final_items.append(TTS_Item(length=pause_post))
-                            # print(f'Adding item after breaking: {new_item.text} / {new_item.speaker}')
-                        pos = idx + 1
-                        found = add_item
+                if synthesize_splitted:
+                    for i, sentence in sentence_data.items():
+                        item = {
+                            "text": sentence["sentence"],
+                            "min_length": 0,
+                            "speaker_id": item["speaker_id"],
+                            "speed_slider": sentence["speed_slider"],
+                        }
+                        # speaker_id_mapping_copy = deepcopy(speaker_id_mapping)
+                        # voice_id = speaker_id_mapping_copy.get(speaker_id, None)
 
-                if found:
-                    if pause_post_ms > 0:
-                        final_items.append(TTS_Item(length=pause_post_ms))
+                        items_to_process.append(item)
+                else:
+                    item = {
+                        "text": text,
+                        "min_length": item.get("min_length", 0),
+                        "speaker_id": item["speaker_id"],
+                    }
 
-                # Add rest / regular item
-                new_item = copy.copy(tts_item)
-                new_item.text = tts_item.text[pos:]
-                new_item.speaker_idx = current_speaker_idx
-                new_item.length = tts_item.length
+                    items_to_process.append(item)
 
-                if new_item.text:
-                    # print(f'Adding regular item: {new_item.text} / {new_item.speaker}')
-                    final_items.append(new_item)
+            temp_files, segment_lengths = self.process_items(items_to_process)
 
-        return final_items
+            input_files = [ffmpeg.input(file) for file in temp_files]
+            ffmpeg.concat(*input_files, v=0, a=1).output(
+                filename, loglevel="error"
+            ).run(overwrite_output=True)
 
-    def preprocess_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
-        """
-        Preprocesses a list of TTS items.
+            for item, segment_length in zip(items_to_process, segment_lengths):
+                text = str(item.get("text", ""))
 
-        :param tts_items: A list of TTS items to be preprocessed.
-        :type tts_items: list[TTS_Item]
+                if isinstance(text, str):
+                    self.item_data.append((int(segment_length * 1e9), text))
 
-        :return: A new list of preprocessed TTS items.
-        :rtype: list[TTS_Item]
-        """
+            self.backend.cleanup()
+            sys.stdout.write("\n")
 
-        final_items: list[TTS_Item] = []
+            num_zeros = len(str(len(self.temp_files)))
+            title = chapter.title
+            chapter_title = f"{c + 1:0{num_zeros}} - {title}"
+            filename_out = os.path.join(
+                temp_dir, f"tts_part_{c}.{temp_format}")
 
-        for tts_item in tts_items:
-            final_items += self._prepare_item(tts_item)
+            self.temp_files.append((chapter_title, filename_out))
+            logger.info(f"Temp file added: {filename_out}")
 
-        return final_items
+            segment_length = self._get_nanoseconds_for_file(filename)
+            end_time = cumulative_time + segment_length
+            self.chapter_times.append((cumulative_time, end_time))
+            cumulative_time = end_time
+
+    def _split_sentences_by_speed(
+        self, sentences: List[str]
+    ) -> Tuple[Dict[int, Dict[str, Any]], bool]:
+        synthesize_splitted = False
+        sentence_data: Dict[int, Dict[str, Any]] = {}
+
+        for i, sentence in enumerate(sentences):
+            letter_count = len(sentence)
+            # speed_slider = self.voices[voice_id].get("speed_slider", 1.0)
+            speed_slider = 1.0
+            speed_slider_max = speed_slider
+
+            if letter_count > 0 and letter_count < 100:
+                speed_slider = 0.3 + (speed_slider - 0.3) * \
+                    (letter_count / 100)
+                speed_slider = min(speed_slider_max, speed_slider)
+                speed_slider = max(0.5, speed_slider)
+
+                if speed_slider < 1.0:
+                    synthesize_splitted = True
+
+            sentence_data[i] = {
+                "sentence": sentence,
+                "speed_slider": speed_slider,
+            }
+
+        return sentence_data, synthesize_splitted
+
+    def concatenate_bytes(self, byte_obj1: bytes, byte_obj2: bytes) -> bytes:
+        concatenated_bytes = byte_obj1 + byte_obj2
+        return concatenated_bytes
 
     def pad_length(self, numpy_wav: np.ndarray, duration: float) -> np.ndarray:
         """
@@ -663,8 +271,7 @@ class TTS_Processor:
         :return: A 1D numpy array of padded audio samples with the desired duration.
         :rtype: np.ndarray
         """
-        # sample_rate = int(self.synthesizer.output_sample_rate)
-        sample_rate = self.get_sample_rate()
+        sample_rate = self.sample_rate
         current_duration = len(numpy_wav) / sample_rate
         if current_duration < duration:
             padding_duration = duration - current_duration
@@ -672,133 +279,122 @@ class TTS_Processor:
             numpy_wav = np.pad(numpy_wav, (0, padding_samples), "constant")
         return numpy_wav
 
-    def synthesize_tts_item(self, tts_item: TTS_Item) -> np.ndarray:
+    def _get_nanoseconds_for_file(self, filename: str) -> int:
         """
-        Synthesize a single item and return a numpy array containing the audio data
+        Get the duration of an audio file in nanoseconds.
 
-        :param tts_item: TTS item to be synthesized
-        :type tts_item: TTS_Item
+        :param filename: The file name (including path) of the audio file to get the duration of.
+        :type filename: str
 
-        :return: numpy array of synthesized audio
-        :rtype: np.ndarray
+        :return: The duration of the audio file in nanoseconds.
+        :rtype: int
         """
+        result = ffmpeg.probe(filename, cmd="ffprobe",
+                              show_entries="format=duration")
+        return int(float(result["format"]["duration"]) * self.NANOSECONDS_IN_ONE_SECOND)
 
+    def process_item(
+        self, item: Dict[str, Any], mapped_speaker_id: Dict[str, Any]
+    ) -> np.ndarray:
         numpy_wav = np.array([0], dtype=np.float32)
 
-        if tts_item.text:
-            # Run in a loop to bypass https://github.com/coqui-ai/TTS/discussions/2516
-            while True:
-                try:
-                    speaker = ""
+        if item.get("text", "").strip():
+            model = ""
 
-                    if self.backend == Backend.COQUI:
-                        # if (
-                        #     self.synthesizer.tts_model
-                        #     and self.synthesizer.tts_model.num_speakers > 1
-                        # ):
-                        #     speaker = self.voice_speakers[
-                        #         tts_item.speaker_idx % len(self.voice_speakers)
-                        #     ]
-                        #     speaker = (
-                        #         self.preferred_speakers[
-                        #             tts_item.speaker_idx % len(self.preferred_speakers)
-                        #         ]
-                        #         if self.preferred_speakers
-                        #         and speaker in self.voice_speakers
-                        #         else speaker
-                        #     )
+            if isinstance(self.backend, TTSBackendF5):
+                frames = self.backend.synthesize(
+                    item["text"], mapped_speaker_id)
 
-                        # log(
-                        #     LOG_TYPE.INFO,
-                        #     f'({tts_item.speaker_idx} => "{speaker}", {tts_item.length}ms):{bcolors.ENDC} {tts_item.text}',
-                        # )
+                numpy_wav = np.frombuffer(
+                    frames, dtype=np.int16).astype(np.float32)
+                numpy_wav /= np.iinfo(np.int16).max
 
-                        # if self.model in self.models_fullstop_needed:
-                        #     # Add a full stop if necessary to avoid synthesizing problems with some models
-                        #     punctuation_marks = [".", "?", "!"]
-                        #     ending_punctuation = tts_item.text[-1]
+                del frames
 
-                        #     if ending_punctuation not in punctuation_marks:
-                        #         tts_item.text += "."
-
-                        # # Suppress tts output
-                        # with contextlib.redirect_stdout(None):
-                        #     wav = self.synthesizer.tts(
-                        #         text=tts_item.text,
-                        #         speaker_name=speaker,
-                        #     )
-                        pass
-                    elif self.backend == Backend.PIPER:
-                        speaker_id = None
-
-                        length_scale = None
-
-                        if len(self.voice_speakers) == 0:
-                            pass
-                        #     if tts_item.speaker_idx > 0:
-                        #         length_scale = 1.1
-                        else:
-                            speaker_id = self.voice_speakers[
-                                tts_item.speaker_idx % len(self.voice_speakers)
-                            ]
-
-                        synthesize_args = {
-                            "speaker_id": speaker_id,
-                            "length_scale": length_scale,
-                            "noise_scale": None,
-                            "noise_w": None,
-                            "sentence_silence": 0.5,
-                        }
-
-                        # Quick and dirty way to get this running for now
-                        wave_io = io.BytesIO()
-                        with wave.open(wave_io, "wb") as wav_file:
-                            self.voice.synthesize(
-                                tts_item.text, wav_file, **synthesize_args
-                            )
-                        wave_io.seek(0)
-                        # Open the BytesIO object as a wave file again to read the frames
-                        with wave.open(wave_io, "rb") as wav_file:
-                            frames = wav_file.readframes(wav_file.getnframes())
-
-                        # Convert the bytes to a numpy float32 array
-                        numpy_array = np.frombuffer(frames, dtype=np.int16).astype(
-                            np.float32
-                        )
-
-                        # Normalize the values to the range [-1, 1]
-                        numpy_array /= np.iinfo(np.int16).max
-
-                except IndexError as e:
-                    logger.warning("IndexError bug encountered, trying again.")
-                    continue
-                except Exception as e:
-                    raise Exception(f'Error synthesizing "{tts_item.text}: {e}".')
-                else:
-                    # numpy_wav = np.asarray(wav, dtype=np.float32)
-                    numpy_wav = numpy_array
-
-                    # TODO: Reintroduce silence stripping?
-                    #     # Strip some silence away to make pauses easier to control
-                    #     silence = detect_silence(speech_segment, min_silence_len=self.silence_length, silence_thresh=self.silence_threshold)
-                    #     speech_segment = speech_segment[:silence[-1][0]]
-                break
-
-        numpy_wav = self.pad_length(numpy_wav, tts_item.length / 1000.0)
+        numpy_wav = self.pad_length(
+            numpy_wav, item.get("min_length", 0) / 1000)
 
         return numpy_wav
 
-    def get_sample_rate(self) -> int:
-        """
-        Returns the sample rate
+    def process_items(self, items: List[TextItem]) -> Tuple[List[str], List[float]]:
+        temp_files = []
+        segment_lengths = []
 
-        :return: sample rate
-        :rtype: int
-        """
-        if self.backend == Backend.COQUI:
-            # return int(self.synthesizer.output_sample_rate)
-            return 22050
-        elif self.backend == Backend.PIPER:
-            return 22050
+        if isinstance(self.backend, TTSBackendF5):
+            self.current_item_count = len(items)
+            numpy_segments = self.backend.synthesize_batch(items)
+
+            for i, numpy_segment in enumerate(numpy_segments):
+                min_length = items[i].get("min_length", 0)
+
+                if isinstance(min_length, int):
+                    numpy_segment = self.pad_length(
+                        numpy_segment, min_length / 1000)
+
+                temp_file_path = f"{self.temp_dir}/{i}.wav"
+                scipy.io.wavfile.write(
+                    temp_file_path, self.sample_rate, numpy_segment)
+                temp_files.append(temp_file_path)
+
+                segment_length = len(numpy_segment) / self.sample_rate
+                segment_lengths.append(segment_length)
+
+        return temp_files, segment_lengths
+
+    def synthesize_project(
+        self,
+        project: TTS_Project,
+        title: str = "",
+        temp_dir_prefix: Optional[str] = "",
+        subtitles: bool = False,
+    ) -> None:
+        logger.info("Preparing TTS")
+
+        chapters = project.chapters
+        self.replace: Dict[str, str] = {}
+        source_dir = Path(__file__).resolve().parent
+        lang = "en"
+
+        for file_path in [
+            os.path.join("data", "replace.json"),
+            os.path.join("data", f"replace_{lang}.json"),
+        ]:
+
+            with open(
+                os.path.join(source_dir, file_path), "r", encoding="utf-8"
+            ) as file:
+                data = file.read()
+                self.replace.update(json.loads(data))
+
+        tts_preprocessor = TTS_Preprocessor()
+
+        for chapter in chapters:
+            chapter.items = tts_preprocessor.preprocess(
+                chapter.items, self.replace)
+
+        if temp_dir_prefix:
+            if not os.path.exists(temp_dir_prefix):
+                os.makedirs(temp_dir_prefix)
         else:
-            return 22050
+            temp_dir_prefix = None
+
+        logger.info(f'Synthesizing project "{project.title}"')
+
+        with tempfile.TemporaryDirectory(dir=temp_dir_prefix) as temp_dir:
+            try:
+                self.synthesize_chapters(chapters, temp_dir)
+            except Exception as e:
+                logger.error(f"Error synthesizing project: {e}")
+                raise
+            else:
+                ffmpeg_processor = FFmpegProcessor(
+                    self.temp_files,
+                    self.chapter_times,
+                    self.item_data,
+                    self.project_path,
+                    self.output_format,
+                )
+                ffmpeg_processor.process_ffmpeg(
+                    project, title, temp_dir, subtitles)
+
+        logger.success("Project synthesis complete")

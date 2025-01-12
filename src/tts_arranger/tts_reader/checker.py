@@ -38,6 +38,7 @@ class ConditionID(Condition):
 class CHECKER_SIGNAL(Enum):
     NO_SIGNAL = auto()
     IGNORE = auto()
+    NEW_ITEM = auto()
     NEW_CHAPTER = auto()
 
 
@@ -53,7 +54,7 @@ class CheckerItemProperties:
     Defines the properties for a TTS item to be generated. If pause_after is set, a pause item will be generated as well after the current item
     """
 
-    speaker_idx: int = 0
+    speaker_id: str = ""
     pause_after: int = 0
 
 

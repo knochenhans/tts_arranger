@@ -1,16 +1,20 @@
 import re
-from typing import Optional
-from num2words import num2words  # type: ignore
+from typing import List, Optional
+from num2words import num2words
+
+from tts_arranger.items.element_optimizer import ElementOptimizer
+from tts_arranger.items.tts_item import TTS_Item  # type: ignore
 
 
 class TTS_Preprocessor:
     def __init__(self) -> None:
         pass
 
-    def preprocess(self, tts_items: list[dict], replace: dict) -> list[dict]:
+    def preprocess(self, tts_items: List[TTS_Item], replace: dict) -> List[TTS_Item]:
         simple_replacements = [
             ("\u2026", "..."),
             ("\u2013", " - "),
+            ("\u00a0", " "),
             (" - ", " — "),
             ("–", " — "),
             (";", ". "),
@@ -71,73 +75,85 @@ class TTS_Preprocessor:
             "CPU",
         ]
 
+        # Optimize item elements first
+        optimizer = ElementOptimizer()
+
         for item in tts_items:
-            if item.get("text"):
-                # Remove Japanese characters etc.
-                item["text"] = "".join(
-                    filter(lambda character: ord(character) < 0x3000, item["text"])
-                )
+            for element in item.elements:
+                if element.text:
+                    # Remove Japanese characters etc.
+                    element.text = "".join(
+                        filter(lambda character: ord(character) < 0x3000, element.text)
+                    )
 
-                # Remove commas in numbers, when used as thousands separator, make sure the all parts after the first are three digits long
-                while re.search(r"(\d),(\d{3})", item["text"]):
-                    item["text"] = re.sub(r"(\d),(\d{3})", r"\1\2", item["text"])
+                    # Remove commas in numbers, when used as thousands separator, make sure the all parts after the first are three digits long
+                    while re.search(r"(\d),(\d{3})", element.text):
+                        element.text = re.sub(r"(\d),(\d{3})", r"\1\2", element.text)
 
-                # Replace ordinal numbers with words
-                item["text"] = re.sub(
-                    r"\b(\d+)(st|nd|rd|th)\b",
-                    lambda x: num2words(x.group(1), to="ordinal"),
-                    item["text"],
-                )
+                    # Replace ordinal numbers with words
+                    element.text = re.sub(
+                        r"\b(\d+)(st|nd|rd|th)\b",
+                        lambda x: num2words(x.group(1), to="ordinal"),
+                        element.text,
+                    )
 
-                # Find and replace year numbers when preceded by month names or "in" with words
-                item["text"] = re.sub(
-                    r"\b(January|February|March|April|May|June|July|August|September|October|November|December|in) (\d{1,2}, )?(\d{4})\b",
-                    lambda x: f"{x.group(1)} {x.group(2) or ''}{num2words(x.group(3), to='year')}",
-                    item["text"],
-                )
+                    # Find and replace year numbers when preceded by month names or "in" with words
+                    element.text = re.sub(
+                        r"\b(January|February|March|April|May|June|July|August|September|October|November|December|in) (\d{1,2}, )?(\d{4})\b",
+                        lambda x: f"{x.group(1)} {x.group(2) or ''}{num2words(x.group(3), to='year')}",
+                        element.text,
+                    )
 
-                # Replace numbers with words, including decimal numbers
-                item["text"] = re.sub(
-                    r"\b\d+(\.\d+)?\b", lambda x: num2words(x.group()), item["text"]
-                )
+                    # Replace numbers with words, including decimal numbers
+                    element.text = re.sub(
+                        r"\b\d+(\.\d+)?\b", lambda x: num2words(x.group()), element.text
+                    )
 
-                # Replace problematic characters, abbreviations etc
-                for k, v in replace.items():
-                    item["text"] = re.sub(k, v, item["text"])
+                    # Replace problematic characters, abbreviations etc
+                    for k, v in replace.items():
+                        element.text = re.sub(k, v, element.text)
 
-                # Apply simple replacements
-                for old, new in simple_replacements:
-                    item["text"] = item["text"].replace(old, new)
+                    # Apply simple replacements
+                    for old, new in simple_replacements:
+                        element.text = element.text.replace(old, new)
 
-                # Make sure each item ends with space
-                item["text"] = item["text"].strip() + " "
+                    # Remove whitespace before punctuation
+                    element.text = re.sub(r"\s+([.,!?])", r"\1", element.text)
 
-                # replace single quote quotation marks with double quote, if beginning and end are found
-                item["text"] = re.sub(r"(?<!\w)‘(.*?)’(?!\w)", r"“\1”", item["text"])
+                    # Make sure each item ends with space
+                    element.text = element.text.strip() + " "
 
-                # Replace hyphen surrounded by text with space
-                item["text"] = re.sub(r"(\S)-(\S)", r"\1 \2", item["text"])
+                    # replace single quote quotation marks with double quote, if beginning and end are found
+                    element.text = re.sub(
+                        r"(?<!\w)‘(.*?)’(?!\w)", r"“\1”", element.text
+                    )
 
-                # Find numbers followed by "Hz" or "dB" without a space and add a space
-                item["text"] = re.sub(r"(\d)([Hd])([dB])", r"\1 \2\3", item["text"])
+                    # Replace hyphen surrounded by text with space
+                    element.text = re.sub(r"(\S)-(\S)", r"\1 \2", element.text)
 
-                # Convert occurrences of "Hz" into "Hertz", check for word boundaries
-                item["text"] = re.sub(r"\bHz\b", "Hertz", item["text"])
+                    # Find numbers followed by "Hz" or "dB" without a space and add a space
+                    element.text = re.sub(r"(\d)([Hd])([dB])", r"\1 \2\3", element.text)
 
-                # Find full stops followed by a space not followed by a capital letter and replace the respective lowercase letter with uppercase
-                item["text"] = re.sub(
-                    r"\. ([a-z])", lambda x: f". {x.group(1).upper()}", item["text"]
-                )
+                    # Convert occurrences of "Hz" into "Hertz", check for word boundaries
+                    element.text = re.sub(r"\bHz\b", "Hertz", element.text)
 
-                # Find substrings that only contain uppercase letter words and replace them with lowercase, ignore whitespace
-                item["text"] = re.sub(
-                    r"\b[A-Z]+\b(?:\s+\b[A-Z]+\b)*",
-                    lambda x: " ".join(
-                        word if word in words_to_keep_upper else word.lower()
-                        for word in re.findall(r"\b[A-Z]+\b", x.group())
-                    ),
-                    item["text"],
-                )
+                    # Find full stops followed by a space not followed by a capital letter and replace the respective lowercase letter with uppercase
+                    element.text = re.sub(
+                        r"\. ([a-z])", lambda x: f". {x.group(1).upper()}", element.text
+                    )
+
+                    # Find substrings that only contain uppercase letter words with more than one letter and replace them with lowercase, ignore whitespace
+                    element.text = re.sub(
+                        r"\b[A-Z]{2,}\b(?:\s+\b[A-Z]{2,}\b)*",
+                        lambda x: " ".join(
+                            word if word in words_to_keep_upper else word.lower()
+                            for word in re.findall(r"\b[A-Z]{2,}\b", x.group())
+                        ),
+                        element.text,
+                    )
+
+        for tts_item in tts_items:
+            tts_item.elements = optimizer.optimize(tts_item.elements, max_pause_duration=1500)
 
         return tts_items
 

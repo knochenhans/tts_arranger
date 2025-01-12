@@ -261,15 +261,15 @@ class TTS_HTML_Converter(HTMLParser):
         :return: The number of chapters added.
         """
 
-        current_chapters_count = len(self.project.tts_chapters)
+        current_chapters_count = len(self.project.chapters)
 
         if new_chapter:
             self.current_chapter = TTS_Chapter()
-            self.project.tts_chapters.append(self.current_chapter)
+            self.project.chapters.append(self.current_chapter)
 
         self.feed(html)
 
-        return len(self.project.tts_chapters) - current_chapters_count
+        return len(self.project.chapters) - current_chapters_count
 
     def convert_from_html_to_project(self, html: str) -> TTS_Project:
         """
@@ -295,8 +295,8 @@ class TTS_HTML_Converter(HTMLParser):
         """
         self.project = TTS_Project()
         self.add_from_html(html)
-        if self.project.tts_chapters:
-            return self.project.tts_chapters[-1].items
+        if self.project.chapters:
+            return self.project.chapters[-1].items
         return []
 
     def add_checkers_from_json(self, filename: str = "") -> None:
@@ -355,15 +355,15 @@ class TTS_HTML_Converter(HTMLParser):
 
             properties: Optional[CheckerItemProperties] = None
 
-            speaker_idx = ""
+            speaker_id = ""
             pause_after = 0
 
-            if "speaker_idx" in json_properties:
-                speaker_idx = str(json_properties["speaker_idx"])
+            if "speaker_id" in json_properties:
+                speaker_id = str(json_properties["speaker_id"])
             if "pause_after" in json_properties:
                 pause_after = int(json_properties["pause_after"])
 
-            properties = CheckerItemProperties(speaker_idx, pause_after)
+            properties = CheckerItemProperties(speaker_id, pause_after)
 
             signal = CHECKER_SIGNAL.NO_SIGNAL
 

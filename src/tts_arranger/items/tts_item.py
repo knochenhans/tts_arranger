@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List
 
+from tts_arranger.items.element_optimizer import ElementOptimizer
 from tts_arranger.items.tts_element import TTS_Element
 
 
@@ -21,6 +22,9 @@ class TTS_Item:
     def __post_init__(self) -> None:
         # Additional initialization if needed
         pass
+
+    def optimize(self, max_pause_duration: int = 0) -> None:
+        self.elements = ElementOptimizer.optimize(self.elements, max_pause_duration)
 
     def __str__(self) -> str:
         return " ".join([elem.text for elem in self.elements])

@@ -10,12 +10,13 @@ import requests  # type: ignore
 from loguru import logger
 
 from tts_arranger.items.tts_chapter import TTS_Chapter  # type: ignore
+from tts_arranger.items.tts_element import TTS_Element
 from tts_arranger.items.tts_item import TTS_Item  # type: ignore
 
 
 @dataclass
 class TTS_Project:
-    tts_chapters: List[TTS_Chapter] = field(default_factory=list)
+    chapters: List[TTS_Chapter] = field(default_factory=list)
 
     title: str = ""
     subtitle: str = ""
@@ -43,9 +44,9 @@ class TTS_Project:
         try:
             data = json.loads(json_data)
             return cls(
-                tts_chapters=[
+                chapters=[
                     TTS_Chapter.from_json(chapter)
-                    for chapter in data.get("tts_chapters", [])
+                    for chapter in data.get("chapters", [])
                 ],
                 title=data.get("title", ""),
                 subtitle=data.get("subtitle", ""),
@@ -64,7 +65,7 @@ class TTS_Project:
             data = asdict(self)
             data["date"] = self.date.isoformat()
             data["image_bytes"] = base64.b64encode(self.image_bytes).decode("utf-8")
-            data["tts_chapters"] = [chapter.to_json() for chapter in self.tts_chapters]
+            data["chapters"] = [chapter.to_json() for chapter in self.chapters]
             return json.dumps(data)
         except (TypeError, ValueError) as e:
             logger.error(f"Failed to convert to JSON: {e}")
@@ -76,7 +77,7 @@ class TTS_Project:
 
     def merge_from_project(self, project: "TTS_Project") -> None:
         if isinstance(project, TTS_Project):
-            self.tts_chapters += project.tts_chapters
+            self.chapters += project.chapters
 
     def dump_as_json_file(self, filename: str) -> None:
         try:
@@ -131,7 +132,7 @@ class TTS_Project:
     #         chapter.optimize(max_pause_duration)
 
     def set_titles(self, only_empty: bool = True, max_length: int = 100) -> None:
-        for chapter in self.tts_chapters:
+        for chapter in self.chapters:
             chapter.set_title(only_empty, max_length)
 
     def get_titles(self) -> None:
@@ -140,42 +141,98 @@ class TTS_Project:
     def get_output_filename(self) -> str:
         return self.author + " - " + self.title
 
+    def add_element(
+        self,
+        element: TTS_Element,
+        chapter_index: Optional[int] = None,
+        item_index: Optional[int] = None,
+    ) -> None:
+        """
+        Add a TTS_Element to the project at the specified chapter and item index.
+
+        :param element: The TTS_Element to add.
+        :param chapter_index: The index of the chapter to add the element to. If None, add to the last chapter.
+        :param item_index: The index of the item to add the element to. If None, add to the last item.
+        """
+
+        if chapter_index is None:
+            chapter_index = -1
+
+        if item_index is None:
+            item_index = -1
+
+        if chapter_index >= len(self.chapters) or len(self.chapters) == 0:
+            self.chapters.append(TTS_Chapter())
+
+        if (
+            item_index >= len(self.chapters[chapter_index].items)
+            or len(self.chapters[chapter_index].items) == 0
+        ):
+            self.chapters[chapter_index].items.append(TTS_Item())
+
+        self.chapters[chapter_index].items[item_index].elements.append(element)
+
+    def add_item(
+        self,
+        item: TTS_Item,
+        chapter_index: Optional[int] = None,
+        item_index: Optional[int] = None,
+    ) -> None:
+        """
+        Add a TTS_Item to the project at the specified chapter and item index.
+
+        :param item: The TTS_Item to add.
+        :param chapter_index: The index of the chapter to add the item to. If None, add to the last chapter.
+        :param item_index: The index of the item to add the item to. If None, add to the last item.
+        """
+
+        if chapter_index is None:
+            chapter_index = -1
+
+        if item_index is None:
+            item_index = -1
+
+        if chapter_index >= len(self.chapters) or len(self.chapters) == 0:
+            self.chapters.append(TTS_Chapter())
+
+        self.chapters[chapter_index].items.append(item)
+
     def __str__(self) -> str:
-        return " ".join([chapter.title for chapter in self.tts_chapters])
+        return " ".join([chapter.title for chapter in self.chapters])
 
     def __len__(self) -> int:
-        return len(self.tts_chapters)
+        return len(self.chapters)
 
     def __getitem__(self, key: int) -> TTS_Chapter:
-        return self.tts_chapters[key]
+        return self.chapters[key]
 
     def __setitem__(self, key: int, value: TTS_Chapter) -> None:
-        self.tts_chapters[key] = value
+        self.chapters[key] = value
 
     def __delitem__(self, key: int) -> None:
-        del self.tts_chapters[key]
+        del self.chapters[key]
 
     def insert(self, index: int, value: TTS_Chapter) -> None:
-        self.tts_chapters.insert(index, value)
+        self.chapters.insert(index, value)
 
     def append(self, value: TTS_Chapter) -> None:
-        self.tts_chapters.append(value)
+        self.chapters.append(value)
 
     def extend(self, values: List[TTS_Chapter]) -> None:
-        self.tts_chapters.extend(values)
+        self.chapters.extend(values)
 
     def remove(self, value: TTS_Chapter) -> None:
-        self.tts_chapters.remove(value)
+        self.chapters.remove(value)
 
     def pop(self, index: int = -1) -> TTS_Chapter:
-        return self.tts_chapters.pop(index)
+        return self.chapters.pop(index)
 
     def clear(self) -> None:
-        self.tts_chapters.clear()
+        self.chapters.clear()
 
     def copy(self) -> "TTS_Project":
         return TTS_Project(
-            tts_chapters=self.tts_chapters.copy(),
+            chapters=self.chapters.copy(),
             title=self.title,
             subtitle=self.subtitle,
             date=self.date,

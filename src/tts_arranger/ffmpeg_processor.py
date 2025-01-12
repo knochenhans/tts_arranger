@@ -3,17 +3,25 @@ import math
 import os
 import subprocess
 import tempfile
+from typing import List, Tuple, Dict, Any
 from pathvalidate import sanitize_filename
 
 import ffmpeg  # type: ignore
 from PIL import Image  # type: ignore
 from loguru import logger
-import srt  # type: ignore
+import srt
+
+from tts_arranger.items.tts_project import TTS_Project  # type: ignore
 
 
 class FFmpegProcessor:
     def __init__(
-        self, temp_files, chapter_times, item_data, project_path, output_format
+        self,
+        temp_files: List[Tuple[Any, str]],
+        chapter_times: List[Tuple[int, int]],
+        item_data: List[Tuple[int, str]],
+        project_path: str,
+        output_format: str,
     ):
         self.temp_files = temp_files
         self.chapter_times = chapter_times
@@ -21,7 +29,7 @@ class FFmpegProcessor:
         self.project_path = project_path
         self.output_format = output_format
 
-    def _remove_last_arg(self, cmd: list[str], arg: str) -> list[str]:
+    def _remove_last_arg(self, cmd: List[str], arg: str) -> List[str]:
         if cmd:
             cmd.reverse()
             index = cmd.index(arg)
@@ -66,13 +74,72 @@ class FFmpegProcessor:
                 ).run(overwrite_output=True)
             )
 
-    def process_ffmpeg(self, project, title, temp_dir, subtitles):
+    def _add_subtitles(self, output_path: str) -> None:
+        srt_output_file = os.path.splitext(output_path)[0] + ".srt"
+        srt_data = []
+        start_time = 0
+
+        for i, segment_data in enumerate(self.item_data):
+            segment_length = segment_data[0] / 1000
+            segment_data_str = segment_data[1].strip()
+
+            if segment_data_str != "":
+                subtile_data = srt.Subtitle(
+                    index=i + 1,
+                    start=srt.timedelta(microseconds=start_time),
+                    end=srt.timedelta(microseconds=start_time + segment_length),
+                    content=segment_data_str,
+                )
+                srt_data.append(subtile_data)
+
+            start_time += segment_length
+
+        logger.info(f"Writing SRT to {srt_output_file}")
+
+        with open(srt_output_file, "w", encoding="utf-8") as srt_file:
+            srt_file.write(srt.compose(srt_data))
+
+    def _process_image(
+        self, project: TTS_Project, output_files: List[str], output_extension: str
+    ) -> None:
+        if project.image_bytes:
+            try:
+                from io import BytesIO
+                import base64
+                import binascii
+
+                image_data = base64.b64decode(project.image_bytes)
+                with Image.open(BytesIO(image_data)) as image:
+                    if image.format:
+                        image_added = False
+
+                        for output_file in output_files:
+                            output_path_with_image = (
+                                output_file + "_tmp" + output_extension
+                            )
+                            self._add_image(image, output_file, output_path_with_image)
+                            os.remove(output_file)
+                            os.rename(output_path_with_image, output_file)
+                            image_added = True
+
+                        if image_added:
+                            logger.success(
+                                "Project image added to final output for all files."
+                            )
+            except (Image.UnidentifiedImageError, binascii.Error):
+                logger.error(
+                    "Could not add image to final output, image file is not a valid image file."
+                )
+
+    def process_ffmpeg(
+        self, project: TTS_Project, title: str, temp_dir: str, subtitles: bool
+    ) -> None:
         if len(self.temp_files) > 0:
             metadata_lines = [";FFMETADATA1\n"]
 
-            for c, chapter in enumerate(project["chapters"]):
+            for c, chapter in enumerate(project.chapters):
                 chapter_times = self.chapter_times[c]
-                chapter_title = chapter.get("title", f"Chapter {c + 1}")
+                chapter_title = chapter.title or f"Chapter {c + 1}"
                 metadata_lines.append(
                     f"[CHAPTER]\nSTART={chapter_times[0]}\nEND={chapter_times[1]}\ntitle={chapter_title}\n"
                 )
@@ -84,7 +151,7 @@ class FFmpegProcessor:
                 metadata_file.write(metadata)
 
             if title == "":
-                title = project.get("title", "Untitled Project")
+                title = project.title or "Untitled Project"
 
             output_filename = os.path.join(self.project_path, sanitize_filename(title))
             output_extension = f".{self.output_format}"
@@ -99,9 +166,9 @@ class FFmpegProcessor:
             if self.output_format not in ["m4b", "m4a"]:
                 logger.warning("Chapters are only possible for m4b/m4a at the moment.")
 
-            project_title = project.get("title", "TTS Project")
-            project_subtitle = project.get("subtitle", "")
-            project_author = project.get("author", "")
+            project_title = project.title or "TTS Project"
+            project_subtitle = project.subtitle
+            project_author = project.author
 
             cmd = (
                 ffmpeg.concat(*infiles, v=0, a=1)
@@ -127,63 +194,16 @@ class FFmpegProcessor:
                 f'Synthesizing project "{project_title}" finished, file saved as "{output_path}".'
             )
 
-            if "cover_image" in project:
-                try:
-                    with Image.open(project["cover_image"]) as image:
-                        if image.format:
-                            image_added = False
-
-                            for output_file in output_files:
-                                output_path_with_image = (
-                                    output_file + "_tmp" + output_extension
-                                )
-                                self._add_image(
-                                    image, output_file, output_path_with_image
-                                )
-                                os.remove(output_file)
-                                os.rename(output_path_with_image, output_file)
-                                image_added = True
-
-                            if image_added:
-                                logger.success(
-                                    "Project image added to final output for all files."
-                                )
-
-                except Image.UnidentifiedImageError:
-                    logger.error(
-                        "Could not add image to final output, image file is not a valid image file."
-                    )
+            self._process_image(project, output_files, output_extension)
 
             if subtitles:
-                srt_output_file = os.path.splitext(output_path)[0] + ".srt"
-                srt_data = []
-                start_time = 0
-
-                for i, segment_data in enumerate(self.item_data):
-                    segment_length = segment_data[0] / 1000
-                    segment_data_str = segment_data[1].strip()
-
-                    if segment_data_str != "":
-                        subtile_data = srt.Subtitle(
-                            index=i + 1,
-                            start=srt.timedelta(microseconds=start_time),
-                            end=srt.timedelta(microseconds=start_time + segment_length),
-                            content=segment_data_str,
-                        )
-                        srt_data.append(subtile_data)
-
-                    start_time += segment_length
-
-                logger.info(f"Writing SRT to {srt_output_file}")
-
-                with open(srt_output_file, "w", encoding="utf-8") as srt_file:
-                    srt_file.write(srt.compose(srt_data))
+                self._add_subtitles(output_path)
 
             probe = ffmpeg.probe(output_path)
             duration = float(probe["format"]["duration"])
             total_duration = str(datetime.timedelta(seconds=int(duration)))
             logger.info(f"Total duration: {total_duration}")
             logger.info(f"Output file: {output_path}")
-            logger.info(f"Chapter count: {len(project['chapters'])}")
+            logger.info(f"Chapter count: {len(project.chapters)}")
             if subtitles:
-                logger.info(f"SRT file: {srt_output_file}")
+                logger.info(f"SRT file: {os.path.splitext(output_path)[0] + '.srt'}")
