@@ -4,6 +4,7 @@ import urllib.request
 
 from tts_arranger.items.element_optimizer import ElementOptimizer
 from tts_arranger.items.tts_chapter import TTS_Chapter
+from tts_arranger.items.tts_element import TTS_Element
 from tts_arranger.items.tts_item import TTS_Item
 from tts_arranger.items.tts_project import TTS_Project
 from tts_arranger.tts_html_converter import (
@@ -186,91 +187,100 @@ def test_merge_items2():
     assert item.elements[4].text == "a b c. d. e."
 
 
-# def test_merge_items3():
-#     html = """<div style="text-align: justify;">Released 1992 for <b>Macintosh</b> <br></div>"""
+def test_merge_items3():
+    html = """<div style="text-align: justify;">Released 1992 for <b>Macintosh</b> <br></div>"""
 
-#     checkers = [Checker([ConditionName("br")], CheckerItemProperties(0, 800))]
+    checkers = [Checker([ConditionName("br")], CheckerItemProperties("0", 800))]
 
-#     reader = TTS_HTML_Reader(custom_checkers=checkers)
-#     reader.load_raw(html)
+    reader = TTS_HTML_Reader(custom_checkers=checkers)
+    reader.load_raw(html)
 
-#     items = reader.project.tts_chapters[0].items
+    items = reader.project.tts_chapters[0].items
 
-#     project = TTS_Project()
-#     project.tts_chapters.append(TTS_Chapter(items))
-#     project.optimize()
-#     items = project.tts_chapters[0].items
+    project = TTS_Project()
+    project.tts_chapters.append(TTS_Chapter(items))
 
-#     assert items[0].text == "Released 1992 for Macintosh"
+    items = project.tts_chapters[0].items
+    item = items[0]
+    item.optimize()
 
-
-# def test_merge_items4():
-#     html = """<span>1</span><span>2</span>"""
-
-#     checkers = [Checker([ConditionName("span")], CheckerItemProperties())]
-
-#     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
-#     reader.load_raw(html)
-
-#     items = reader.project.tts_chapters[0].items
-
-#     project = TTS_Project()
-#     project.tts_chapters.append(TTS_Chapter(items))
-#     project.optimize()
-#     items = project.tts_chapters[0].items
-
-#     assert items[0].text == "12"
+    assert items[0].elements[0].text == "Released 1992 for Macintosh "
 
 
-# def test_merge_items5():
-#     html = """<span>1</span><span>2</span>"""
+def test_merge_items4():
+    html = """<span>1</span><span>2</span>"""
 
-#     checkers = [Checker([ConditionName("span")], CheckerItemProperties())]
+    checkers = [Checker([ConditionName("span")], CheckerItemProperties())]
 
-#     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
-#     reader.load_raw(html)
+    reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
+    reader.load_raw(html)
 
-#     items = reader.project.tts_chapters[0].items
+    items = reader.project.tts_chapters[0].items
 
-#     project = TTS_Project()
-#     project.tts_chapters.append(TTS_Chapter(items))
-#     project.optimize()
-#     items = project.tts_chapters[0].items
+    project = TTS_Project()
+    project.tts_chapters.append(TTS_Chapter(items))
 
-#     assert items[0].text == "12"
-#     # assert items[1].text == '2'
+    items = project.tts_chapters[0].items
+    item = items[0]
+    item.optimize()
 
-
-# def test_nested_tags():
-#     html = """<blockquote><p>test</p></blockquote>"""
-
-#     checkers = [
-#         Checker([ConditionName("p")], CheckerItemProperties(0)),
-#         Checker([ConditionName("blockquote")], CheckerItemProperties(1)),
-#     ]
-
-#     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
-#     reader.load_raw(html)
-
-#     items = reader.project.tts_chapters[0].items
-
-#     project = TTS_Project()
-#     project.tts_chapters.append(TTS_Chapter(items))
-#     project.optimize()
-#     items = project.tts_chapters[0].items
-
-#     assert items[0].speaker_idx == 1
+    assert items[0].elements[0].text == "12"
 
 
-# def test_merge_items_pause():
-#     items = [TTS_Item(length=1000), TTS_Item(length=1000), TTS_Item(length=1000)]
+def test_merge_items5():
+    html = """<span>1</span><span>2</span>"""
 
-#     project = TTS_Project()
-#     project.tts_chapters.append(TTS_Chapter(items))
-#     project.optimize(1500)
-#     items = project.tts_chapters[0].items
+    checkers = [Checker([ConditionName("span")], CheckerItemProperties())]
 
-#     assert items[0].length == 1500
+    reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
+    reader.load_raw(html)
+
+    items = reader.project.tts_chapters[0].items
+
+    project = TTS_Project()
+    project.tts_chapters.append(TTS_Chapter(items))
+
+    items = project.tts_chapters[0].items
+    item = items[0]
+    item.optimize()
+
+    assert item.elements[0].text == "12"
+
+
+def test_nested_tags():
+    html = """<blockquote><p>test</p></blockquote>"""
+
+    checkers = [
+        Checker([ConditionName("p")], CheckerItemProperties("0")),
+        Checker([ConditionName("blockquote")], CheckerItemProperties("1")),
+    ]
+
+    reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
+    reader.load_raw(html)
+
+    items = reader.project.tts_chapters[0].items
+
+    project = TTS_Project()
+    project.tts_chapters.append(TTS_Chapter(items))
+
+    items = project.tts_chapters[0].items
+    item = items[0]
+    item.optimize()
+
+    assert item.elements[0].text == "test"
+    assert item.elements[0].speaker_id == "1"
+
+
+def test_merge_items_pause():
+    elements = [
+        TTS_Element(min_length=1000),
+        TTS_Element(min_length=1000),
+        TTS_Element(min_length=1000),
+    ]
+
+    optimizer = ElementOptimizer.optimize(elements, 1500)
+
+    assert optimizer[0].min_length == 1500
 
 
 # def test_epub1():

@@ -1,15 +1,19 @@
 from tts_arranger.tts_preprocessor import TTS_Preprocessor
 from tts_arranger.tts_reader.text_splitter import TextSplitter
 from tts_arranger.functions import load_default_config
+from tts_arranger.items.tts_element import TTS_Element
+from tts_arranger.items.tts_project import TTS_Project
+from tts_arranger.items.tts_item import TTS_Item
 
 
 def test_uppercase_parts():
     text = "NASA is a space agency."
 
     preprocessor = TTS_Preprocessor()
-    result = preprocessor.preprocess([{"text": text}], {})
+    tts_item = TTS_Item([TTS_Element(text)])
+    result = preprocessor.preprocess([tts_item], {})
 
-    assert result[0]["text"] == "NASA is a space agency. "
+    assert result[0].elements[0].text == "NASA is a space agency. "
 
 
 def test_split_text1():
@@ -36,6 +40,7 @@ def test_split_text1():
     )
     assert result[2].get("type") == "text"
 
+
 def test_split_text2():
     config = load_default_config()
 
@@ -56,7 +61,7 @@ def test_split_text2():
 
     assert result[3].get("text") == "1948"
     assert result[3].get("type") == "year"
-    
+
     assert result[4].get("text") == " Approach, and rightfully so?"
     assert result[4].get("type") == "text"
 
@@ -93,4 +98,3 @@ def test_split_text4():
     assert result[1].get("type") == "year"
     assert result[2].get("text") == ", Columbus sailed the ocean blue."
     assert result[2].get("type") == "text"
-
