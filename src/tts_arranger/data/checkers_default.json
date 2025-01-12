@@ -8,9 +8,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "0",
+                "speaker_id": "0",
                 "pause_after": 750
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -20,7 +21,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "0",
+                "speaker_id": "0",
                 "pause_after": 1000
             },
             "signal": "NEW_ITEM"
@@ -37,7 +38,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
             },
             "signal": "NEW_CHAPTER"
@@ -50,7 +51,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 600
             }
         },
@@ -62,9 +63,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -74,9 +76,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 600
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -86,9 +89,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -98,9 +102,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -110,9 +115,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -122,9 +128,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -134,9 +141,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -146,9 +154,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -158,9 +167,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 750
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -174,7 +184,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 0
             }
         },
@@ -186,7 +196,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 500
             }
         },
@@ -198,7 +208,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 500
             }
         },
@@ -210,7 +220,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 500
             }
         },
@@ -222,7 +232,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 500
             }
         },
@@ -234,7 +244,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 500
             }
         },
@@ -246,7 +256,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 500
             }
         },
@@ -258,7 +268,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 500
             }
         },
@@ -270,7 +280,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 600
             }
         },
@@ -282,7 +292,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
             }
         },
@@ -305,9 +315,10 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1500
-            }
+            },
+            "signal": "NEW_ITEM"
         },
         {
             "conditions": [
@@ -331,7 +342,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "0",
+                "speaker_id": "0",
                 "pause_after": 750
             }
         },
@@ -343,7 +354,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "0",
+                "speaker_id": "0",
                 "pause_after": 1000
             }
         },
@@ -355,7 +366,7 @@
                 }
             ],
             "properties": {
-                "speaker_idx": "1",
+                "speaker_id": "1",
                 "pause_after": 1000
             }
         }
