@@ -382,7 +382,7 @@ def test_merge_items1():
     project = TTS_Project()
     project.tts_chapters.append(TTS_Chapter(items))
     project.optimize()
-    items = project.tts_chapters[0].tts_items
+    items = project.tts_chapters[0].items
 
     assert items[0].text == "1 2 3"
 
@@ -398,7 +398,7 @@ def test_merge_items2():
     project = TTS_Project()
     project.tts_chapters.append(TTS_Chapter(items))
     # project.optimize()
-    items = project.tts_chapters[0].tts_items
+    items = project.tts_chapters[0].items
 
     assert items[0].text == "1 "
     assert items[1].length == 1000
@@ -419,7 +419,7 @@ def test_merge_items3():
     project = TTS_Project()
     project.tts_chapters.append(TTS_Chapter(items))
     project.optimize(max_pause_duration=100)
-    items = project.tts_chapters[0].tts_items
+    items = project.tts_chapters[0].items
 
     assert items[0].text == "1 2"
     assert items[1].length == 100
@@ -435,7 +435,7 @@ def test_merge_items4():
     project = TTS_Project()
     project.tts_chapters.append(TTS_Chapter(tts_items))
     project.optimize(max_pause_duration=100)
-    items = project.tts_chapters[0].tts_items
+    items = project.tts_chapters[0].items
 
     assert items[0].text == "1"
     assert items[2].text == "1234,"
