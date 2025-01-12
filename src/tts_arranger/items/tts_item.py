@@ -1,42 +1,59 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, List
+
+from tts_arranger.items.tts_element import TTS_Element
 
 
 @dataclass
-class TTS_Item():
-    """
-    Represents a TTS item containing various information.
-
-    :param text: The text to be synthesized. Can be left empty in combination with length > 0 to create a pause.
-    :type text: str
-
-    :param speaker_idx: The index of the speaker to be used if no speaker name is given. Wraps around based on the actual available speaker indexes per model.
-    :type speaker_idx: int
-
-    :param length: The minimum length in milliseconds. Will be padded if the actual synthesized text fragment is shorter, and ignored if it is longer.
-    :type length: int
-    """
-    text: str = ''
-    speaker_idx: int = 0
-    length: int = 0
+class TTS_Item:
+    elements: List[TTS_Element] = field(default_factory=list)
 
     @classmethod
-    def from_json(cls, json_data: dict) -> 'TTS_Item':
-        """
-        Class method to load a TTS item from a JSON object.
+    def from_json(cls: type["TTS_Item"], json_data: Dict[str, Any]) -> "TTS_Item":
+        elements = [
+            TTS_Element.from_json(elem) for elem in json_data.get("elements", [])
+        ]
+        return cls(elements=elements)
 
-        :param json_data: A dictionary representing the JSON object to be loaded.
-        :type json_data: dict
+    def to_json(self) -> Dict[str, Any]:
+        return asdict(self)
 
-        :return: A TTS item object loaded from the JSON object.
-        :rtype: TTS_Item
-        """
-        return cls(
-            text=json_data.get('text', ''),
-            # speaker_idx=json_data.get('speaker_idx', 0),
-            length=json_data.get('min_length', 0),
-        )
+    def __post_init__(self) -> None:
+        # Additional initialization if needed
+        pass
 
-    def __post_init__(self):
-        # Mark pauses by invalidating speaker index
-        if self.text == '' and self.length > 0:
-            self.speaker_idx = -1
+    def __str__(self) -> str:
+        return " ".join([elem.text for elem in self.elements])
+
+    def __len__(self) -> int:
+        return len(self.elements)
+
+    def __getitem__(self, key: int) -> TTS_Element:
+        return self.elements[key]
+
+    def __setitem__(self, key: int, value: TTS_Element) -> None:
+        self.elements[key] = value
+
+    def __delitem__(self, key: int) -> None:
+        del self.elements[key]
+
+    def insert(self, index: int, value: TTS_Element) -> None:
+        self.elements.insert(index, value)
+
+    def append(self, value: TTS_Element) -> None:
+        self.elements.append(value)
+
+    def extend(self, values: List[TTS_Element]) -> None:
+        self.elements.extend(values)
+
+    def remove(self, value: TTS_Element) -> None:
+        self.elements.remove(value)
+
+    def pop(self, index: int = -1) -> TTS_Element:
+        return self.elements.pop(index)
+
+    def clear(self) -> None:
+        self.elements.clear()
+
+    def copy(self) -> "TTS_Item":
+        return TTS_Item(elements=self.elements.copy())

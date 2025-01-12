@@ -1,124 +1,80 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import asdict, dataclass, field
+from typing import Optional, List, Dict, Any
 
-import numpy as np
 
-from .tts_item import TTS_Item  # type: ignore
+from tts_arranger.items.tts_item import TTS_Item  # type: ignore
+from tts_arranger.items.element_optimizer import ElementOptimizer  # type: ignore
 
 
 @dataclass
-class TTS_Chapter():
-    """
-    A data class representing a TTS chapter.
-
-    :param tts_items: A list of TTS items representing the text items to be synthesized into audio. Default value is an empty list.
-    :type tts_items: list[TTS_Item]
-
-    :param title: A string representing the chapter title. Default value is an empty string.
-    :type title: str
-
-    :param start_time: A float representing the start time of the chapter in nanoseconds. Default value is 0.
-    :type start_time: float
-
-    :param end_time: A float representing the end time of the chapter in nanoseconds. Default value is 0.
-    :type end_time: float
-
-    :param audio: An numpy array representing the synthesized audio for the chapter. Default value is an empty numpy array.
-    :type audio: np.ndarray
-    """
-    tts_items: list[TTS_Item] = field(default_factory=list)
-
-    title: str = ''
-    start_time = 0
-    end_time = 0
-    audio = np.array([0], dtype=np.float32)
+class TTS_Chapter:
+    items: List[TTS_Item] = field(default_factory=list)
+    title: str = ""
+    start_time: int = 0
+    end_time: int = 0
 
     @classmethod
-    def from_json(cls, json_data: dict) -> 'TTS_Chapter':
-        """
-        Class method to load a TTS chapter from a JSON object.
-
-        :param json_data: A dictionary representing the JSON object to be loaded.
-        :type json_data: dict
-
-        :return: A TTS chapter object loaded from the JSON object.
-        :rtype: TTS_Chapter
-        """
-        tts_items = [TTS_Item.from_json(item) for item in json_data.get('items', [])]
+    def from_json(cls, json_data: Dict[str, Any]) -> "TTS_Chapter":
+        tts_items = [TTS_Item.from_json(item) for item in json_data.get("items", [])]
 
         return cls(
-            tts_items=tts_items,
-            title=json_data.get('title', ''),
+            items=tts_items,
+            title=json_data.get("title", ""),
         )
 
-    def _merge_items(self, tts_items: list[TTS_Item]) -> list[TTS_Item]:
-        final_items: list[TTS_Item] = []
-        merged_item: Optional[TTS_Item] = None
+    def to_json(self) -> Dict[str, Any]:
+        return asdict(self)
 
-        for tts_item in tts_items:
-            if not merged_item:
-                # Scanning not started
-                merged_item = tts_item
-            elif merged_item.speaker_idx == tts_item.speaker_idx:
-                # Starting item and current are similar, add to merge item text and length
-                merged_item = merged_item.__class__(
-                    text=f'{merged_item.text}{tts_item.text}',
-                    speaker_idx=merged_item.speaker_idx,
-                    length=merged_item.length + tts_item.length
-                )
-            else:
-                # Starting item and current are not similar, add last and current item, set this item as new starting item
-                final_items.append(merged_item)
-                merged_item = tts_item
+    def optimize(self, max_pause_duration: int = 0) -> None:
+        # self.tts_items = ItemOptimizer.optimize(self.tts_items, max_pause_duration)
+        pass
 
-        if merged_item is not None:
-            final_items.append(merged_item)
+    def set_title(self, only_empty: bool = True, max_length: int = 100) -> None:
+        # if len(self.tts_items) > 0:
+        #     self.title = (
+        #         self.tts_items[0].text[:max_length] + "…"
+        #         if len(self.tts_items[0].text) > max_length
+        #         else self.tts_items[0].text
+        #     )
+        pass
 
-        return final_items
+    def __str__(self) -> str:
+        return " ".join([str(item) for item in self.items])
 
-    def optimize(self, max_pause_duration=0) -> None:
-        """
-        Merge similar items for smoother synthesizing and avoiding unwanted pauses
+    def __len__(self) -> int:
+        return len(self.items)
 
-        :param max_pause_duration: Maximum duration auf merged pauses
-        :type max_pause_duration: int
+    def __getitem__(self, key: int) -> TTS_Item:
+        return self.items[key]
 
-        :return: None
-        """
+    def __setitem__(self, key: int, value: TTS_Item) -> None:
+        self.items[key] = value
 
-        final_items: list[TTS_Item] = self._merge_items(self.tts_items)
+    def __delitem__(self, key: int) -> None:
+        del self.items[key]
 
-        non_empty_items: list[TTS_Item] = []
+    def insert(self, index: int, value: TTS_Item) -> None:
+        self.items.insert(index, value)
 
-        # Remove remaining empty items
-        for final_item in final_items:
-            if final_item.text.strip() or final_item.speaker_idx == -1:
-                final_item.text = final_item.text.strip()
-                non_empty_items.append(final_item)
+    def append(self, value: TTS_Item) -> None:
+        self.items.append(value)
 
-        # Merge one final time for remaining pauses
-        non_empty_items = self._merge_items(non_empty_items)
+    def extend(self, values: List[TTS_Item]) -> None:
+        self.items.extend(values)
 
-        # Limit pause duration for pause items, ignore if max_pause_duration == 0
-        for non_empty_item in non_empty_items:
-            if non_empty_item.speaker_idx == -1 and max_pause_duration > 0:
-                if non_empty_item.length > max_pause_duration:
-                    non_empty_item.length = max_pause_duration
+    def remove(self, value: TTS_Item) -> None:
+        self.items.remove(value)
 
-        self.tts_items = non_empty_items
+    def pop(self, index: int = -1) -> TTS_Item:
+        return self.items.pop(index)
 
-    def set_title(self, only_empty=True, max_length=100) -> None:
-        """
-        Set title to the text of the first item
+    def clear(self) -> None:
+        self.items.clear()
 
-        :param only_empty: Only set empty titles
-        :type only_empty: bool
-
-        :param max_length: Maximus title length, a '…' will be added after this
-        :type max_length: int
-
-        :return: None
-        """
-
-        if len(self.tts_items) > 0:
-            self.title = self.tts_items[0].text[:max_length] + '…' if len(self.tts_items[0].text) > max_length else self.tts_items[0].text
+    def copy(self) -> "TTS_Chapter":
+        return TTS_Chapter(
+            items=self.items.copy(),
+            title=self.title,
+            start_time=self.start_time,
+            end_time=self.end_time,
+        )
