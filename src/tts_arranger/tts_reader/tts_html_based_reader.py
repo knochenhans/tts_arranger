@@ -97,7 +97,7 @@ class TTS_HTML_Based_Reader(TTS_Abstract_Reader):
                 # Set title for added chapters
                 # TODO: Figure out how to handle multiple added chapters
                 if chapter_title is not None:
-                    self.project.tts_chapters[-1].title = chapter_title
+                    self.project.chapters[-1].title = chapter_title
 
                 self.project.author = self.author
                 self.project.title = self.title

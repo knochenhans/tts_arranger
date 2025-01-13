@@ -31,7 +31,7 @@ class TTS_Project:
     def from_json_file(cls, filename: str = "") -> "TTS_Project":
         if filename:
             try:
-                with open(filename, "r") as file:
+                with open(filename, "r", encoding="utf-8") as file:
                     json_data = file.read()
                     return cls.from_json(json_data)
             except IOError as e:
@@ -40,9 +40,9 @@ class TTS_Project:
         return TTS_Project()
 
     @classmethod
-    def from_json(cls, json_data: str) -> "TTS_Project":
+    def from_json(cls, json_str: str) -> "TTS_Project":
         try:
-            data = json.loads(json_data)
+            data = json.loads(json_str)
             return cls(
                 chapters=[
                     TTS_Chapter.from_json(chapter)
@@ -50,7 +50,8 @@ class TTS_Project:
                 ],
                 title=data.get("title", ""),
                 subtitle=data.get("subtitle", ""),
-                date=parser.parse(data.get("date", datetime.datetime.min.isoformat())),
+                date=parser.parse(
+                    data.get("date", datetime.datetime.min.isoformat())),
                 author=data.get("author", ""),
                 lang_code=data.get("lang_code", "en"),
                 image_bytes=base64.b64decode(data.get("image_bytes", "")),
@@ -64,7 +65,8 @@ class TTS_Project:
         try:
             data = asdict(self)
             data["date"] = self.date.isoformat()
-            data["image_bytes"] = base64.b64encode(self.image_bytes).decode("utf-8")
+            data["image_bytes"] = base64.b64encode(
+                self.image_bytes).decode("utf-8")
             data["chapters"] = [chapter.to_json() for chapter in self.chapters]
             return json.dumps(data)
         except (TypeError, ValueError) as e:
@@ -98,37 +100,40 @@ class TTS_Project:
                 requests.get(image_url, headers=headers).content
             )
 
-    # def _check_empty_chapter(self, chapter: TTS_Chapter) -> bool:
-    #     for item in chapter.tts_items:
-    #         if item.text.strip() != "":
-    #             return False
-    #     return True
+    def _check_empty_chapter(self, chapter: TTS_Chapter) -> bool:
+        for item in chapter.items:
+            for element in item.elements:
+                if element.text.strip() != "":
+                    return False
+        return True
 
-    # def clean_empty_chapters(self) -> None:
-    #     final_chapters: List[TTS_Chapter] = []
+    def clean_empty_chapters(self) -> None:
+        final_chapters: List[TTS_Chapter] = []
 
-    #     # for chapter in self.tts_chapters:
-    #     #     if len(chapter.tts_items) > 0:
-    #     #         final_chapters.append(chapter)
+        # for chapter in self.chapters:
+        #     if len(chapter.items) > 0:
+        #         final_chapters.append(chapter)
 
-    #     # Remove empty chapters
-    #     for chapter in self.tts_chapters:
-    #         final_items = []
-    #         for item in chapter.tts_items:
-    #             if item.text.strip() != "" or (
-    #                 item.speaker_idx == -1 and item.length > 0
-    #             ):
-    #                 final_items.append(item)
+        # Remove empty chapters
+        for chapter in self.chapters:
+            final_items = []
+            for item in chapter.items:
+                for element in item.elements:
+                    if element.text.strip() != "" or (
+                        element.speaker_id == "" and element.min_length > 0
+                    ):
+                        final_items.append(item)
+                        break
 
-    #         # Check if remaining items are all pauses
-    #         if len(final_items) > 1:
-    #             if not self._check_empty_chapter(TTS_Chapter(final_items)):
-    #                 final_chapters.append(chapter)
+            # Check if remaining items are all pauses
+            if len(final_items) > 1:
+                if not self._check_empty_chapter(TTS_Chapter(final_items)):
+                    final_chapters.append(chapter)
 
-    #     self.tts_chapters = final_chapters
+        self.chapters = final_chapters
 
     # def optimize(self, max_pause_duration: int = 0) -> None:
-    #     for chapter in self.tts_chapters:
+    #     for chapter in self.chapters:
     #         chapter.optimize(max_pause_duration)
 
     def set_titles(self, only_empty: bool = True, max_length: int = 100) -> None:
