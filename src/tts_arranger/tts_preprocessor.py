@@ -11,55 +11,6 @@ class TTS_Preprocessor:
         pass
 
     def preprocess(self, tts_items: List[TTS_Item], replace: dict) -> List[TTS_Item]:
-        simple_replacements = [
-            ("\u2026", "..."),
-            ("\u2013", " - "),
-            ("\u00a0", " "),
-            (" - ", " — "),
-            ("–", " — "),
-            (";", ". "),
-            (": ", ". "),
-            (":", ". "),
-            ("/", " slash "),
-            ("\\", " backslash "),
-            ("<", " less than "),
-            (">", " greater than "),
-            ("=", " equals "),
-            ("≠", " not equals "),
-            ("≈", " approximately "),
-            ("≤", " less than or equal to "),
-            ("≥", " greater than or equal to "),
-            ("±", " plus minus "),
-            ("×", " times "),
-            ("÷", " divided by "),
-            ("∞", " infinity "),
-            ("√", " square root "),
-            ("∛", " cube root "),
-            ("∜", " fourth root "),
-            ("∑", " sum "),
-            ("∏", " product "),
-            ("∫", " integral "),
-            ("∂", " partial "),
-            ("∆", " delta "),
-            ("$", " dollar "),
-            ("€", " euro "),
-            ("£", " pound "),
-            ("¥", " yen "),
-            ("¢", " cent "),
-            ("°C", " degrees Celsius "),
-            ("°", " degrees "),
-            ("℃", " degrees Celsius "),
-            ("(", "\n\n"),
-            (")", "\n\n"),
-            ("[", "\n\n"),
-            ("]", "\n\n"),
-            ("…?", "?"),
-            ("…!", "!"),
-            ("…", "."),
-            ("!", "."),
-            ("\r", "\n"),
-        ]
-
         words_to_keep_upper = [
             "NASA",
             "FBI",
@@ -81,41 +32,8 @@ class TTS_Preprocessor:
         for item in tts_items:
             for element in item.elements:
                 if element.text:
-                    # Remove Japanese characters etc.
-                    element.text = "".join(
-                        filter(lambda character: ord(character) < 0x3000, element.text)
-                    )
-
-                    # Remove commas in numbers, when used as thousands separator, make sure the all parts after the first are three digits long
-                    while re.search(r"(\d),(\d{3})", element.text):
-                        element.text = re.sub(r"(\d),(\d{3})", r"\1\2", element.text)
-
-                    # Replace ordinal numbers with words
-                    element.text = re.sub(
-                        r"\b(\d+)(st|nd|rd|th)\b",
-                        lambda x: num2words(x.group(1), to="ordinal"),
-                        element.text,
-                    )
-
-                    # Find and replace year numbers when preceded by month names or "in" with words
-                    element.text = re.sub(
-                        r"\b(January|February|March|April|May|June|July|August|September|October|November|December|in) (\d{1,2}, )?(\d{4})\b",
-                        lambda x: f"{x.group(1)} {x.group(2) or ''}{num2words(x.group(3), to='year')}",
-                        element.text,
-                    )
-
-                    # Replace numbers with words, including decimal numbers
-                    element.text = re.sub(
-                        r"\b\d+(\.\d+)?\b", lambda x: num2words(x.group()), element.text
-                    )
-
-                    # Replace problematic characters, abbreviations etc
-                    for k, v in replace.items():
-                        element.text = re.sub(k, v, element.text)
-
-                    # Apply simple replacements
-                    for old, new in simple_replacements:
-                        element.text = element.text.replace(old, new)
+                    element.text = self._cleanup_numbers(element.text)
+                    element.text = self._apply_basic_replacements(element.text, replace)
 
                     # Remove whitespace before punctuation
                     element.text = re.sub(r"\s+([.,!?])", r"\1", element.text)
@@ -153,9 +71,105 @@ class TTS_Preprocessor:
                     )
 
         for tts_item in tts_items:
-            tts_item.elements = optimizer.optimize(tts_item.elements, max_pause_duration=1500)
+            tts_item.elements = optimizer.optimize(
+                tts_item.elements, max_pause_duration=1500
+            )
 
         return tts_items
+
+    def _apply_basic_replacements(self, text: str, replace: dict) -> str:
+        # Remove Japanese characters etc.
+        text = "".join(filter(lambda character: ord(character) < 0x3000, text))
+
+        # Replace problematic characters, abbreviations etc
+        for k, v in replace.items():
+            text = re.sub(k, v, text)
+
+        simple_replacements = [
+            ("\u2026", "..."),
+            ("\u2013", " - "),
+            ("\u00a0", " "),
+            (" - ", " — "),
+            ("–", " — "),
+            (";", ". "),
+            (": ", ". "),
+            (":", ". "),
+            ("(", "\n\n"),
+            (")", "\n\n"),
+            ("[", "\n\n"),
+            ("]", "\n\n"),
+            ("…?", "?"),
+            ("…!", "!"),
+            ("…", "."),
+            ("!", "."),
+            ("\r", "\n"),
+        ]
+
+        special_replacements = [
+            ("/", "slash"),
+            ("\\", "backslash"),
+            ("<", "less than"),
+            (">", "greater than"),
+            ("=", "equals"),
+            ("≠", "not equals"),
+            ("≈", "approximately"),
+            ("≤", "less than or equal to"),
+            ("≥", "greater than or equal to"),
+            ("±", "plus minus"),
+            ("×", "times"),
+            ("÷", "divided by"),
+            ("∞", "infinity"),
+            ("√", "square root"),
+            ("∛", "cube root"),
+            ("∜", "fourth root"),
+            ("∑", "sum"),
+            ("∏", "product"),
+            ("∫", "integral"),
+            ("∂", "partial"),
+            ("∆", "delta"),
+            ("$", "dollar"),
+            ("€", "euro"),
+            ("£", "pound"),
+            ("¥", "yen"),
+            ("¢", "cent"),
+            ("°C", "degrees Celsius"),
+            ("°", "degrees"),
+            ("℃", "degrees Celsius"),
+        ]
+
+        # Apply simple replacements
+        for old, new in simple_replacements:
+            text = text.replace(old, new)
+
+        # Apply special replacements
+        for old, new in special_replacements:
+            text = text.replace(old, " " + new + " ")
+
+        return text
+
+    def _cleanup_numbers(self, text: str) -> str:
+        # Remove commas in numbers, when used as thousands separator, make sure the all parts after the first are three digits long
+        while re.search(r"(\d),(\d{3})", text):
+            text = re.sub(r"(\d),(\d{3})", r"\1\2", text)
+
+        # Replace ordinal numbers with words
+        text = re.sub(
+            r"\b(\d+)(st|nd|rd|th)\b",
+            lambda x: num2words(x.group(1), to="ordinal"),
+            text,
+        )
+
+        # Find and replace year numbers when preceded by month names or "in" with words
+        text = re.sub(
+            r"\b(January|February|March|April|May|June|July|August|September|October|November|December|in) (\d{1,2}, )?(\d{4})\b",
+            lambda x: f"{x.group(1)} {x.group(2) or ''}{num2words(x.group(3), to='year')}",
+            text,
+        )
+
+        # Replace numbers with words, including decimal numbers
+        text = re.sub(r"\b\d+(\.\d+)?\b", lambda x: num2words(x.group()), text)
+
+        return text
 
     def optimize(self, tts_items: list[dict], max_pause_duration=0) -> list[dict]:
         """
