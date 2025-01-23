@@ -4,7 +4,7 @@ import os
 from enum import Enum, auto
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from loguru import logger
 
@@ -71,7 +71,7 @@ class TTS_HTML_Converter(HTMLParser):
             logger.info(f"{len(custom_checkers)} custom checker entries added.")
 
         self.checker_results_stack: list[
-            tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]
+            Tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]
         ] = []
 
         # Add checkers from custom files
@@ -98,6 +98,7 @@ class TTS_HTML_Converter(HTMLParser):
 
         self.project = TTS_Project()
         # self.current_item: Optional[TTS_Item] = None
+        self.current_tag: Optional[Tuple[str, List[str]]] = None
 
     def tag_to_element(self, name: str, attrs: list) -> Element:
         """
@@ -158,30 +159,23 @@ class TTS_HTML_Converter(HTMLParser):
                     properties.speaker_id = parent_properties.speaker_id
 
         self.checker_results_stack.append((result, signal, properties))
+        self.current_tag = (name, attrs)
 
-    def handle_data(self, data: str) -> None:
+    def handle_data(self, text: str) -> None:
         """
         Handles the data between two HTML tags.
 
         :param data: The data between two HTML tags.
         :type data: str.
         """
-        (_, signal, properties) = self.checker_results_stack[-1]
-
-        # match signal:
-        #     case CHECKER_SIGNAL.IGNORE:
-        #         return
-        #     case CHECKER_SIGNAL.NEW_CHAPTER:
-        #         # Prepare a new chapter
-        #         self.current_chapter = TTS_Chapter()
-        #         self.project.append(self.current_chapter)
-        #     case CHECKER_SIGNAL.NEW_ITEM:
-        #         # Prepare a new item
-        #         self.current_item = TTS_Item()
-        #         self.project.add_item(self.current_item)
+        (_, _, properties) = self.checker_results_stack[-1]
 
         if properties:
-            self.project.add_element(TTS_Element(data, properties.speaker_id))
+            self.project.add_element(
+                TTS_Element(
+                    text, properties.speaker_id, custom_data={"tag": self.current_tag}
+                )
+            )
 
     def handle_endtag(self, name: str) -> None:
         """
@@ -190,6 +184,8 @@ class TTS_HTML_Converter(HTMLParser):
         :param name: The name of the HTML tag.
         :type name: str
         """
+        self.current_tag = None
+
         (result, signal, properties) = self.checker_results_stack.pop()
 
         add_pause = False
@@ -229,7 +225,7 @@ class TTS_HTML_Converter(HTMLParser):
 
     def _check_elem(
         self, elem: Element, checkers: list[Checker]
-    ) -> tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]:
+    ) -> Tuple[CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, Optional[CheckerItemProperties]]:
         """
         Checks an HTML element against a list of Checkers.
 
@@ -239,7 +235,7 @@ class TTS_HTML_Converter(HTMLParser):
         :param checkers: A list of Checker objects to use for checking the HTML element.
         :type checkers: checkers: list[Checker]
 
-        :return: A tuple of the CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, and CheckerItemProperties objects representing the result of the check.
+        :return: A Tuple of the CHECK_SPEAKER_RESULT, CHECKER_SIGNAL, and CheckerItemProperties objects representing the result of the check.
         """
         for checker in checkers:
             result, signal, properties = checker.determine(elem)
