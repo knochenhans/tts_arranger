@@ -58,9 +58,7 @@ class SSMLBuilder:
         )
         if creators:
             dc_creator = ET.SubElement(rdf_description, "dc:creator")
-            rdf_seq = ET.SubElement(
-                dc_creator, "rdf:Seq", ID="CreatorsAlphabeticalBySurname"
-            )
+            rdf_seq = ET.SubElement(dc_creator, "rdf:Seq", ID="Creators")
             for creator in creators:
                 ET.SubElement(rdf_seq, "rdf:li").text = creator
 
@@ -78,7 +76,7 @@ class SSMLBuilder:
         self.current_voice.text = (self.current_voice.text or "") + text
         return self
 
-    def add_paragraph(self, text: str) -> "SSMLBuilder":
+    def add_paragraph(self, text: Optional[str] = "") -> "SSMLBuilder":
         if self.current_voice is None:
             raise ValueError("Voice must be set before adding paragraph.")
         p = ET.SubElement(self.current_voice, "p")
