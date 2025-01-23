@@ -412,7 +412,7 @@ def tts_project_to_json(
 
     chapters_dict: List[Dict[str, Any]] = []
 
-    for chapter in tts_project.tts_chapters:
+    for chapter in tts_project.chapters:
         items_dict: List[Dict[str, Any]] = []
 
         for item in chapter.tts_items:

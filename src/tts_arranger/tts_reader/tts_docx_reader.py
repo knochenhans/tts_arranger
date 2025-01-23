@@ -39,6 +39,6 @@ class TTS_Docx_Reader(TTS_HTML_Based_Reader):
             self.project.clean_empty_chapters()
 
             # Use first item as chapter and document title
-            title = self.project.tts_chapters[0].tts_items[0].text
-            self.project.tts_chapters[0].title = title
+            title = self.project.chapters[0].items[0].elements[0].text
+            self.project.chapters[0].title = title
             self.project.title = title
