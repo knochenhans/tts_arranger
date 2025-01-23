@@ -7,6 +7,8 @@ from tts_arranger.items.tts_item import TTS_Item  # type: ignore
 
 
 class TTS_Preprocessor:
+    inline_elements = ["span", "a", "b", "i", "u", "strong", "em", "sub", "sup", "mark"]
+
     def __init__(self) -> None:
         pass
 
@@ -38,8 +40,12 @@ class TTS_Preprocessor:
                     # Remove whitespace before punctuation
                     element.text = re.sub(r"\s+([.,!?])", r"\1", element.text)
 
-                    # Make sure each item ends with space
-                    element.text = element.text.strip() + " "
+                    # Make sure each item ends with space, if not an inline element
+                    if element.custom_data:
+                        tag = element.custom_data.get("tag", "")
+                        if tag:
+                            if tag[0] not in self.inline_elements:
+                                element.text = element.text.strip() + " "
 
                     # replace single quote quotation marks with double quote, if beginning and end are found
                     element.text = re.sub(
