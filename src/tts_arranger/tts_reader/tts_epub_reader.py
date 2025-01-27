@@ -2,7 +2,7 @@ import base64
 import datetime
 import json
 import os
-from dateutil.parser import ParserError
+from dateutil.parser import ParserError  # type: ignore
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -84,8 +84,7 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
                 soup = BeautifulSoup(epub_item.content, "xml")
 
                 if isinstance(soup, PageElement):
-                    added_chapters_count = self.html_converter.add_from_html(
-                        str(soup))
+                    added_chapters_count = self.html_converter.add_from_html(str(soup))
 
                     # If no chapter titel is found, use the first item
                     # chapter_title = self.get_chapter_title(book.toc, epub_item.file_name)
@@ -160,8 +159,7 @@ class TTS_EPUB_Reader(TTS_HTML_Based_Reader):
         for epub_item in book.get_items():
             if epub_item.media_type.startswith("image/"):
                 if epub_item.content:
-                    self.project.image_bytes = base64.b64encode(
-                        epub_item.content)
+                    self.project.image_bytes = base64.b64encode(epub_item.content)
                     break
 
         self.project.author = author
