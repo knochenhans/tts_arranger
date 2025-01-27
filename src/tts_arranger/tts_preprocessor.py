@@ -34,8 +34,8 @@ class TTS_Preprocessor:
         for item in tts_items:
             for element in item.elements:
                 if element.text:
-                    element.text = self._cleanup_numbers(element.text)
-                    element.text = self._apply_basic_replacements(element.text, replace)
+                    # element.text = self._cleanup_numbers(element.text)
+                    # element.text = self._apply_basic_replacements(element.text, replace)
 
                     # Remove whitespace before punctuation
                     element.text = re.sub(r"\s+([.,!?])", r"\1", element.text)
@@ -67,14 +67,14 @@ class TTS_Preprocessor:
                     )
 
                     # Find substrings that only contain uppercase letter words with more than one letter and replace them with lowercase, ignore whitespace
-                    element.text = re.sub(
-                        r"\b[A-Z]{2,}\b(?:\s+\b[A-Z]{2,}\b)*",
-                        lambda x: " ".join(
-                            word if word in words_to_keep_upper else word.lower()
-                            for word in re.findall(r"\b[A-Z]{2,}\b", x.group())
-                        ),
-                        element.text,
-                    )
+                    # element.text = re.sub(
+                    #     r"\b[A-Z]{2,}\b(?:\s+\b[A-Z]{2,}\b)*",
+                    #     lambda x: " ".join(
+                    #         word if word in words_to_keep_upper else word.lower()
+                    #         for word in re.findall(r"\b[A-Z]{2,}\b", x.group())
+                    #     ),
+                    #     element.text,
+                    # )
 
         for tts_item in tts_items:
             tts_item.elements = optimizer.optimize(
