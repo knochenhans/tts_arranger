@@ -6,10 +6,17 @@ import numpy as np
 from platformdirs import user_data_dir
 import soundfile as sf  # type: ignore
 import time
+import asyncio
 
 from tts_arranger.functions import load_default_voices  # type: ignore
 from .tts_backend import TTSBackend
 import edge_tts  # type: ignore
+from edge_tts.exceptions import (
+    NoAudioReceived,
+    UnexpectedResponse,
+    UnknownResponse,
+    WebSocketError,
+)
 from tqdm import tqdm
 from loguru import logger
 import unicodedata
@@ -39,13 +46,8 @@ class TTSBackendEdge(TTSBackend):
     def cleanup(self) -> None:
         pass
 
-    # def preprocess(
-    #     self, text_items: List[Dict[str, str | float]]
-    # ) -> List[Dict[str, str | float]]:
-        
-
-    def synthesize_batch(self, text_items: List[TextItem]) -> List[np.ndarray]:
-        numpy_waves: List[np.ndarray] = []
+    async def synthesize_batch(self, text_items: List[TextItem]) -> None:
+        self.results = []
 
         loop_obj = tqdm(text_items, desc="Synthesizing")
 
@@ -54,7 +56,7 @@ class TTSBackendEdge(TTSBackend):
                 not text_item.get("text", "")
                 and float(text_item.get("min_length", 0)) > 0
             ):
-                numpy_waves.append(
+                self.results.append(
                     np.zeros(
                         int(
                             text_item["min_length"]
@@ -106,7 +108,7 @@ class TTSBackendEdge(TTSBackend):
                 try:
                     communicate = edge_tts.Communicate(text, voice_id)
                     start_time = time.time()
-                    for chunk in communicate.stream_sync():
+                    async for chunk in communicate.stream():
                         if time.time() - start_time > 600:  # 10 minutes
                             logger.error(
                                 f"Stream sync taking too long for text item: {text_item}"
@@ -116,22 +118,33 @@ class TTSBackendEdge(TTSBackend):
                             if "data" in chunk:
                                 audio_bytes.write(chunk["data"])
                     break  # Exit loop if successful
+                except (
+                    NoAudioReceived,
+                    UnexpectedResponse,
+                    UnknownResponse,
+                    WebSocketError,
+                ) as e:
+                    logger.error(f"{type(e).__name__} for text: {text}")
+                    if attempt < 2:
+                        logger.info("Retrying in 60 seconds...")
+                        await asyncio.sleep(60)
+                    else:
+                        logger.error(
+                            f"All attempts to synthesize text failed due to {type(e).__name__}. Exiting."
+                        )
+                        raise SystemExit(e)
                 except Exception as e:
                     logger.error(f"Error synthesizing text: {e} for text: {text}")
                     if attempt < 2:  # Wait only if it's not the last attempt
                         logger.info("Retrying in 60 seconds...")
-                        time.sleep(60)
+                        await asyncio.sleep(60)
                     else:
                         logger.error("All attempts to synthesize text failed. Exiting.")
-                        raise SystemExit(
-                            e
-                        )  # Raise the exception and exit if all attempts fail
+                        raise SystemExit(e)
 
             audio_bytes.seek(0)
             audio_data, _ = sf.read(io.BytesIO(audio_bytes.getvalue()))
-            numpy_waves.append(audio_data)
+            self.results.append(audio_data)
 
             if self.progress_callback:
                 self.progress_callback(i)
-
-        return numpy_waves

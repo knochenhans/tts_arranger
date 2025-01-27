@@ -118,7 +118,7 @@ class TTS_Processor:
 
         return merged_sentences
 
-    def synthesize_chapters(
+    async def synthesize_chapters(
         self,
         chapters: List[TTS_Chapter],
         temp_dir: str = "/tmp",
@@ -201,7 +201,7 @@ class TTS_Processor:
 
                 items_to_process.append(item)
 
-            temp_files, segment_lengths = self.process_items(items_to_process)
+            temp_files, segment_lengths = await self.process_items(items_to_process)
 
             input_files = [ffmpeg.input(file) for file in temp_files]
             ffmpeg.concat(*input_files, v=0, a=1).output(
@@ -315,13 +315,14 @@ class TTS_Processor:
 
         return numpy_wav
 
-    def process_items(self, items: List[TextItem]) -> Tuple[List[str], List[float]]:
+    async def process_items(self, items: List[TextItem]) -> Tuple[List[str], List[float]]:
         temp_files = []
         segment_lengths = []
 
         if isinstance(self.backend, TTSBackend):
             self.current_item_count = len(items)
-            numpy_segments = self.backend.synthesize_batch(items)
+            await self.backend.synthesize_batch(items)
+            numpy_segments = self.backend.results
 
             for i, numpy_segment in enumerate(numpy_segments):
                 min_length = items[i].get("min_length", 0)
@@ -338,7 +339,7 @@ class TTS_Processor:
 
         return temp_files, segment_lengths
 
-    def synthesize_project(
+    async def synthesize_project(
         self,
         project: TTS_Project,
         title: str = "",
@@ -378,7 +379,7 @@ class TTS_Processor:
 
         with tempfile.TemporaryDirectory(dir=temp_dir_prefix) as temp_dir:
             try:
-                self.synthesize_chapters(chapters, temp_dir)
+                await self.synthesize_chapters(chapters, temp_dir)
             except Exception as e:
                 logger.error(f"Error synthesizing project: {e}")
                 raise

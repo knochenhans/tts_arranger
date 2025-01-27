@@ -9,10 +9,12 @@ class TTSBackend:
     def __init__(self, config: str):
         self.config = config
 
+        self.results: List[np.ndarray] = []
+
     def synthesize(self, text: str, config: Optional[dict] = None) -> bytes:
         return b""
 
-    def synthesize_batch(self, text_items: List[TextItem]) -> List[np.ndarray]:
+    async def synthesize_batch(self, text_items: List[TextItem]) -> List[np.ndarray]:
         return []
 
     def cleanup(self):
