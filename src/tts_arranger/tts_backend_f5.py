@@ -48,7 +48,7 @@ class TTSBackendF5(TTSBackend):
         self.vocoder: Any = self.load_vocoder()
         self.ema_model: Any = self.load_model()
 
-        self.voices: Dict[str, Dict[str, Any]] = load_default_voices()
+        self.voices: Dict[str, Dict[str, Any]] = load_default_voices(backend="f5")
 
         logger.info("F5 TTS backend initialized")
 

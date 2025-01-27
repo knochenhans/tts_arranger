@@ -25,7 +25,6 @@ from tts_arranger.items.tts_element import TTS_Element
 
 from .items.tts_project import TTS_Project  # type: ignore
 
-from .tts_backend_f5 import TTSBackendF5
 from .ffmpeg_processor import FFmpegProcessor
 
 TextItem = Dict[str, str | float]
@@ -38,8 +37,7 @@ class TTS_Processor:
         output_format: str = "m4b",
         backend_config: Optional[Dict[str, Any]] = None,
         speaker_id_mapping: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[Callable[[
-            int, int, int, int], None]] = None,
+        progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
     ) -> None:
         self.NANOSECONDS_IN_ONE_SECOND = 1e9
 
@@ -60,10 +58,10 @@ class TTS_Processor:
         else:
             self.backend_config = load_default_config()
 
-        if speaker_id_mapping:
+        if speaker_id_mapping and speaker_id_mapping != {}:
             self.backend_config["speaker_id_mapping"] = speaker_id_mapping
 
-        self.sample_rate = self.backend_config.get("sample_rate", 22050)
+        self.sample_rate = self.backend_config.get("sample_rate", 24000)
 
         self.current_item_count = 0
         self.current_chapter_count = 0
@@ -85,9 +83,8 @@ class TTS_Processor:
         text_items: List[TextItem] = []
 
         for item in items:
-            text_item: Dict[str, str | float] = {}
-
             for element in item.elements:
+                text_item: Dict[str, str | float] = {}
                 if element.text:
                     text_item["text"] = element.text
                 if element.min_length:
@@ -95,7 +92,7 @@ class TTS_Processor:
                 if element.speaker_id:
                     text_item["speaker_id"] = element.speaker_id
 
-            text_items.append(text_item)
+                text_items.append(text_item)
 
         return text_items
 
@@ -111,7 +108,9 @@ class TTS_Processor:
                 if i > 0 and i < len(sentences) - 1:
                     if not merged_sentences:
                         merged_sentences.append(sentences[i - 1])
-                    merged_sentences[-1] = f"{merged_sentences[-1]} {sentences[i]} {sentences[i+1]}"
+                    merged_sentences[-1] = (
+                        f"{merged_sentences[-1]} {sentences[i]} {sentences[i+1]}"
+                    )
                     i += 1  # Skip the next sentence as it has been merged
             else:
                 merged_sentences.append(sentences[i])
@@ -134,67 +133,73 @@ class TTS_Processor:
         for c, chapter in enumerate(chapters):
             self.current_chapter_idx = c
 
-            logger.info(
-                f"Processing chapter {c+1} of {len(chapters)}: {chapter.title}")
+            logger.info(f"Processing chapter {c+1} of {len(chapters)}: {chapter.title}")
             filename = os.path.join(temp_dir, f"tts_part_{c}.{temp_format}")
             items: List[TextItem] = self.prepare_text_items(chapter.items)
 
-            self.backend = TTSBackendF5(
-                "f5-tts", self.temp_dir, self.backend_config, self.on_progress
-            )
+            if self.backend_config["backend_id"] == "edge-tts":
+                from .tts_backend_edge_tts import TTSBackendEdge
+                self.backend = TTSBackendEdge(
+                    "edge-tts", self.temp_dir, self.backend_config, self.on_progress
+                )
+            else:
+                from .tts_backend_f5 import TTSBackendF5
+                self.backend = TTSBackendF5(
+                    "f5-tts", self.temp_dir, self.backend_config, self.on_progress
+                )
 
             items_to_process: List[TextItem] = []
             for i, item in enumerate(items):
-                text = ""
+                # text = ""
 
-                if "text" in item:
-                    text = str(item.get("text", ""))
+                # if "text" in item:
+                #     text = str(item.get("text", ""))
 
-                    if not isinstance(text, str):
-                        continue
-                else:
-                    if "min_length" in item:
-                        items_to_process.append(item)
-                    else:
-                        continue
-
-                if not text.strip():
-                    continue
-
-                # sentences = re.split(r"(?<=[.!?]) +|\n", text.strip())
-                sentences = self.split_sentences(text)
-                # speaker_id_mapping = deepcopy(self.backend_data["speaker_id_mapping"])
-                # speaker_id = item.get("speaker_id", None)
-
-                # if speaker_id in speaker_id_mapping:
-                #     voice_id = speaker_id_mapping[speaker_id]
+                #     if not isinstance(text, str):
+                #         continue
                 # else:
-                #     voice_id = list(speaker_id_mapping.values())[0]
+                #     if "min_length" in item:
+                #         items_to_process.append(item)
+                #     else:
+                #         continue
 
-                sentence_data, synthesize_splitted = self._split_sentences_by_speed(
-                    sentences
-                )
+                # if not text.strip():
+                #     continue
 
-                if synthesize_splitted:
-                    for i, sentence in sentence_data.items():
-                        item = {
-                            "text": sentence["sentence"],
-                            "min_length": 0,
-                            "speaker_id": item["speaker_id"],
-                            "speed_slider": sentence["speed_slider"],
-                        }
-                        # speaker_id_mapping_copy = deepcopy(speaker_id_mapping)
-                        # voice_id = speaker_id_mapping_copy.get(speaker_id, None)
+                # # sentences = re.split(r"(?<=[.!?]) +|\n", text.strip())
+                # sentences = self.split_sentences(text)
+                # # speaker_id_mapping = deepcopy(self.backend_data["speaker_id_mapping"])
+                # # speaker_id = item.get("speaker_id", None)
 
-                        items_to_process.append(item)
-                else:
-                    item = {
-                        "text": text,
-                        "min_length": item.get("min_length", 0),
-                        "speaker_id": item["speaker_id"],
-                    }
+                # # if speaker_id in speaker_id_mapping:
+                # #     voice_id = speaker_id_mapping[speaker_id]
+                # # else:
+                # #     voice_id = list(speaker_id_mapping.values())[0]
 
-                    items_to_process.append(item)
+                # sentence_data, synthesize_splitted = self._split_sentences_by_speed(
+                #     sentences
+                # )
+
+                # if synthesize_splitted:
+                #     for i, sentence in sentence_data.items():
+                #         item = {
+                #             "text": sentence["sentence"],
+                #             "min_length": 0,
+                #             "speaker_id": item["speaker_id"],
+                #             "speed_slider": sentence["speed_slider"],
+                #         }
+                #         # speaker_id_mapping_copy = deepcopy(speaker_id_mapping)
+                #         # voice_id = speaker_id_mapping_copy.get(speaker_id, None)
+
+                #         items_to_process.append(item)
+                # else:
+                #     item = {
+                #         "text": text,
+                #         "min_length": item.get("min_length", 0),
+                #         "speaker_id": item["speaker_id"],
+                #     }
+
+                items_to_process.append(item)
 
             temp_files, segment_lengths = self.process_items(items_to_process)
 
@@ -215,8 +220,7 @@ class TTS_Processor:
             num_zeros = len(str(len(self.temp_files)))
             title = chapter.title
             chapter_title = f"{c + 1:0{num_zeros}} - {title}"
-            filename_out = os.path.join(
-                temp_dir, f"tts_part_{c}.{temp_format}")
+            filename_out = os.path.join(temp_dir, f"tts_part_{c}.{temp_format}")
 
             self.temp_files.append((chapter_title, filename_out))
             logger.info(f"Temp file added: {filename_out}")
@@ -239,8 +243,7 @@ class TTS_Processor:
             speed_slider_max = speed_slider
 
             if letter_count > 0 and letter_count < 100:
-                speed_slider = 0.3 + (speed_slider - 0.3) * \
-                    (letter_count / 100)
+                speed_slider = 0.3 + (speed_slider - 0.3) * (letter_count / 100)
                 speed_slider = min(speed_slider_max, speed_slider)
                 speed_slider = max(0.5, speed_slider)
 
@@ -289,8 +292,7 @@ class TTS_Processor:
         :return: The duration of the audio file in nanoseconds.
         :rtype: int
         """
-        result = ffmpeg.probe(filename, cmd="ffprobe",
-                              show_entries="format=duration")
+        result = ffmpeg.probe(filename, cmd="ffprobe", show_entries="format=duration")
         return int(float(result["format"]["duration"]) * self.NANOSECONDS_IN_ONE_SECOND)
 
     def process_item(
@@ -301,18 +303,15 @@ class TTS_Processor:
         if item.get("text", "").strip():
             model = ""
 
-            if isinstance(self.backend, TTSBackendF5):
-                frames = self.backend.synthesize(
-                    item["text"], mapped_speaker_id)
+            if isinstance(self.backend, TTSBackend):
+                frames = self.backend.synthesize(item["text"], mapped_speaker_id)
 
-                numpy_wav = np.frombuffer(
-                    frames, dtype=np.int16).astype(np.float32)
+                numpy_wav = np.frombuffer(frames, dtype=np.int16).astype(np.float32)
                 numpy_wav /= np.iinfo(np.int16).max
 
                 del frames
 
-        numpy_wav = self.pad_length(
-            numpy_wav, item.get("min_length", 0) / 1000)
+        numpy_wav = self.pad_length(numpy_wav, item.get("min_length", 0) / 1000)
 
         return numpy_wav
 
@@ -320,7 +319,7 @@ class TTS_Processor:
         temp_files = []
         segment_lengths = []
 
-        if isinstance(self.backend, TTSBackendF5):
+        if isinstance(self.backend, TTSBackend):
             self.current_item_count = len(items)
             numpy_segments = self.backend.synthesize_batch(items)
 
@@ -328,12 +327,10 @@ class TTS_Processor:
                 min_length = items[i].get("min_length", 0)
 
                 if isinstance(min_length, int):
-                    numpy_segment = self.pad_length(
-                        numpy_segment, min_length / 1000)
+                    numpy_segment = self.pad_length(numpy_segment, min_length / 1000)
 
                 temp_file_path = f"{self.temp_dir}/{i}.wav"
-                scipy.io.wavfile.write(
-                    temp_file_path, self.sample_rate, numpy_segment)
+                scipy.io.wavfile.write(temp_file_path, self.sample_rate, numpy_segment)
                 temp_files.append(temp_file_path)
 
                 segment_length = len(numpy_segment) / self.sample_rate
@@ -369,8 +366,7 @@ class TTS_Processor:
         tts_preprocessor = TTS_Preprocessor()
 
         for chapter in chapters:
-            chapter.items = tts_preprocessor.preprocess(
-                chapter.items, self.replace)
+            chapter.items = tts_preprocessor.preprocess(chapter.items, self.replace)
 
         if temp_dir_prefix:
             if not os.path.exists(temp_dir_prefix):
@@ -394,7 +390,6 @@ class TTS_Processor:
                     self.project_path,
                     self.output_format,
                 )
-                ffmpeg_processor.process_ffmpeg(
-                    project, title, temp_dir, subtitles)
+                ffmpeg_processor.process_ffmpeg(project, title, temp_dir, subtitles)
 
         logger.success("Project synthesis complete")
