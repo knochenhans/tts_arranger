@@ -4,19 +4,35 @@ from tts_arranger.items.tts_element import TTS_Element
 
 
 class ElementOptimizer:
+    inline_elements = ["span", "a", "b", "i", "u", "strong", "em", "sub", "sup", "mark"]
+
     @staticmethod
     def merge_items(
         tts_elements: List[TTS_Element], join_char: str = ""
     ) -> List[TTS_Element]:
         final_elements: List[TTS_Element] = []
         merged_element: Optional[TTS_Element] = None
+        last_element: Optional[TTS_Element] = None
 
         for tts_element in tts_elements:
             if not merged_element:
                 merged_element = tts_element
-            elif (
-                merged_element.speaker_id == tts_element.speaker_id
-                and merged_element.custom_data == tts_element.custom_data
+            elif merged_element.speaker_id == tts_element.speaker_id and (
+                merged_element.custom_data == tts_element.custom_data
+                or (
+                    tts_element.custom_data
+                    and merged_element.custom_data
+                    and tts_element.custom_data.get("tag", "")
+                    and tts_element.custom_data.get("tag", "")[0]
+                    in ElementOptimizer.inline_elements
+                )
+                or (
+                    last_element
+                    and last_element.custom_data
+                    and last_element.custom_data.get("tag", "")
+                    and last_element.custom_data.get("tag", "")[0]
+                    in ElementOptimizer.inline_elements
+                )
             ):
                 merged_element = TTS_Element(
                     text=f"{merged_element.text}{join_char}{tts_element.text}",
@@ -24,6 +40,7 @@ class ElementOptimizer:
                     min_length=merged_element.min_length + tts_element.min_length,
                     custom_data=merged_element.custom_data,
                 )
+                last_element = tts_element
             else:
                 final_elements.append(merged_element)
                 merged_element = tts_element
