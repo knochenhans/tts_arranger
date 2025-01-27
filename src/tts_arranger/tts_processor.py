@@ -1,3 +1,4 @@
+import asyncio
 import base64
 from datetime import date
 import json
@@ -317,7 +318,9 @@ class TTS_Processor:
 
         return numpy_wav
 
-    async def process_items(self, items: List[TextItem]) -> Tuple[List[str], List[float]]:
+    async def process_items(
+        self, items: List[TextItem]
+    ) -> Tuple[List[str], List[float]]:
         temp_files = []
         segment_lengths = []
 
@@ -341,7 +344,7 @@ class TTS_Processor:
 
         return temp_files, segment_lengths
 
-    async def synthesize_project(
+    async def _synthesize_project(
         self,
         project: TTS_Project,
         title: str = "",
@@ -386,13 +389,31 @@ class TTS_Processor:
                 logger.error(f"Error synthesizing project: {e}")
                 raise
             else:
-                ffmpeg_processor = FFmpegProcessor(
-                    self.temp_files,
-                    self.chapter_times,
-                    self.item_data,
-                    self.project_path,
-                    self.output_format,
-                )
-                ffmpeg_processor.process_ffmpeg(project, title, temp_dir, subtitles)
+                if self.temp_files:
+                    ffmpeg_processor = FFmpegProcessor(
+                        self.temp_files,
+                        self.chapter_times,
+                        self.item_data,
+                        self.project_path,
+                        self.output_format,
+                    )
+                    ffmpeg_processor.process_ffmpeg(project, title, temp_dir, subtitles)
+                    logger.success("Project synthesis complete")
+                else:
+                    logger.warning("No synthesized files found, skipping project")
 
-        logger.success("Project synthesis complete")
+    def synthesize_project(
+        self,
+        project: TTS_Project,
+        title: str = "",
+        temp_dir_prefix: Optional[str] = "",
+        subtitles: bool = False,
+    ) -> None:
+        asyncio.run(
+            self._synthesize_project(
+                project,
+                title=title,
+                temp_dir_prefix=temp_dir_prefix,
+                subtitles=subtitles,
+            )
+        )
