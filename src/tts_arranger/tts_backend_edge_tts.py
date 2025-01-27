@@ -32,7 +32,6 @@ class TTSBackendEdge(TTSBackend):
 
         os.makedirs(self.temp_dir, exist_ok=True)
 
-        # if self.backend_config.get("")
         self.voices: Dict[str, Dict[str, Any]] = load_default_voices(backend="edge-tts")
 
         logger.info("Edge TTS backend initialized")
@@ -71,18 +70,21 @@ class TTSBackendEdge(TTSBackend):
             if text.strip() == "":
                 continue
 
-            # Continue if text only contains punctuation
             if all(unicodedata.category(char).startswith("P") for char in text.strip()):
                 continue
 
-            # Continue if text does not contain any letters or digits
-            if not any(unicodedata.category(char).startswith(("L", "N")) for char in text.strip()):
+            if not any(
+                unicodedata.category(char).startswith(("L", "N"))
+                for char in text.strip()
+            ):
                 continue
 
             speaker_id: str = str(text_item.get("speaker_id", ""))
 
             if speaker_id is None:
-                logger.error(f"Speaker ID {speaker_id} not found for text item {text_item}, using empty id")
+                logger.error(
+                    f"Speaker ID {speaker_id} not found for text item {text_item}, using empty id"
+                )
 
             speaker_id_mapping: Dict[str, str] = self.backend_config.get(
                 "speaker_id_mapping", {}
@@ -92,15 +94,11 @@ class TTSBackendEdge(TTSBackend):
 
             if not voice_ids:
                 voice_id = list(self.voices.keys())[0]
-                logger.warning(f"No voice IDs found for speaker {speaker_id}, using {voice_id} instead")
+                logger.warning(
+                    f"No voice IDs found for speaker {speaker_id}, using {voice_id} instead"
+                )
             else:
                 voice_id = random.choice(voice_ids)
-                # voice: Dict[str, Any] = self.voices.get(voice_id, {})
-
-            # if not voice_id:
-            #     raise ValueError(f"Voice {voice_id} not found for speaker {speaker_id}")
-
-            # logger.debug(f"Synthesizing text: {text} with voice: {voice_id}")
 
             audio_bytes = io.BytesIO()
 
@@ -110,7 +108,9 @@ class TTSBackendEdge(TTSBackend):
                     start_time = time.time()
                     for chunk in communicate.stream_sync():
                         if time.time() - start_time > 600:  # 10 minutes
-                            logger.error(f"Stream sync taking too long for text item: {text_item}")
+                            logger.error(
+                                f"Stream sync taking too long for text item: {text_item}"
+                            )
                             raise TimeoutError("Stream sync exceeded 10 minutes")
                         if chunk["type"] == "audio":
                             if "data" in chunk:
