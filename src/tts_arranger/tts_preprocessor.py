@@ -1,6 +1,6 @@
 import re
 from typing import List, Optional
-from num2words import num2words
+from num2words import num2words # type: ignore
 
 from tts_arranger.items.element_optimizer import ElementOptimizer
 from tts_arranger.items.tts_item import TTS_Item  # type: ignore
@@ -34,6 +34,9 @@ class TTS_Preprocessor:
         for item in tts_items:
             for element in item.elements:
                 if element.text:
+                    # Remove Japanese characters etc.
+                    element.text = "".join(filter(lambda character: ord(character) < 0x3000, element.text))
+
                     # element.text = self._cleanup_numbers(element.text)
                     # element.text = self._apply_basic_replacements(element.text, replace)
 
@@ -53,10 +56,10 @@ class TTS_Preprocessor:
                     )
 
                     # Replace hyphen surrounded by text with space
-                    element.text = re.sub(r"(\S)-(\S)", r"\1 \2", element.text)
+                    # element.text = re.sub(r"(\S)-(\S)", r"\1 \2", element.text)
 
                     # Find numbers followed by "Hz" or "dB" without a space and add a space
-                    element.text = re.sub(r"(\d)([Hd])([dB])", r"\1 \2\3", element.text)
+                    element.text = re.sub(r"(\d)([Hz])([dB])", r"\1 \2\3", element.text)
 
                     # Convert occurrences of "Hz" into "Hertz", check for word boundaries
                     element.text = re.sub(r"\bHz\b", "Hertz", element.text)
@@ -84,9 +87,6 @@ class TTS_Preprocessor:
         return tts_items
 
     def _apply_basic_replacements(self, text: str, replace: dict) -> str:
-        # Remove Japanese characters etc.
-        text = "".join(filter(lambda character: ord(character) < 0x3000, text))
-
         # Replace problematic characters, abbreviations etc
         for k, v in replace.items():
             text = re.sub(k, v, text)
