@@ -152,6 +152,11 @@ class TTS_Processor:
                 )
 
             items_to_process: List[TextItem] = []
+
+            if len(items) == 0:
+                logger.warning("No items to process, skipping chapter")
+                continue
+
             for i, item in enumerate(items):
                 # text = ""
 
