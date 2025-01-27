@@ -373,7 +373,7 @@ def test_project_merge():
 
     project1.merge_from_project(project2)
 
-    assert len(project1.tts_chapters) == len(project2.tts_chapters)
+    assert len(project1.chapters) == len(project2.chapters)
 
 
 def test_project_dump_as_json_file():

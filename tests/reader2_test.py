@@ -16,10 +16,10 @@ def test_html_reader1():
 
     checkers = [
         Checker(
-            [ConditionName("p"), ConditionClass("bla")], CheckerItemProperties(1, 800)
+            [ConditionName("p"), ConditionClass("bla")], CheckerItemProperties("1", 800)
         ),
-        Checker([ConditionName("i")], CheckerItemProperties(2, 500)),
-        Checker([ConditionName("b")], CheckerItemProperties(3, 1000)),
+        Checker([ConditionName("i")], CheckerItemProperties("2", 500)),
+        Checker([ConditionName("b")], CheckerItemProperties("3", 1000)),
     ]
 
     # converter = TTS_HTML_Converter_JSON(custom_checkers=checkers)

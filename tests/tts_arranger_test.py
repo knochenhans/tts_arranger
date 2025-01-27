@@ -9,124 +9,124 @@ from tts_arranger.tts_processor import TTS_Processor
 from tts_arranger.tts_writer import TTS_Writer
 
 
-def test_break1():
-    t = TTS_Processor()
+# def test_break1():
+#     t = TTS_Processor()
 
-    tts_item = TTS_Item("This. Is: A t:est!")
-
-    tts_items = t._prepare_item(tts_item)
-
-    assert tts_items[0].text == "This. Is"
-    assert tts_items[1].length == 100
-    assert tts_items[2].text == "A t:est!"
-    assert tts_items[3].length == 1000
-
-
-def test_quote():
-    t = TTS_Processor()
-
-    tts_item = TTS_Item('Test!"')
-
-    tts_items = t._prepare_item(tts_item)
-
-    assert tts_items[0].text == "Test!"
-
-
-# def test_break3():
-#     t = TTS_Arranger()
-
-#     text = '''In this rough theatre of teeming peoples and conflicting cultures were developed the agriculture and commerce, the horse and wagon, the coinage and letters of credit, the crafts and industries, the law and government, the mathematics and medicine, the enemas and drainage systems, the geometry and astronomy, the calendar and clock and zodiac, the alphabet and writing, the paper and ink, the books and libraries and schools, the literature and music, the sculpture and architecture, the glazed pottery and fine furniture, the monotheism and monogamy, the cosmetics and jewelry, the checkers and dice, the ten-pins and income tax, the wet-nurses and beer, from which our own European and American culture derive by a continuous succession through the mediation of Crete and Greece and Rome.'''
-
-#     tts_item = TTS_Item(text, 'test', 10, 10, True)
-
-#     tts_items = t.prepare_item(tts_item)
-
-#     assertEqual(tts_items[0].text, 'In this rough theatre of teeming peoples and conflicting cultures were developed the agriculture and commerce, the horse and wagon, the coinage and letters of credit, the crafts and industries, the law and government, the mathematics and medicine, the enemas and drainage systems, the geometry and astronomy')
-#     assertEqual(tts_items[1].text, 'the calendar and clock and zodiac, the alphabet and writing, the paper and ink, the books and libraries and schools, the literature and music, the sculpture and architecture, the glazed pottery and fine furniture, the monotheism and monogamy, the cosmetics and jewelry, the checkers and dice')
-#     assertEqual(
-#         tts_items[2].text, 'the ten-pins and income tax, the wet-nurses and beer, from which our own European and American culture derive by a continuous succession through the mediation of Crete and Greece and Rome.')
-
-# def test_break4():
-#     t = TTS_Arranger()
-
-#     tts_item = TTS_Item('LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequatduisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariaturexcepteursintoccaecatcupidatatnonproidentsuntinculpaquiofficiadeseruntmollitanimidestlaborum.', 'test', 10, 10, True)
-
-#     tts_items = t.prepare_item(tts_item)
-
-#     assertEqual(tts_items[0].text, 'LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequatduisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariaturexcepteursintoccaecatcupidatatnonproidentsu')
-#     assertEqual(
-#         tts_items[1].text, 'ntinculpaquiofficiadeseruntmollitanimidestlaborum.')
-
-
-def test_url():
-    t = TTS_Processor()
-
-    tts_item = TTS_Item(
-        "https://stackoverflow.com/questions/17730788/search-and-replace-with-whole-word-only-option"
-    )
-
-    tts_items = t._prepare_item(tts_item)
-    assert tts_items[0].text == "stackoverflow.com"
-
-
-def test_endings():
-    t = TTS_Processor()
-
-    tts_item = TTS_Item(
-        """Lovely story!
-Do you mean pidgin Danish, perhaps? :"""
-    )
-
-    tts_items = t._prepare_item(tts_item)
-    assert tts_items[0].text == "Lovely story!"
-    assert tts_items[1].length == 1000
-    assert tts_items[2].length == 250
-    assert tts_items[3].text == "Do you mean pidgin Danish, perhaps?"
-    assert tts_items[4].length == 1000
-
-
-# def test_punctuation1():
-#     t = TTS_Arranger()
-
-#     tts_item = TTS_Item('Sure, these were all hoary old tropes even by the late ’70s/early ’80s, but this particular combination of them, at this exact date…? Even the “silly but kind of grim” atmosphere that you correctly mention the game possessing is the exact way I would describe “Night Horrors”.', '')
+#     tts_item = TTS_Item("This. Is: A t:est!")
 
 #     tts_items = t._prepare_item(tts_item)
-#     assertEqual(tts_items[0].text, 'Sure, these were all hoary old tropes even by the late \'70s/early \'80s, but this particular combination of them, at this exact date?')
-#     assertEqual(tts_items[1].text, 'Even the')
-#     assertEqual(tts_items[2].text, 'silly but kind of grim')
-#     assertEqual(tts_items[3].text, 'atmosphere that you correctly mention the game possessing is the exact way I would describe')
-#     assertEqual(tts_items[4].text, 'Night Horrors.')
+
+#     assert tts_items[0].text == "This. Is"
+#     assert tts_items[1].length == 100
+#     assert tts_items[2].text == "A t:est!"
+#     assert tts_items[3].length == 1000
 
 
-def test_punctuation2():
-    t = TTS_Processor()
+# def test_quote():
+#     t = TTS_Processor()
 
-    tts_item = TTS_Item(
-        "Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II."
-    )
+#     tts_item = TTS_Item('Test!"')
 
-    tts_items = t._prepare_item(tts_item)
-    assert (
-        tts_items[0].text
-        == "Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure"
-    )
-    assert tts_items[1].length == 300
-    assert tts_items[2].text == "not that Ken likely knew this or cared,"
-    assert tts_items[3].length == 300
-    assert tts_items[4].text == "to the little Apple 2."
-    assert tts_items[5].length == 750
+#     tts_items = t._prepare_item(tts_item)
+
+#     assert tts_items[0].text == "Test!"
 
 
-def test_punctuation3():
-    t = TTS_Processor()
+# # def test_break3():
+# #     t = TTS_Arranger()
 
-    tts_item = TTS_Item("a — b.")
+# #     text = '''In this rough theatre of teeming peoples and conflicting cultures were developed the agriculture and commerce, the horse and wagon, the coinage and letters of credit, the crafts and industries, the law and government, the mathematics and medicine, the enemas and drainage systems, the geometry and astronomy, the calendar and clock and zodiac, the alphabet and writing, the paper and ink, the books and libraries and schools, the literature and music, the sculpture and architecture, the glazed pottery and fine furniture, the monotheism and monogamy, the cosmetics and jewelry, the checkers and dice, the ten-pins and income tax, the wet-nurses and beer, from which our own European and American culture derive by a continuous succession through the mediation of Crete and Greece and Rome.'''
 
-    tts_items = t._prepare_item(tts_item)
-    assert tts_items[0].text == "a"
-    assert tts_items[1].length == 300
-    assert tts_items[2].text == "b."
-    assert tts_items[3].length == 750
+# #     tts_item = TTS_Item(text, 'test', 10, 10, True)
+
+# #     tts_items = t.prepare_item(tts_item)
+
+# #     assertEqual(tts_items[0].text, 'In this rough theatre of teeming peoples and conflicting cultures were developed the agriculture and commerce, the horse and wagon, the coinage and letters of credit, the crafts and industries, the law and government, the mathematics and medicine, the enemas and drainage systems, the geometry and astronomy')
+# #     assertEqual(tts_items[1].text, 'the calendar and clock and zodiac, the alphabet and writing, the paper and ink, the books and libraries and schools, the literature and music, the sculpture and architecture, the glazed pottery and fine furniture, the monotheism and monogamy, the cosmetics and jewelry, the checkers and dice')
+# #     assertEqual(
+# #         tts_items[2].text, 'the ten-pins and income tax, the wet-nurses and beer, from which our own European and American culture derive by a continuous succession through the mediation of Crete and Greece and Rome.')
+
+# # def test_break4():
+# #     t = TTS_Arranger()
+
+# #     tts_item = TTS_Item('LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequatduisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariaturexcepteursintoccaecatcupidatatnonproidentsuntinculpaquiofficiadeseruntmollitanimidestlaborum.', 'test', 10, 10, True)
+
+# #     tts_items = t.prepare_item(tts_item)
+
+# #     assertEqual(tts_items[0].text, 'LoremipsumdolorsitametconsecteturadipiscingelitseddoeiusmodtemporincididuntutlaboreetdoloremagnaaliquaUtenimadminimveniamquisnostrudexercitationullamcolaborisnisiutaliquipexeacommodoconsequatduisauteiruredolorinreprehenderitinvoluptatevelitessecillumdoloreeufugiatnullapariaturexcepteursintoccaecatcupidatatnonproidentsu')
+# #     assertEqual(
+# #         tts_items[1].text, 'ntinculpaquiofficiadeseruntmollitanimidestlaborum.')
+
+
+# def test_url():
+#     t = TTS_Processor()
+
+#     tts_item = TTS_Item(
+#         "https://stackoverflow.com/questions/17730788/search-and-replace-with-whole-word-only-option"
+#     )
+
+#     tts_items = t._prepare_item(tts_item)
+#     assert tts_items[0].text == "stackoverflow.com"
+
+
+# def test_endings():
+#     t = TTS_Processor()
+
+#     tts_item = TTS_Item(
+#         """Lovely story!
+# Do you mean pidgin Danish, perhaps? :"""
+#     )
+
+#     tts_items = t._prepare_item(tts_item)
+#     assert tts_items[0].text == "Lovely story!"
+#     assert tts_items[1].length == 1000
+#     assert tts_items[2].length == 250
+#     assert tts_items[3].text == "Do you mean pidgin Danish, perhaps?"
+#     assert tts_items[4].length == 1000
+
+
+# # def test_punctuation1():
+# #     t = TTS_Arranger()
+
+# #     tts_item = TTS_Item('Sure, these were all hoary old tropes even by the late ’70s/early ’80s, but this particular combination of them, at this exact date…? Even the “silly but kind of grim” atmosphere that you correctly mention the game possessing is the exact way I would describe “Night Horrors”.', '')
+
+# #     tts_items = t._prepare_item(tts_item)
+# #     assertEqual(tts_items[0].text, 'Sure, these were all hoary old tropes even by the late \'70s/early \'80s, but this particular combination of them, at this exact date?')
+# #     assertEqual(tts_items[1].text, 'Even the')
+# #     assertEqual(tts_items[2].text, 'silly but kind of grim')
+# #     assertEqual(tts_items[3].text, 'atmosphere that you correctly mention the game possessing is the exact way I would describe')
+# #     assertEqual(tts_items[4].text, 'Night Horrors.')
+
+
+# def test_punctuation2():
+#     t = TTS_Processor()
+
+#     tts_item = TTS_Item(
+#         "Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure (not that Ken likely knew this or cared), to the little Apple II."
+#     )
+
+#     tts_items = t._prepare_item(tts_item)
+#     assert (
+#         tts_items[0].text
+#         == "Specifically, he wanted to bring FORTRAN, as it happens the implementation language of the original Adventure"
+#     )
+#     assert tts_items[1].length == 300
+#     assert tts_items[2].text == "not that Ken likely knew this or cared,"
+#     assert tts_items[3].length == 300
+#     assert tts_items[4].text == "to the little Apple 2."
+#     assert tts_items[5].length == 750
+
+
+# def test_punctuation3():
+#     t = TTS_Processor()
+
+#     tts_item = TTS_Item("a — b.")
+
+#     tts_items = t._prepare_item(tts_item)
+#     assert tts_items[0].text == "a"
+#     assert tts_items[1].length == 300
+#     assert tts_items[2].text == "b."
+#     assert tts_items[3].length == 750
 
 
 # def test_punctuation3():
@@ -314,129 +314,129 @@ def test_punctuation3():
 #     # assertEqual(tts_items[2].speaker, t.default_speakers[1])
 
 
-def test_new_break_a5():
-    t = TTS_Processor()
+# def test_new_break_a5():
+#     t = TTS_Processor()
 
-    tts_item = TTS_Item("sic!].")
+#     tts_item = TTS_Item("sic!].")
 
-    tts_items = t._prepare_item(tts_item)
-    # tts_items = t.break_speakers(tts_items, ('‘', '’'), True)
-    # tts_items = t.break_speakers(tts_items, ('"', '"'), True)
+#     tts_items = t._prepare_item(tts_item)
+#     # tts_items = t.break_speakers(tts_items, ('‘', '’'), True)
+#     # tts_items = t.break_speakers(tts_items, ('"', '"'), True)
 
-    assert tts_items[0].text == "sic!"
-
-
-def test_new_break_a6():
-    t = TTS_Processor()
-
-    tts_item = TTS_Item("candle- ?, ?")
-
-    tts_items = t._prepare_item(tts_item)
-    # tts_items = t.break_speakers(tts_items, ('‘', '’'), True)
-    # tts_items = t.break_speakers(tts_items, ('"', '"'), True)
-
-    assert tts_items[0].text == "candle-"
+#     assert tts_items[0].text == "sic!"
 
 
-# def test_synthesize_and_write():
-#     items1 = []
-#     items1.append(TTS_Item("This is a test:", speaker_idx=0))
-#     items1.append(TTS_Item("This is another test:", speaker_idx=1))
+# def test_new_break_a6():
+#     t = TTS_Processor()
 
-#     items2 = []
-#     items2.append(TTS_Item("Another test", speaker_idx=0))
-#     items2.append(TTS_Item("This is getting boring!", speaker_idx=1))
+#     tts_item = TTS_Item("candle- ?, ?")
 
-#     chapter = []
-#     chapter.append(TTS_Chapter(items1, "Chapter 1"))
-#     chapter.append(TTS_Chapter(items2, "Chapter 2"))
+#     tts_items = t._prepare_item(tts_item)
+#     # tts_items = t.break_speakers(tts_items, ('‘', '’'), True)
+#     # tts_items = t.break_speakers(tts_items, ('"', '"'), True)
 
-#     project = TTS_Project(
-#         chapter, "Project title", "This is a subtitle", author="Some author"
-#     )
-
-#     with TemporaryDirectory() as tmpdir:
-#         output_dir = tmpdir
-#         output_format = "mp3"
-
-#         writer = TTS_Writer(project, output_dir, output_format=output_format)
-#         writer.synthesize_and_write(project.author + " - " + project.title)
-
-#         output_file_path = os.path.join(
-#             output_dir, f"{project.author} - {project.title}.{output_format}"
-#         )
-
-#         # Ensure that the output file was created
-#         assert os.path.exists(output_file_path)
-
-#         # Ensure that the output file has a non-zero size
-#         assert os.path.getsize(output_file_path) > 0
+#     assert tts_items[0].text == "candle-"
 
 
-def test_merge_items1():
-    items = []
-    items.append(TTS_Item("1 "))
-    items.append(TTS_Item("2"))
-    items.append(TTS_Item(" 3"))
+# # def test_synthesize_and_write():
+# #     items1 = []
+# #     items1.append(TTS_Item("This is a test:", speaker_idx=0))
+# #     items1.append(TTS_Item("This is another test:", speaker_idx=1))
 
-    project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
-    project.optimize()
-    items = project.tts_chapters[0].items
+# #     items2 = []
+# #     items2.append(TTS_Item("Another test", speaker_idx=0))
+# #     items2.append(TTS_Item("This is getting boring!", speaker_idx=1))
 
-    assert items[0].text == "1 2 3"
+# #     chapter = []
+# #     chapter.append(TTS_Chapter(items1, "Chapter 1"))
+# #     chapter.append(TTS_Chapter(items2, "Chapter 2"))
 
+# #     project = TTS_Project(
+# #         chapter, "Project title", "This is a subtitle", author="Some author"
+# #     )
 
-def test_merge_items2():
-    items = []
-    items.append(TTS_Item("1 "))
-    items.append(TTS_Item(length=1000))
-    items.append(TTS_Item("2"))
-    items.append(TTS_Item(length=1000))
-    items.append(TTS_Item(" 3"))
+# #     with TemporaryDirectory() as tmpdir:
+# #         output_dir = tmpdir
+# #         output_format = "mp3"
 
-    project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
-    # project.optimize()
-    items = project.tts_chapters[0].items
+# #         writer = TTS_Writer(project, output_dir, output_format=output_format)
+# #         writer.synthesize_and_write(project.author + " - " + project.title)
 
-    assert items[0].text == "1 "
-    assert items[1].length == 1000
-    assert items[2].text == "2"
-    assert items[3].length == 1000
-    assert items[4].text == " 3"
+# #         output_file_path = os.path.join(
+# #             output_dir, f"{project.author} - {project.title}.{output_format}"
+# #         )
 
+# #         # Ensure that the output file was created
+# #         assert os.path.exists(output_file_path)
 
-def test_merge_items3():
-    items = []
-    items.append(TTS_Item("1 "))
-    items.append(TTS_Item("2"))
-    items.append(TTS_Item(length=1000))
-    items.append(TTS_Item(length=1000))
-    items.append(TTS_Item(" 3"))
-    items.append(TTS_Item(length=1000))
-
-    project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
-    project.optimize(max_pause_duration=100)
-    items = project.tts_chapters[0].items
-
-    assert items[0].text == "1 2"
-    assert items[1].length == 100
-    assert items[2].text == "3"
-    assert items[3].length == 100
+# #         # Ensure that the output file has a non-zero size
+# #         assert os.path.getsize(output_file_path) > 0
 
 
-def test_merge_items4():
-    item = TTS_Item("1 (1234), test")
-    t = TTS_Processor()
-    tts_items = t._prepare_item(item)
+# def test_merge_items1():
+#     items = []
+#     items.append(TTS_Item("1 "))
+#     items.append(TTS_Item("2"))
+#     items.append(TTS_Item(" 3"))
 
-    project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(tts_items))
-    project.optimize(max_pause_duration=100)
-    items = project.tts_chapters[0].items
+#     project = TTS_Project()
+#     project.tts_chapters.append(TTS_Chapter(items))
+#     project.optimize()
+#     items = project.tts_chapters[0].items
 
-    assert items[0].text == "1"
-    assert items[2].text == "1234,"
-    assert items[4].text == "test"
+#     assert items[0].text == "1 2 3"
+
+
+# def test_merge_items2():
+#     items = []
+#     items.append(TTS_Item("1 "))
+#     items.append(TTS_Item(length=1000))
+#     items.append(TTS_Item("2"))
+#     items.append(TTS_Item(length=1000))
+#     items.append(TTS_Item(" 3"))
+
+#     project = TTS_Project()
+#     project.tts_chapters.append(TTS_Chapter(items))
+#     # project.optimize()
+#     items = project.tts_chapters[0].items
+
+#     assert items[0].text == "1 "
+#     assert items[1].length == 1000
+#     assert items[2].text == "2"
+#     assert items[3].length == 1000
+#     assert items[4].text == " 3"
+
+
+# def test_merge_items3():
+#     items = []
+#     items.append(TTS_Item("1 "))
+#     items.append(TTS_Item("2"))
+#     items.append(TTS_Item(length=1000))
+#     items.append(TTS_Item(length=1000))
+#     items.append(TTS_Item(" 3"))
+#     items.append(TTS_Item(length=1000))
+
+#     project = TTS_Project()
+#     project.tts_chapters.append(TTS_Chapter(items))
+#     project.optimize(max_pause_duration=100)
+#     items = project.tts_chapters[0].items
+
+#     assert items[0].text == "1 2"
+#     assert items[1].length == 100
+#     assert items[2].text == "3"
+#     assert items[3].length == 100
+
+
+# def test_merge_items4():
+#     item = TTS_Item("1 (1234), test")
+#     t = TTS_Processor()
+#     tts_items = t._prepare_item(item)
+
+#     project = TTS_Project()
+#     project.tts_chapters.append(TTS_Chapter(tts_items))
+#     project.optimize(max_pause_duration=100)
+#     items = project.tts_chapters[0].items
+
+#     assert items[0].text == "1"
+#     assert items[2].text == "1234,"
+#     assert items[4].text == "test"

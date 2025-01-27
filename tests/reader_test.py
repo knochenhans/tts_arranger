@@ -26,7 +26,7 @@ def test_text_reader1():
     reader = TTS_Text_Reader()
     reader.load_raw(text)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     assert items[0].elements[0].text == "Hello, world!"
 
@@ -37,7 +37,7 @@ def test_text_reader2():
     reader = TTS_Text_Reader()
     reader.load_raw(text)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     assert items[0].elements[0].text == "Hello, world!"
     assert items[1].elements[0].text == "This is a test."
@@ -57,7 +57,7 @@ def test_html_reader1():
     reader = TTS_HTML_Reader(custom_checkers=checkers)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     assert items[0].elements[0].text == "test1 "
     assert items[0].elements[1].text == "test2"
@@ -82,15 +82,15 @@ def test_html_reader2():
     reader = TTS_HTML_Reader(custom_checkers=checkers)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
+    project.chapters.append(TTS_Chapter(items))
 
     optimizer = ElementOptimizer()
 
     # project.optimize()
-    items = project.tts_chapters[0].items
+    items = project.chapters[0].items
 
     assert items[0].elements[0].text == "2"
 
@@ -103,12 +103,12 @@ def test_html_reader3():
     reader = TTS_HTML_Reader(custom_checkers=checkers)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
+    project.chapters.append(TTS_Chapter(items))
     # project.optimize()
-    items = project.tts_chapters[0].items
+    items = project.chapters[0].items
 
     assert items[0].elements[0].text == "1 "
     assert items[0].elements[1].text == "2"
@@ -123,11 +123,11 @@ def test_merge_items1():
     reader = TTS_HTML_Reader(custom_checkers=checkers)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
     project.add_item(items[0])
-    items = project.tts_chapters[0].items
+    items = project.chapters[0].items
     item = items[0]
     item.optimize()
 
@@ -147,11 +147,11 @@ def test_merge_items2a():
     reader = TTS_HTML_Reader(custom_checkers=checkers)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
-    items = project.tts_chapters[0].items
+    project.chapters.append(TTS_Chapter(items))
+    items = project.chapters[0].items
     item = items[0]
     # item.optimize()
 
@@ -172,12 +172,12 @@ def test_merge_items2():
     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
+    project.chapters.append(TTS_Chapter(items))
     # project.optimize()
-    item = project.tts_chapters[0].items[0]
+    item = project.chapters[0].items[0]
     item.optimize()
 
     assert item.elements[0].text == "a b. c."
@@ -195,12 +195,12 @@ def test_merge_items3():
     reader = TTS_HTML_Reader(custom_checkers=checkers)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
+    project.chapters.append(TTS_Chapter(items))
 
-    items = project.tts_chapters[0].items
+    items = project.chapters[0].items
     item = items[0]
     item.optimize()
 
@@ -215,12 +215,12 @@ def test_merge_items4():
     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
+    project.chapters.append(TTS_Chapter(items))
 
-    items = project.tts_chapters[0].items
+    items = project.chapters[0].items
     item = items[0]
     item.optimize()
 
@@ -235,12 +235,12 @@ def test_merge_items5():
     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
+    project.chapters.append(TTS_Chapter(items))
 
-    items = project.tts_chapters[0].items
+    items = project.chapters[0].items
     item = items[0]
     item.optimize()
 
@@ -258,12 +258,12 @@ def test_nested_tags():
     reader = TTS_HTML_Reader(custom_checkers=checkers, ignore_default_checkers=True)
     reader.load_raw(html)
 
-    items = reader.project.tts_chapters[0].items
+    items = reader.project.chapters[0].items
 
     project = TTS_Project()
-    project.tts_chapters.append(TTS_Chapter(items))
+    project.chapters.append(TTS_Chapter(items))
 
-    items = project.tts_chapters[0].items
+    items = project.chapters[0].items
     item = items[0]
     item.optimize()
 
@@ -300,12 +300,12 @@ def test_merge_items_pause():
 #         reader.load(file_path)
 #         reader.get_project().optimize()
 
-#         items = reader.get_project().tts_chapters[0].items
+#         items = reader.get_project().chapters[0].items
 
 #         assert items[0].text == "Table of Contents"
 #         assert items[0].speaker_idx == 1
 
-#         items = reader.get_project().tts_chapters[2].items
+#         items = reader.get_project().chapters[2].items
 
 #         assert items[0].text == "Introduction"
 #         assert items[0].speaker_idx == 1
