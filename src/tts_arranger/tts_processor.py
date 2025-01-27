@@ -139,11 +139,13 @@ class TTS_Processor:
 
             if self.backend_config["backend_id"] == "edge-tts":
                 from .tts_backend_edge_tts import TTSBackendEdge
+
                 self.backend = TTSBackendEdge(
                     "edge-tts", self.temp_dir, self.backend_config, self.on_progress
                 )
             else:
                 from .tts_backend_f5 import TTSBackendF5
+
                 self.backend = TTSBackendF5(
                     "f5-tts", self.temp_dir, self.backend_config, self.on_progress
                 )

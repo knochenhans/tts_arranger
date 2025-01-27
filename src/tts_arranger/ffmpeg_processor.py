@@ -9,7 +9,7 @@ from pathvalidate import sanitize_filename
 import ffmpeg  # type: ignore
 from PIL import Image  # type: ignore
 from loguru import logger
-import srt
+import srt # type: ignore
 
 from tts_arranger.items.tts_project import TTS_Project  # type: ignore
 
