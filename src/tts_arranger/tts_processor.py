@@ -119,6 +119,37 @@ class TTS_Processor:
 
         return merged_sentences
 
+    def batch_process_temp_files(
+        self,
+        temp_files: List[str],
+        temp_dir: str,
+        temp_format: str,
+        filename: str,
+        items_to_process: List[TextItem],
+        segment_lengths: List[float],
+    ) -> None:
+        # Batch process the temp files to avoid ffmpeg concat issues with large number of files
+
+        batch_size = 500
+        batched_temp_files = [
+            temp_files[i : i + batch_size]
+            for i in range(0, len(temp_files), batch_size)
+        ]
+        intermediate_files: List[str] = []
+
+        for batch_idx, batch in enumerate(batched_temp_files):
+            batch_filename = os.path.join(temp_dir, f"batch_{batch_idx}.{temp_format}")
+            input_files = [ffmpeg.input(file) for file in batch]
+            ffmpeg.concat(*input_files, v=0, a=1).output(
+                batch_filename, loglevel="error"
+            ).run(overwrite_output=True)
+            intermediate_files.append(batch_filename)
+
+        final_input_files = [ffmpeg.input(file) for file in intermediate_files]
+        ffmpeg.concat(*final_input_files, v=0, a=1).output(
+            filename, loglevel="error"
+        ).run(overwrite_output=True)
+
     async def synthesize_chapters(
         self,
         chapters: List[TTS_Chapter],
@@ -211,10 +242,14 @@ class TTS_Processor:
 
             temp_files, segment_lengths = await self.process_items(items_to_process)
 
-            input_files = [ffmpeg.input(file) for file in temp_files]
-            ffmpeg.concat(*input_files, v=0, a=1).output(
-                filename, loglevel="error"
-            ).run(overwrite_output=True)
+            self.batch_process_temp_files(
+                temp_files,
+                temp_dir,
+                temp_format,
+                filename,
+                items_to_process,
+                segment_lengths,
+            )
 
             for item, segment_length in zip(items_to_process, segment_lengths):
                 text = str(item.get("text", ""))
