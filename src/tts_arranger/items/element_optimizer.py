@@ -40,10 +40,10 @@ class ElementOptimizer:
                     min_length=merged_element.min_length + tts_element.min_length,
                     custom_data=merged_element.custom_data,
                 )
-                last_element = tts_element
             else:
                 final_elements.append(merged_element)
                 merged_element = tts_element
+            last_element = tts_element
 
         if merged_element is not None:
             final_elements.append(merged_element)
