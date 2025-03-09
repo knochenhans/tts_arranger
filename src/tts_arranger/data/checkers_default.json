@@ -46,6 +46,23 @@
         {
             "conditions": [
                 {
+                    "name": "Name",
+                    "arg": "p"
+                },
+                {
+                    "name": "Class",
+                    "arg": "section"
+                }
+            ],
+            "properties": {
+                "speaker_id": "1",
+                "pause_after": 1000
+            },
+            "signal": "NEW_CHAPTER"
+        },
+        {
+            "conditions": [
+                {
                     "name": "Class",
                     "arg": "quote"
                 }
@@ -92,7 +109,7 @@
                 "speaker_id": "1",
                 "pause_after": 1000
             },
-            "signal": "NEW_ITEM"
+            "signal": "NEW_CHAPTER"
         },
         {
             "conditions": [
