@@ -107,18 +107,19 @@ class TTSBackendEdge(TTSBackend):
             # Adjust rate dynamically between 0% and -20% based on item length
             text_length = len(text)
 
-            rate_str = "-0%"
+            # rate_str = "-0%"
 
-            if text_length < 100:
-                rate = round((25 / 99 * text_length - 2525 / 99))
+            # if text_length < 100:
+            #     rate = round((25 / 99 * text_length - 2525 / 99))
 
-                if rate != 0:
-                    rate_str = f"{rate}%"
-                    logger.debug(f"Adjusting rate to {rate_str} for text: {text}")
+            #     if rate != 0:
+            #         rate_str = f"{rate}%"
+            #         logger.debug(f"Adjusting rate to {rate_str} for text: {text}")
 
             for attempt in range(3):  # Try up to 3 times
                 try:
-                    communicate = edge_tts.Communicate(text, voice_id, rate=rate_str, connect_timeout=30, receive_timeout=300)
+                    # communicate = edge_tts.Communicate(text, voice_id, rate=rate_str, connect_timeout=30, receive_timeout=300)
+                    communicate = edge_tts.Communicate(text, voice_id, connect_timeout=30, receive_timeout=300)
                     start_time = time.time()
                     async for chunk in communicate.stream():
                         if time.time() - start_time > 600:  # 10 minutes
