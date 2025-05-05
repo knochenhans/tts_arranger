@@ -4,9 +4,9 @@ import json
 import pickle
 from dataclasses import asdict, dataclass, field
 from typing import List, Optional
-from dateutil import parser
 
 import requests  # type: ignore
+from dateutil import parser # type: ignore
 from loguru import logger
 
 from tts_arranger.items.tts_chapter import TTS_Chapter  # type: ignore
@@ -50,8 +50,7 @@ class TTS_Project:
                 ],
                 title=data.get("title", ""),
                 subtitle=data.get("subtitle", ""),
-                date=parser.parse(
-                    data.get("date", datetime.datetime.min.isoformat())),
+                date=parser.parse(data.get("date", datetime.datetime.min.isoformat())),
                 author=data.get("author", ""),
                 lang_code=data.get("lang_code", "en"),
                 image_bytes=base64.b64decode(data.get("image_bytes", "")),
@@ -65,8 +64,7 @@ class TTS_Project:
         try:
             data = asdict(self)
             data["date"] = self.date.isoformat()
-            data["image_bytes"] = base64.b64encode(
-                self.image_bytes).decode("utf-8")
+            data["image_bytes"] = base64.b64encode(self.image_bytes).decode("utf-8")
             data["chapters"] = [chapter.to_json() for chapter in self.chapters]
             return json.dumps(data)
         except (TypeError, ValueError) as e:
