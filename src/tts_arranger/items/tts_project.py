@@ -98,6 +98,15 @@ class TTS_Project:
                 requests.get(image_url, headers=headers).content
             )
 
+    def add_image_from_file(self, image_path: str) -> None:
+        try:
+            with open(image_path, "rb") as file:
+                self.image_bytes = base64.b64encode(file.read())
+        except IOError:
+            logger.warning(
+                f'TTS Project image file "{image_path}" could not be opened for reading.'
+            )
+
     def _check_empty_chapter(self, chapter: TTS_Chapter) -> bool:
         for item in chapter.items:
             for element in item.elements:
