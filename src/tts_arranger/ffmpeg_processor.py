@@ -1,15 +1,17 @@
 import datetime
 import math
 import os
+import struct
 import subprocess
 import tempfile
-from typing import List, Tuple, Dict, Any
-from pathvalidate import sanitize_filename
+import wave
+from typing import Any, List, Tuple
 
 import ffmpeg  # type: ignore
-from PIL import Image  # type: ignore
+import srt  # type: ignore
 from loguru import logger
-import srt # type: ignore
+from pathvalidate import sanitize_filename
+from PIL import Image  # type: ignore
 
 from tts_arranger.items.tts_project import TTS_Project  # type: ignore
 
@@ -104,9 +106,9 @@ class FFmpegProcessor:
     ) -> None:
         if project.image_bytes:
             try:
-                from io import BytesIO
                 import base64
                 import binascii
+                from io import BytesIO
 
                 image_data = base64.b64decode(project.image_bytes)
                 with Image.open(BytesIO(image_data)) as image:
@@ -130,6 +132,35 @@ class FFmpegProcessor:
                 logger.error(
                     "Could not add image to final output, image file is not a valid image file."
                 )
+
+    def find_peak_volume(self, temp_files: List[Tuple[Any, str]]) -> float:
+        max_peak = float("-inf")
+
+        for _, file in temp_files:
+            try:
+                with wave.open(file, "r") as audio:
+                    # Extract the raw audio data
+                    raw_data = audio.readframes(audio.getnframes())
+
+                    # Convert the raw audio data to a list of integers
+                    samples = struct.unpack(f"{audio.getnframes()}h", raw_data)
+
+                    # Find the peak sample
+                    peak = max(abs(sample) for sample in samples)
+
+                    # Calculate the reference value based on the bit depth of the audio file
+                    reference_value = 2 ** (audio.getsampwidth() * 8 - 1)
+
+                    # Calculate the peak value in dBFS
+                    peak_dB = 20 * math.log10(peak / reference_value)
+
+                    max_peak = max(max_peak, peak_dB)
+
+            except Exception as e:
+                logger.error(f"Error analyzing file {file}: {e}")
+
+        logger.info(f"Maximum peak volume: {max_peak} dB")
+        return max_peak
 
     def process_ffmpeg(
         self, project: TTS_Project, title: str, temp_dir: str, subtitles: bool
@@ -159,6 +190,15 @@ class FFmpegProcessor:
             output_path = output_filename + output_extension
             output_files = []
 
+            # Check input files and find highest peak volume using volumedetect filter
+            max_peak = self.find_peak_volume(self.temp_files)
+
+            logger.info(f"Maximum peak volume: {max_peak} dB")
+
+            # Calculate gain to apply
+            gain_to_apply = 0 if max_peak >= 0 else abs(max_peak)
+            logger.info(f"Gain to apply: {gain_to_apply} dB")
+
             os.makedirs(self.project_path, exist_ok=True)
             infiles = [ffmpeg.input(file) for _, file in self.temp_files]
             metadata_input = ffmpeg.input(metadata_filename)
@@ -170,8 +210,10 @@ class FFmpegProcessor:
             project_subtitle = project.subtitle
             project_author = project.author
 
+            volume_adjustment = -0.3 - max_peak
             cmd = (
                 ffmpeg.concat(*infiles, v=0, a=1)
+                .filter_("volume", volume=f"{volume_adjustment}dB")
                 .output(
                     metadata_input,
                     output_path,
