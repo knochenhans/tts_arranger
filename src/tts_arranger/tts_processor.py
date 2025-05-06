@@ -1,32 +1,29 @@
 import asyncio
 import base64
-from datetime import date
 import json
 import os
 import re
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
-from typing import Optional, List, Tuple, Dict, Any, Callable
-
-
-from loguru import logger
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import ffmpeg  # type: ignore
 import numpy as np
 import scipy  # type: ignore
+from loguru import logger
 
 from tts_arranger.functions import load_default_config
-from tts_arranger.tts_backend import TTSBackend
-from tts_arranger.tts_preprocessor import TTS_Preprocessor  # type: ignore
-from tts_arranger.items.tts_project import TTS_Project
-from tts_arranger.items.tts_item import TTS_Item
 from tts_arranger.items.tts_chapter import TTS_Chapter
 from tts_arranger.items.tts_element import TTS_Element
-
-from .items.tts_project import TTS_Project  # type: ignore
+from tts_arranger.items.tts_item import TTS_Item
+from tts_arranger.items.tts_project import TTS_Project
+from tts_arranger.tts_backend import TTSBackend
+from tts_arranger.tts_preprocessor import TTS_Preprocessor  # type: ignore
 
 from .ffmpeg_processor import FFmpegProcessor
+from .items.tts_project import TTS_Project  # type: ignore
 
 TextItem = Dict[str, str | float]
 
@@ -169,18 +166,31 @@ class TTS_Processor:
             filename = os.path.join(temp_dir, f"tts_part_{c}.{temp_format}")
             items: List[TextItem] = self.prepare_text_items(chapter.items)
 
-            if self.backend_config["backend_id"] == "edge-tts":
-                from .tts_backend_edge_tts import TTSBackendEdge
+            match self.backend_config["backend_id"]:
+                case "edge-tts":
+                    from .tts_backend_edge_tts import TTSBackendEdge
 
-                self.backend = TTSBackendEdge(
-                    "edge-tts", self.temp_dir, self.backend_config, self.on_progress
-                )
-            else:
-                from .tts_backend_f5 import TTSBackendF5
+                    self.backend = TTSBackendEdge(
+                        "edge-tts", self.temp_dir, self.backend_config, self.on_progress
+                    )
+                case "kokoro-tts":
+                    from .tts_backend_kokoro import TTSBackendKokoro
 
-                self.backend = TTSBackendF5(
-                    "f5-tts", self.temp_dir, self.backend_config, self.on_progress
-                )
+                    self.backend = TTSBackendKokoro(
+                        "kokoro", self.temp_dir, self.backend_config, self.on_progress
+                    )
+                case "kokoro-tts-gradio":
+                    from .tts_backend_kokoro_gradio import TTSBackendKokoroGradio
+
+                    self.backend = TTSBackendKokoroGradio(
+                        "kokoro", self.temp_dir, self.backend_config, self.on_progress
+                    )
+                case _:
+                    from .tts_backend_f5 import TTSBackendF5
+
+                    self.backend = TTSBackendF5(
+                        "f5-tts", self.temp_dir, self.backend_config, self.on_progress
+                    )
 
             items_to_process: List[TextItem] = []
 
