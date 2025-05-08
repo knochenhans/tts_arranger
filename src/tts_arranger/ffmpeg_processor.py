@@ -207,22 +207,24 @@ class FFmpegProcessor:
             project_author = project.author
 
             # Apply loudness normalization using loudnorm
-            normalization_filter = (
-                {"filter_": "loudnorm", "I": -16, "TP": -1.5, "LRA": 11}
-                if normalize_audio
-                else {}
-            )
+            i = -16 if normalize_audio else -24.0
+            tp = -1.5 if normalize_audio else 0.0
+            lra = 11 if normalize_audio else 50.0
 
             if normalize_audio:
                 logger.info("Loudness normalization is enabled.")
+            else:
+                logger.info(
+                    "Loudness normalization is disabled. Using default parameters."
+                )
 
             cmd = (
                 ffmpeg.concat(*infiles, v=0, a=1)
+                .filter_("loudnorm", I=i, TP=tp, LRA=lra)
                 .output(
                     metadata_input,
                     output_path,
                     map_metadata=1,
-                    **normalization_filter,
                     **{
                         "metadata": f"title={project_title}",
                         "metadata:": f"album={project_subtitle}",
