@@ -163,7 +163,12 @@ class FFmpegProcessor:
         return max_peak
 
     def process_ffmpeg(
-        self, project: TTS_Project, title: str, temp_dir: str, subtitles: bool
+        self,
+        project: TTS_Project,
+        title: str,
+        temp_dir: str,
+        subtitles: bool,
+        normalize_audio: bool = True,
     ) -> None:
         if len(self.temp_files) > 0:
             metadata_lines = [";FFMETADATA1\n"]
@@ -190,15 +195,6 @@ class FFmpegProcessor:
             output_path = output_filename + output_extension
             output_files = []
 
-            # Check input files and find highest peak volume using volumedetect filter
-            max_peak = self.find_peak_volume(self.temp_files)
-
-            logger.info(f"Maximum peak volume: {max_peak} dB")
-
-            # Calculate gain to apply
-            gain_to_apply = 0 if max_peak >= 0 else abs(max_peak)
-            logger.info(f"Gain to apply: {gain_to_apply} dB")
-
             os.makedirs(self.project_path, exist_ok=True)
             infiles = [ffmpeg.input(file) for _, file in self.temp_files]
             metadata_input = ffmpeg.input(metadata_filename)
@@ -210,14 +206,23 @@ class FFmpegProcessor:
             project_subtitle = project.subtitle
             project_author = project.author
 
-            volume_adjustment = -0.3 - max_peak
+            # Apply loudness normalization using loudnorm
+            normalization_filter = (
+                {"filter_": "loudnorm", "I": -16, "TP": -1.5, "LRA": 11}
+                if normalize_audio
+                else {}
+            )
+
+            if normalize_audio:
+                logger.info("Loudness normalization is enabled.")
+
             cmd = (
                 ffmpeg.concat(*infiles, v=0, a=1)
-                .filter_("volume", volume=f"{volume_adjustment}dB")
                 .output(
                     metadata_input,
                     output_path,
                     map_metadata=1,
+                    **normalization_filter,
                     **{
                         "metadata": f"title={project_title}",
                         "metadata:": f"album={project_subtitle}",

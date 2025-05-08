@@ -36,6 +36,7 @@ class TTS_Processor:
         backend_config: Optional[Dict[str, Any]] = None,
         speaker_id_mapping: Optional[Dict[str, Any]] = None,
         progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
+        normalize_audio: bool = True,
     ) -> None:
         self.NANOSECONDS_IN_ONE_SECOND = 1e9
 
@@ -50,6 +51,7 @@ class TTS_Processor:
         self.progress_callback: Optional[Callable[[int, int, int, int], None]] = (
             progress_callback
         )
+        self.normalize_audio = normalize_audio
 
         if backend_config:
             self.backend_config = backend_config
@@ -447,7 +449,7 @@ class TTS_Processor:
                         self.project_path,
                         self.output_format,
                     )
-                    ffmpeg_processor.process_ffmpeg(project, title, temp_dir, subtitles)
+                    ffmpeg_processor.process_ffmpeg(project, title, temp_dir, subtitles, self.normalize_audio)
                     logger.success("Project synthesis complete")
                 else:
                     logger.warning("No synthesized files found, skipping project")
