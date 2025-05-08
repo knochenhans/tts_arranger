@@ -25,11 +25,12 @@ class TTSBackendKokoro(TTSBackend):
         self.temp_dir: str = os.path.join(temp_dir, "kokoro_tts")
         self.backend_config: Dict[str, Any] = backend_config
         self.progress_callback: Optional[Callable[[int], None]] = progress_callback
+        self.pack: Optional[Any] = None
 
         os.makedirs(self.temp_dir, exist_ok=True)
 
         # Initialize Kokoro TTS pipeline
-        self.pipeline = KPipeline(lang_code="a")
+        self.pipeline = KPipeline(lang_code="a", repo_id="hexgrad/Kokoro-82M")
 
         # Define available voices as a simple list
         self.voices: List[str] = [
@@ -70,6 +71,7 @@ class TTSBackendKokoro(TTSBackend):
 
     async def synthesize_batch(self, text_items: List[TextItem]) -> None:
         self.results = []
+        current_voice = None  # Track the currently loaded voice
 
         loop_obj = tqdm(text_items, desc="Synthesizing")
 
@@ -102,8 +104,13 @@ class TTSBackendKokoro(TTSBackend):
                 voice = random.choice(voice_ids)
 
             try:
+                # Load the voice only if it has changed
+                if voice != current_voice:
+                    self.pack = self.pipeline.load_single_voice(voice)
+                    current_voice = voice
+
                 # Generate audio using Kokoro TTS pipeline
-                generator = self.pipeline(text, voice=voice)
+                generator = self.pipeline(text, self.pack)
                 audio_data = []
 
                 for _, _, audio in generator:
@@ -121,6 +128,11 @@ class TTSBackendKokoro(TTSBackend):
             except Exception as e:
                 logger.error(f"Error synthesizing text: {e} for text: {text}")
                 self.results.append(np.zeros(0))  # Append empty result on failure
+
+            finally:
+                # Ensure generator is fully consumed or closed
+                if "generator" in locals():
+                    del generator  # Explicitly delete generator to release resources
 
             if self.progress_callback:
                 self.progress_callback(i)
