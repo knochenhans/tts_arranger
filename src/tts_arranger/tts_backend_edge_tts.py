@@ -3,7 +3,6 @@ import os
 import random
 from typing import Any, Dict, List, Callable, Optional
 import numpy as np
-from platformdirs import user_data_dir
 import soundfile as sf  # type: ignore
 import time
 import asyncio
@@ -115,6 +114,10 @@ class TTSBackendEdge(TTSBackend):
             #     if rate != 0:
             #         rate_str = f"{rate}%"
             #         logger.debug(f"Adjusting rate to {rate_str} for text: {text}")
+
+            # Bypass tone problems for Brian Multilingual Voice by falling back to default voice
+            if "Multilingual" in voice_id and text_length < 50:
+                voice_id = voice_id.replace("Multilingual", "")
 
             for attempt in range(3):  # Try up to 3 times
                 try:
